@@ -1,0 +1,26 @@
+services:
+  oracle:
+    # Oracle Database Free — the same SQL dialect as Autonomous Database,
+    # so schema written here applies unchanged to the cloud instance.
+    image: gvenzl/oracle-free:23-slim
+    container_name: raxtan-oracle
+    # Without this the SGA cannot allocate against Docker's default 64MB
+    # /dev/shm and the container dies during listener startup with exit 255.
+    shm_size: 2gb
+    ports:
+      - "1521:1521"
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_SYS_PASSWORD:-devsyspw_local}
+      APP_USER: ${ORACLE_USER:-raxtan}
+      APP_USER_PASSWORD: ${ORACLE_PASSWORD:-devpw_local}
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 90s
+
+volumes:
+  oracle-data:

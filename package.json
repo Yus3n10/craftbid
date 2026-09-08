@@ -1,0 +1,33 @@
+{
+  "name": "raxtan",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A marketplace connecting Filipino handmade-craft artists with clients who want to commission their work.",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.34.5",
+  "scripts": {
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f oracle",
+    "db:migrate": "pnpm --filter @raxtan/api migrate",
+    "db:reset": "pnpm --filter @raxtan/api migrate:reset",
+    "dev": "pnpm --parallel --filter @raxtan/api --filter @raxtan/web dev",
+    "dev:api": "pnpm --filter @raxtan/api dev",
+    "dev:web": "pnpm --filter @raxtan/web dev",
+    "build": "pnpm --filter @raxtan/shared build && pnpm --filter @raxtan/api build && pnpm --filter @raxtan/web build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "test:api": "pnpm --filter @raxtan/api test",
+    "test:e2e": "pnpm --filter @raxtan/web test:e2e"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "oracledb", "sharp"]
+  }
+}
