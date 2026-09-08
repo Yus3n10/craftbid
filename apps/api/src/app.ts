@@ -20,6 +20,11 @@ import authPlugin from "./plugins/auth.plugin.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { userRoutes } from "./modules/users/users.routes.js";
 import { imageRoutes } from "./modules/images/images.routes.js";
+import { postingRoutes } from "./modules/postings/postings.routes.js";
+import { applicationRoutes } from "./modules/applications/applications.routes.js";
+import { commissionRoutes } from "./modules/commissions/commissions.routes.js";
+import { postRoutes } from "./modules/posts/posts.routes.js";
+import { communityRoutes } from "./modules/community.routes.js";
 
 /** One entry of Fastify's `error.validation` array. */
 interface ValidationEntry {
@@ -28,7 +33,19 @@ interface ValidationEntry {
   params?: { issue?: { path?: (string | number)[]; message?: string } };
 }
 
-export async function buildApp(): Promise<FastifyInstance> {
+export interface BuildAppOptions {
+  /**
+   * Defaults to on everywhere except tests, which register dozens of accounts
+   * and would otherwise trip the registration limiter. The limiter itself is
+   * covered by rate-limit.test.ts, which builds an app with this forced on.
+   */
+  enableRateLimit?: boolean;
+}
+
+export async function buildApp(
+  options: BuildAppOptions = {},
+): Promise<FastifyInstance> {
+  const enableRateLimit = options.enableRateLimit ?? !config.isTest;
   const app = Fastify({
     logger: config.isTest
       ? false
@@ -65,11 +82,13 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   await app.register(cookie);
 
-  await app.register(rateLimit, {
-    global: true,
-    max: 300,
-    timeWindow: "1 minute",
-  });
+  if (enableRateLimit) {
+    await app.register(rateLimit, {
+      global: true,
+      max: 300,
+      timeWindow: "1 minute",
+    });
+  }
 
   await app.register(multipart, {
     limits: { fileSize: UPLOAD.maxBytes, files: 1, fields: 10 },
@@ -179,6 +198,11 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(authRoutes, { prefix: "/auth" });
   await app.register(userRoutes);
   await app.register(imageRoutes);
+  await app.register(postingRoutes);
+  await app.register(applicationRoutes);
+  await app.register(commissionRoutes);
+  await app.register(postRoutes);
+  await app.register(communityRoutes);
 
   return app;
 }
