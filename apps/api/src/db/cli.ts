@@ -50,8 +50,14 @@ async function main(): Promise<void> {
       break;
     }
 
+    case "seed": {
+      const { runSeed } = await import("./seed.js");
+      await runSeed();
+      break;
+    }
+
     default:
-      console.error(`Unknown command "${command}". Use: up | status | reset`);
+      console.error(`Unknown command "${command}". Use: up | status | reset | seed`);
       process.exitCode = 1;
   }
 }

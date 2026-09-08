@@ -51,6 +51,15 @@ export const postingListQuerySchema = paginationSchema.extend({
   maxBudget: z.coerce.number().int().min(0).optional(),
   q: z.string().trim().max(120).optional(),
   sort: z.enum(["newest", "oldest", "budget_high", "budget_low"]).default("newest"),
+  /**
+   * Restrict to the signed-in client's own postings. Resolved server-side from
+   * the token, never from a client id in the query, so it cannot be pointed at
+   * someone else's postings.
+   */
+  mine: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((value) => value === "true"),
 });
 
 export type CreatePostingInput = z.infer<typeof createPostingSchema>;

@@ -19,7 +19,15 @@ export const postingRoutes: FastifyPluginAsync = async (fastify) => {
   app.get(
     "/postings",
     { schema: { querystring: postingListQuerySchema } },
-    async (request) => service.listPostings(request.query),
+    async (request) =>
+      service.listPostings({
+        ...request.query,
+        // Scoped from the token rather than a client id in the query string,
+        // so `mine` cannot be aimed at another user's postings.
+        ...(request.query.mine && request.user
+          ? { clientId: request.user.id }
+          : {}),
+      }),
   );
 
   app.get(

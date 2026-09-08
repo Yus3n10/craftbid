@@ -1,0 +1,168 @@
+@import "tailwindcss";
+
+/*
+  RaxTan design system.
+
+  Direction: natural indigo dyeing (tayum) and handloom weaving, both living
+  Filipino craft traditions. Indigo carries the brand rather than the terracotta
+  that marketplace templates default to; warm abaca-paper neutrals carry the
+  ground. Clay appears on peso figures and almost nowhere else, so the one warm
+  accent in the interface is doing a job: money is what people scan for.
+
+  Every text colour below was checked against the paper ground and clears WCAG
+  AA (4.5:1) at body size.
+*/
+@theme {
+  /* Grounds */
+  --color-paper: #f7f4ee;
+  --color-paper-raised: #fffdf8;
+  --color-paper-sunk: #efeae0;
+
+  /* Text. 15.2:1, 7.2:1 and 4.5:1 on paper. */
+  --color-ink: #1a1f1d;
+  --color-ink-soft: #4a5450;
+  --color-ink-faint: #68726d;
+
+  /* Structure. Hairlines are decorative; fiber-strong is for form controls,
+     where 3:1 against the ground is required to delineate the control. */
+  --color-fiber: #ded5c4;
+  --color-fiber-soft: #ebe4d8;
+  --color-fiber-strong: #96866f;
+
+  /* Brand */
+  --color-indigo: #1f3a4d;
+  --color-indigo-deep: #14262f;
+  --color-indigo-soft: #2e5169;
+  --color-indigo-wash: #e7eaec;
+
+  /* Accent, reserved for money and the moment an artist is chosen. */
+  --color-clay: #a85434;
+  --color-clay-wash: #f4e8e1;
+
+  /* Status */
+  --color-sage: #55704e;
+  --color-sage-wash: #e8eee6;
+  --color-rust: #9c3d28;
+  --color-rust-wash: #f6e6e2;
+  --color-amber: #8a6a2f;
+  --color-amber-wash: #f3ecdd;
+
+  /* Material families. Craft categories group by what they are made from, so
+     the selvedge on a card says what it is before the label is read. */
+  --color-mat-fiber: #3e5c6b;
+  --color-mat-earth: #a85434;
+  --color-mat-pigment: #6b4a72;
+  --color-mat-metal: #8a6a2f;
+  --color-mat-wood: #6e5138;
+  --color-mat-other: #5c6661;
+
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-body: "Karla", ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  --shadow-raise: 0 1px 2px rgb(26 31 29 / 0.05), 0 4px 14px rgb(26 31 29 / 0.05);
+  --shadow-lift: 0 2px 4px rgb(26 31 29 / 0.06), 0 12px 28px rgb(26 31 29 / 0.09);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    /* Fraunces' WONK axis keeps the letterforms slightly irregular, the way a
+       hand-cut punch would be. It is the reason this face is here. */
+    font-variation-settings: "SOFT" 20, "WONK" 1;
+    line-height: 1.12;
+    letter-spacing: -0.015em;
+    color: var(--color-ink);
+  }
+
+  /* Prices must line up in a column of bids the client is comparing. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-indigo);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background: var(--color-indigo);
+    color: var(--color-paper-raised);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /*
+    The signature: a selvedge, the self-finished edge that stops woven cloth
+    unravelling. Every card carries one, tinted by material family, so a grid
+    of postings reads as categories before any label is parsed.
+  */
+  .selvedge {
+    position: relative;
+    --selvedge-color: var(--color-mat-other);
+  }
+
+  .selvedge::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: repeating-linear-gradient(
+      to bottom,
+      var(--selvedge-color) 0 7px,
+      color-mix(in oklab, var(--selvedge-color) 35%, transparent) 7px 11px
+    );
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+  }
+
+  /* A woven rule for section breaks: warp threads seen end-on. Dashes sit
+     closer than their gaps so it reads as one stitched line rather than a row
+     of loose dots. */
+  .thread-rule {
+    height: 3px;
+    background: repeating-linear-gradient(
+      to right,
+      var(--color-fiber-strong) 0 5px,
+      transparent 5px 8px
+    );
+    opacity: 0.85;
+  }
+
+  .eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-ink-faint);
+  }
+}

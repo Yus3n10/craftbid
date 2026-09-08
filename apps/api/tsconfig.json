@@ -9,5 +9,8 @@
     "types": ["node"]
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.test.ts", "dist"]
+  // Tests and their helpers are run by Vitest, which transpiles them itself.
+  // Keeping them out of the build means no test scaffolding ships to
+  // production. They are still typechecked, via tsconfig.typecheck.json.
+  "exclude": ["src/**/*.test.ts", "src/test/**", "dist"]
 }

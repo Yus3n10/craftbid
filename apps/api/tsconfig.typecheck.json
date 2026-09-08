@@ -1,0 +1,7 @@
+{
+  // Same settings as the build, but covering the test files too, so type
+  // errors in tests are caught without shipping them in dist.
+  "extends": "./tsconfig.json",
+  "include": ["src/**/*.ts"],
+  "exclude": ["dist"]
+}

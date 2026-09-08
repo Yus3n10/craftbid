@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, LightMyRequestResponse } from "fastify";
 import { buildApp } from "../app.js";
 import { newId } from "../db/ids.js";
 import { db } from "../db/query.js";
@@ -172,7 +172,7 @@ export async function applyToPosting(
   postingId: string,
   proposedPriceCentavos: number,
   samplePostIds: string[] = [],
-) {
+): Promise<LightMyRequestResponse> {
   const instance = await getTestApp();
   return instance.inject({
     method: "POST",
