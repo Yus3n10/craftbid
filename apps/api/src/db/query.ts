@@ -4,6 +4,12 @@ import { getPool } from "./pool.js";
 export type Binds = oracledb.BindParameters;
 
 /**
+ * A single bound value. Used where a query builds its bind set dynamically,
+ * such as a PATCH that only updates the fields it was given.
+ */
+export type BindValue = string | number | Buffer | Date | null;
+
+/**
  * The interface every repository takes. Because a plain query and a transaction
  * both satisfy it, the same repository function works standalone or as one step
  * inside a larger atomic operation — no duplicated "…WithTransaction" variants.
