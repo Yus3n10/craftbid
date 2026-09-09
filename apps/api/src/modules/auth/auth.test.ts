@@ -220,6 +220,58 @@ describe("authentication", () => {
     expect(refresh.statusCode).toBe(401);
   });
 
+  it("clears cookies with the attributes they were set with", async () => {
+    const app = await getTestApp();
+
+    const registration = await app.inject({
+      method: "POST",
+      url: "/auth/register",
+      payload: {
+        email: "cookies@example.com",
+        username: "cookieuser",
+        password: "a sufficiently long password",
+        displayName: "Cookie",
+        role: "client",
+      },
+    });
+    const cookies = registration.headers["set-cookie"] as string[];
+
+    const logout = await app.inject({
+      method: "POST",
+      url: "/auth/logout",
+      headers: { cookie: cookies.map((c) => c.split(";")[0]).join("; ") },
+    });
+
+    /**
+     * The reason this test exists: sign-out returned 204, revoked the refresh
+     * token, and left the browser signed in. A cookie is only overwritten when
+     * the incoming Set-Cookie matches on name, path AND SameSite, so clearing
+     * with a bare path produced something the browser did not recognise as the
+     * same cookie. Nothing at the status-code level could see it.
+     */
+    const cleared = logout.headers["set-cookie"] as string[] | undefined;
+    expect(cleared, "logout must send Set-Cookie headers").toBeDefined();
+
+    for (const name of ["craftbid_at", "craftbid_rt"]) {
+      const header = cleared!.find((value) => value.startsWith(`${name}=`));
+      expect(header, `${name} must be cleared`).toBeDefined();
+
+      // Emptied, expired, and carrying the same attributes as when it was set.
+      expect(header).toMatch(new RegExp(`^${name}=;`));
+      expect(header!.toLowerCase()).toContain("path=/");
+
+      const setHeader = cookies.find((value) => value.startsWith(`${name}=`))!;
+      for (const attribute of ["samesite=", "secure", "httponly"]) {
+        const wasSet = setHeader.toLowerCase().includes(attribute);
+        const isCleared = header!.toLowerCase().includes(attribute);
+        expect(
+          isCleared,
+          `${name}: "${attribute}" was ${wasSet ? "set" : "absent"} on login and must match on logout`,
+        ).toBe(wasSet);
+      }
+    }
+  });
+
   it("logs out and invalidates the refresh token", async () => {
     const app = await getTestApp();
     const registration = await app.inject({

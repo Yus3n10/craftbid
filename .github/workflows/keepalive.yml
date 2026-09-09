@@ -10,11 +10,20 @@ name: Keep the database alive
 # Render's free tier, which spins down after 15 minutes.
 on:
   schedule:
-    # Twice a week, well inside the 7-day window even if a run is skipped.
-    # GitHub disables schedules on repositories with no activity for 60 days,
-    # which is itself within the 90-day deletion window, so do not rely on this
-    # alone if the project goes dormant.
-    - cron: "0 3 * * 1,4"
+    # Every ten minutes, which is about keeping the API awake rather than the
+    # database alive. Render's free tier stops a service after fifteen minutes
+    # without a request, and the next visitor then waits thirty to sixty
+    # seconds for it to start. That wait is the single slowest thing about the
+    # site, and it is felt by exactly the people arriving for the first time.
+    #
+    # This is best effort. GitHub delays scheduled workflows under load and
+    # drops them outright on repositories that have been quiet for 60 days, so
+    # a gap longer than fifteen minutes will happen. A free external monitor
+    # such as UptimeRobot polls far more reliably; see docs/DEPLOY.md.
+    #
+    # It still covers the original job too: the database is stopped after 7
+    # idle days and deleted after 90, and /health runs a real query.
+    - cron: "*/10 * * * *"
   workflow_dispatch:
 
 jobs:

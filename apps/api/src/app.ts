@@ -147,6 +147,53 @@ export async function buildApp(
     });
   }
 
+  /**
+   * Cache headers for reads.
+   *
+   * The dangerous version of this is caching everything: a feed carries
+   * `reactions.mine` and `saved`, which are that reader's state, so a shared
+   * cache holding one would hand another person's bookmarks to the next
+   * visitor. So anything answered to a signed-in caller is private and stored
+   * nowhere, and only genuinely anonymous reads are shareable.
+   *
+   * stale-while-revalidate is what makes this worth doing on a free tier: a
+   * returning visitor gets the previous copy instantly while the refresh
+   * happens behind them, which hides both the network and a waking server.
+   */
+  app.addHook("onSend", async (request, reply) => {
+    if (request.method !== "GET") return;
+    if (reply.statusCode >= 400) return;
+
+    const authenticated =
+      Boolean(request.headers.authorization) || Boolean(request.user);
+
+    if (authenticated) {
+      reply.header("Cache-Control", "private, no-store");
+      return;
+    }
+
+    // Vary so a cache never serves an anonymous copy to a signed-in reader,
+    // or the reverse, on the same URL.
+    reply.header("Vary", "Cookie, Authorization, Origin");
+
+    const url = request.url.split("?")[0] ?? "";
+
+    // Craft categories change when the product changes, not when users act.
+    if (url === "/categories") {
+      reply.header("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400");
+      return;
+    }
+
+    // Uploaded bytes are immutable: the key contains the image id, and an
+    // edited image is a new upload with a new key.
+    if (url.startsWith("/media/")) {
+      reply.header("Cache-Control", "public, max-age=31536000, immutable");
+      return;
+    }
+
+    reply.header("Cache-Control", "public, max-age=30, stale-while-revalidate=300");
+  });
+
   await app.register(multipart, {
     limits: { fileSize: UPLOAD.maxBytes, files: 1, fields: 10 },
   });

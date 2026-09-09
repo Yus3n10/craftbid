@@ -107,3 +107,21 @@ export function cookieOptions(maxAgeSeconds: number) {
     maxAge: maxAgeSeconds,
   };
 }
+
+/**
+ * The attributes a session cookie has to be deleted with.
+ *
+ * A browser only overwrites a cookie when the incoming Set-Cookie matches the
+ * existing one on name, domain, path AND SameSite. Clearing with just a path,
+ * which is what this did, produced a Set-Cookie without SameSite=None or
+ * Secure. The browser either treats that as a different cookie or rejects it
+ * outright, since SameSite=None without Secure is invalid, and the session
+ * survived a sign-out that had already returned 204.
+ *
+ * Derived from cookieOptions rather than written out again, so the two cannot
+ * drift apart the way they just did.
+ */
+export function clearCookieOptions() {
+  const { maxAge: _maxAge, ...rest } = cookieOptions(0);
+  return rest;
+}

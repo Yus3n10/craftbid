@@ -213,10 +213,28 @@ Set the repository variable so it knows where to ping:
 **Settings → Secrets and variables → Actions → Variables → New variable**
 `API_URL` = your Render URL.
 
-> GitHub disables scheduled workflows on repositories with no activity for 60
-> days. That is inside the 90-day deletion window, but not by much. If the
-> project goes dormant, check on the database.
+### The cold start is the slowest thing about the site
 
+Render stops a free service after **15 minutes without a request**, and the
+next visitor waits 30 to 60 seconds while it starts. Nothing else on the site
+comes close to that, and it lands on first-time visitors.
+
+The workflow now pings every 10 minutes, which keeps the service up when it
+runs. It is best effort: GitHub delays scheduled workflows under load and stops
+running them on a repository quiet for 60 days.
+
+**For something reliable, add a free external monitor.** UptimeRobot's free
+tier polls every 5 minutes:
+
+1. Sign up at https://uptimerobot.com (no card)
+2. **Add New Monitor** → type **HTTP(s)**
+3. URL: `https://craftbid-api.onrender.com/health`
+4. Interval: **5 minutes**
+
+That alone removes almost every cold start, and it tells you when the API is
+down.
+
+> GitHub also disables scheduled workflows on repositories with no activity for 60
 ---
 
 ## 6. Desktop releases

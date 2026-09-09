@@ -6,6 +6,7 @@ import { config } from "../../config.js";
 import {
   ACCESS_COOKIE,
   REFRESH_COOKIE,
+  clearCookieOptions,
   cookieOptions,
   parseDurationSeconds,
 } from "../../lib/tokens.js";
@@ -42,8 +43,10 @@ function setSession(reply: FastifyReply, tokens: service.SessionTokens): void {
 }
 
 function clearSession(reply: FastifyReply): void {
-  reply.clearCookie(ACCESS_COOKIE, { path: "/" });
-  reply.clearCookie(REFRESH_COOKIE, { path: "/" });
+  // Same attributes the cookies were set with, or the browser will not
+  // recognise these as the same cookies and the session outlives sign-out.
+  reply.clearCookie(ACCESS_COOKIE, clearCookieOptions());
+  reply.clearCookie(REFRESH_COOKIE, clearCookieOptions());
 }
 
 export const authRoutes: FastifyPluginAsync = async (fastify) => {

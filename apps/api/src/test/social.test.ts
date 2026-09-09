@@ -449,3 +449,79 @@ describe("contact links", () => {
     expect(response.statusCode).toBe(400);
   });
 });
+
+/**
+ * Cache headers.
+ *
+ * The failure mode being guarded against is a shared cache holding a response
+ * that contains one reader's `saved` and `reactions.mine`, then serving it to
+ * the next visitor. That would hand someone else's bookmarks to a stranger, so
+ * the rule is simple and absolute: authenticated reads are never stored.
+ */
+describe("cache headers", () => {
+  let client: Session;
+  let artist: Session;
+
+  beforeEach(async () => {
+    await resetData();
+    artist = await registerUser("artist");
+    client = await registerUser("client");
+    await createArtistPost(artist, "Something to cache");
+  });
+
+  it("never stores a response containing the reader's own state", async () => {
+    const app = await getTestApp();
+
+    for (const url of ["/feed", "/posts", "/categories", "/notifications"]) {
+      const response = await app.inject({
+        method: "GET",
+        url,
+        headers: authHeaders(client),
+      });
+      expect(response.headers["cache-control"], url).toBe("private, no-store");
+    }
+  });
+
+  it("allows an anonymous read to be cached briefly", async () => {
+    const app = await getTestApp();
+    const response = await app.inject({ method: "GET", url: "/feed" });
+
+    expect(response.headers["cache-control"]).toContain("public");
+    expect(response.headers["cache-control"]).toContain("stale-while-revalidate");
+    // Without Vary, a cache could hand this anonymous copy to a signed-in
+    // reader on the same URL.
+    expect(String(response.headers["vary"])).toContain("Authorization");
+  });
+
+  it("caches the craft categories for far longer than a feed", async () => {
+    const app = await getTestApp();
+    const categories = await app.inject({ method: "GET", url: "/categories" });
+    const feed = await app.inject({ method: "GET", url: "/feed" });
+
+    const maxAge = (value: unknown) =>
+      Number(/max-age=(\d+)/.exec(String(value))?.[1] ?? 0);
+
+    expect(maxAge(categories.headers["cache-control"])).toBeGreaterThan(
+      maxAge(feed.headers["cache-control"]),
+    );
+  });
+
+  it("does not cache a write or an error", async () => {
+    const app = await getTestApp();
+
+    const write = await app.inject({
+      method: "POST",
+      url: "/posts",
+      headers: authHeaders(artist),
+      payload: { caption: "x", imageIds: [] },
+    });
+    expect(write.headers["cache-control"]).toBeUndefined();
+
+    const missing = await app.inject({
+      method: "GET",
+      url: "/posts/01a00000-0000-7000-8000-000000000000",
+    });
+    expect(missing.statusCode).toBe(404);
+    expect(missing.headers["cache-control"]).toBeUndefined();
+  });
+});

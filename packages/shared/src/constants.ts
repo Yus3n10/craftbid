@@ -237,8 +237,11 @@ export const LIMITS = {
   skillsPerArtist: 20,
   skillLength: { min: 2, max: 40 },
   linksPerUser: 8,
-  postingImages: { min: 0, max: 8 },
-  artistPostImages: { min: 1, max: 10 },
+  // Five is the cap everywhere photographs are attached. Enough to show a
+  // piece from several angles, few enough that a feed card stays scannable and
+  // a reader on mobile data is not paying for a gallery they did not ask for.
+  postingImages: { min: 0, max: 5 },
+  artistPostImages: { min: 1, max: 5 },
   applicationSamples: { max: 6 },
 } as const;
 
