@@ -63,7 +63,32 @@ function Gallery({ posting }: { posting: PostingDto }) {
   );
 }
 
-function ApplyForm({ posting }: { posting: PostingDto }) {
+function BidSentCard() {
+  return (
+    <Card className="p-6">
+      <div className="pl-3">
+        <h2 className="font-display text-xl">Your bid is in</h2>
+        <p className="mt-2 text-ink-soft">
+          The client can now see your price, your message and your portfolio.
+          You will be notified when they decide.
+        </p>
+        <div className="mt-4">
+          <ButtonLink to="/my/applications" variant="secondary" size="sm">
+            See my bids
+          </ButtonLink>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function ApplyForm({
+  posting,
+  onSubmitted,
+}: {
+  posting: PostingDto;
+  onSubmitted: () => void;
+}) {
   const queryClient = useQueryClient();
   const [price, setPrice] = useState<number | "">(posting.minBudgetCentavos);
   const [coverLetter, setCoverLetter] = useState("");
@@ -86,31 +111,17 @@ function ApplyForm({ posting }: { posting: PostingDto }) {
         samplePostIds: samples,
       }),
     onSuccess: () => {
+      // The parent owns the confirmation. Refetching the posting flips
+      // `canApply` to false, which would unmount this form: if the success
+      // message lived here it would vanish the instant it appeared, and the
+      // artist would see "you have already bid" as their only feedback.
+      onSubmitted();
       void queryClient.invalidateQueries({ queryKey: ["posting", posting.id] });
     },
   });
 
   const fields = mutation.error instanceof ApiError ? mutation.error.fields : {};
   const belowMinimum = price !== "" && price < posting.minBudgetCentavos;
-
-  if (mutation.isSuccess) {
-    return (
-      <Card className="p-6">
-        <div className="pl-3">
-          <h2 className="font-display text-xl">Your bid is in</h2>
-          <p className="mt-2 text-ink-soft">
-            The client can now see your price, your message and your portfolio.
-            You will be notified when they decide.
-          </p>
-          <div className="mt-4">
-            <ButtonLink to="/my/applications" variant="secondary" size="sm">
-              See my bids
-            </ButtonLink>
-          </div>
-        </div>
-      </Card>
-    );
-  }
 
   return (
     <Card className="p-6">
@@ -239,6 +250,9 @@ export function PostingDetailPage() {
   const { id = "" } = useParams();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  // Survives the refetch that follows a successful bid, so the confirmation
+  // stays on screen instead of being replaced a moment after it appears.
+  const [justBid, setJustBid] = useState(false);
 
   const { data: posting, isLoading, error, refetch } = useQuery({
     queryKey: ["posting", id],
@@ -303,9 +317,13 @@ export function PostingDetailPage() {
             </section>
           )}
 
-          {canApply && <ApplyForm posting={posting} />}
+          {justBid && <BidSentCard />}
 
-          {isArtist && posting.viewerApplicationId && (
+          {!justBid && canApply && (
+            <ApplyForm posting={posting} onSubmitted={() => setJustBid(true)} />
+          )}
+
+          {!justBid && isArtist && posting.viewerApplicationId && (
             <Card className="p-5">
               <div className="pl-3">
                 <h2 className="font-display text-lg">You have already bid on this</h2>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
 import type { UserRole } from "@raxtan/shared";
 import { LIMITS } from "@raxtan/shared";
 import { ApiError } from "../lib/api.js";
@@ -26,7 +26,6 @@ const ROLES: { value: UserRole; title: string; description: string }[] = [
 
 export function RegisterPage() {
   const { user, register } = useAuth();
-  const navigate = useNavigate();
   const [params] = useSearchParams();
 
   const [role, setRole] = useState<UserRole>(
@@ -41,7 +40,14 @@ export function RegisterPage() {
   const [error, setError] = useState<unknown>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  if (user) return <Navigate to="/" replace />;
+  // Redirecting here rather than calling navigate() after the mutation. Doing
+  // both meant this guard re-rendered the moment the session landed and raced
+  // the imperative navigation, dropping new users on the home page instead of
+  // where they need to go: an artist at their craft settings, a client at the
+  // requests they came to post against.
+  if (user) {
+    return <Navigate to={user.role === "artist" ? "/settings" : "/postings"} replace />;
+  }
 
   const fields = error instanceof ApiError ? error.fields : {};
 
@@ -54,8 +60,8 @@ export function RegisterPage() {
     setError(null);
     setSubmitting(true);
     try {
+      // The redirect above takes over as soon as the session lands.
       await register({ ...form, role });
-      navigate(role === "artist" ? "/settings" : "/postings", { replace: true });
     } catch (caught) {
       setError(caught);
     } finally {

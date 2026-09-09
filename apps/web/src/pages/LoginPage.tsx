@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 import { ApiError } from "../lib/api.js";
 import { useAuth } from "../lib/auth.js";
 import { Page } from "../components/layout/Shell.js";
@@ -10,16 +10,18 @@ import { ThreadRule } from "../components/ui/Primitives.js";
 
 export function LoginPage() {
   const { user, login } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<unknown>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  if (user) return <Navigate to="/" replace />;
-
   const returnTo = (location.state as { from?: string } | null)?.from ?? "/";
+
+  // Same reason as on the register page: this guard fires as soon as the
+  // session lands, so it has to be the thing that decides where you go, or it
+  // races an imperative navigate and wins with the wrong destination.
+  if (user) return <Navigate to={returnTo} replace />;
   const fields = error instanceof ApiError ? error.fields : {};
 
   async function handleSubmit(event: React.FormEvent) {
@@ -27,8 +29,8 @@ export function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
+      // The redirect above takes over as soon as the session lands.
       await login({ email, password });
-      navigate(returnTo, { replace: true });
     } catch (caught) {
       setError(caught);
     } finally {
