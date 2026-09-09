@@ -14,8 +14,13 @@
   "assets": {
     "directory": "./dist",
     // Client-side routing: a deep link such as /postings/<id> is not a file on
-    // disk, so unknown paths must return index.html rather than a 404. This
-    // supersedes public/_redirects, which only Pages reads.
+    // disk, so unknown paths must return index.html rather than a 404.
+    //
+    // Do NOT also ship a public/_redirects containing `/* /index.html 200`.
+    // Workers reads that file as well, and rejects the rule as an infinite
+    // loop (API error 100324) because the destination matches the pattern.
+    // The deploy fails at the very last step, after every asset has uploaded
+    // and after `--dry-run` has passed, since only the server validates it.
     "not_found_handling": "single-page-application"
   }
 }

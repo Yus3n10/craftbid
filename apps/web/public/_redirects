@@ -1,4 +1,0 @@
-# Single-page app: serve index.html for any path the static host does not
-# recognise, so a deep link like /postings/<id> resolves instead of 404ing.
-# Read by Cloudflare Pages and Netlify.
-/*    /index.html   200

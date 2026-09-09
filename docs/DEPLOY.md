@@ -188,6 +188,14 @@ unknown paths. Add `apps/web/public/_redirects` containing:
 /*    /index.html   200
 ```
 
+> **Only for the Pages flow.** That file breaks the Workers deploy: Workers
+> reads `_redirects` too and rejects this rule as an infinite loop
+> (API error 100324), because the destination matches the pattern. It fails on
+> the final API call, after all assets have uploaded, and `wrangler --dry-run`
+> does not catch it because only the server validates the file. The repository
+> therefore does not contain one; `not_found_handling` in
+> `apps/web/wrangler.jsonc` covers the same need.
+
 ---
 
 ## 5. Keep the database alive
