@@ -208,6 +208,41 @@
     will-change: transform;
   }
 
+  /*
+    The hero ribbon: real work from the platform, running past like cloth off
+    a bolt. The list is rendered twice and the track travels exactly half its
+    width, so the seam never arrives.
+
+    Slow on purpose. At this speed it reads as something being shown rather
+    than something demanding to be watched, and it stops under the cursor so
+    a piece can actually be looked at.
+  */
+  @keyframes ribbon {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(-50%, 0, 0);
+    }
+  }
+
+  .ribbon-track {
+    animation: ribbon 70s linear infinite;
+  }
+
+  /*
+    No will-change here. It promotes a compositor layer and, on an animation
+    that never ends, never gives it back: a permanent extra buffer and an
+    animation that stops the browser ever going idle. A transform animation is
+    composited anyway, so the hint buys nothing and costs battery on the
+    mid-range Android this is mostly viewed on.
+  */
+  .ribbon:hover .ribbon-track,
+  .ribbon:focus-within .ribbon-track,
+  .ribbon[data-paused="true"] .ribbon-track {
+    animation-play-state: paused;
+  }
+
   /* Pressing anything should feel like pressing something. */
   .press {
     transition: transform var(--duration-quick) var(--ease-exit);
@@ -226,7 +261,8 @@
   */
   @media (prefers-reduced-motion: reduce) {
     .rise-in,
-    .stagger > * {
+    .stagger > *,
+    .ribbon-track {
       animation: none;
     }
     .lift,

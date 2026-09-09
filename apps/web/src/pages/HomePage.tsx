@@ -9,6 +9,7 @@ import { ThreadRule } from "../components/ui/Primitives.js";
 import { CardSkeleton, EmptyState, ErrorState } from "../components/ui/States.js";
 import { PostingCard } from "../components/PostingCard.js";
 import { PostCard } from "../components/PostCard.js";
+import { WorkRibbon } from "../components/WorkRibbon.js";
 
 /**
  * The hero states the exchange itself rather than decorating around it: one
@@ -21,19 +22,39 @@ function Hero() {
 
   return (
     <section className="border-b border-fiber bg-paper-raised">
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:py-24">
-        <p className="eyebrow">Handmade in the Philippines</p>
+      {/*
+        The four lines arrive in the order they are read, roughly a beat apart.
+        Slower than the grids elsewhere because this is the first thing anyone
+        sees and there is nothing behind it competing for attention.
+      */}
+      <div className="mx-auto max-w-6xl px-4 pb-14 pt-16 sm:pt-24">
+        <p className="eyebrow rise-in" style={{ animationDelay: "0ms" }}>
+          Handmade in the Philippines
+        </p>
         <h1 className="mt-4 max-w-3xl font-display text-4xl leading-[1.08] sm:text-6xl">
-          Someone wants a thing made by hand.
-          <span className="block text-indigo">Someone can make it.</span>
+          <span className="block rise-in" style={{ animationDelay: "80ms" }}>
+            Someone wants a thing made by hand.
+          </span>
+          <span
+            className="block rise-in text-indigo"
+            style={{ animationDelay: "180ms" }}
+          >
+            Someone can make it.
+          </span>
         </h1>
-        <p className="mt-6 max-w-xl text-lg text-ink-soft">
+        <p
+          className="rise-in mt-6 max-w-xl text-lg text-ink-soft"
+          style={{ animationDelay: "280ms" }}
+        >
           Craftbid is where Filipino crafters and the people who commission them
           find each other. Post what you want made, or bid on work that suits
           your hands.
         </p>
 
-        <div className="mt-12 grid gap-px overflow-hidden rounded-lg border border-fiber bg-fiber sm:grid-cols-2">
+        <div
+          className="rise-in mt-12 grid gap-px overflow-hidden rounded-lg border border-fiber bg-fiber sm:grid-cols-2"
+          style={{ animationDelay: "380ms" }}
+        >
           <div className="bg-paper p-7">
             <h2 className="font-display text-2xl">I want something made</h2>
             <p className="mt-2 text-sm text-ink-soft">
@@ -66,6 +87,8 @@ function Hero() {
           </div>
         </div>
       </div>
+
+      <WorkRibbon />
     </section>
   );
 }

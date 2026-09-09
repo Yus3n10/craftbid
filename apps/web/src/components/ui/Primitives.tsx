@@ -180,11 +180,23 @@ export function ImageFrame({
   alt,
   className,
   aspect = "4 / 3",
+  fit = "contain",
 }: {
   image: ImageDto | null;
   alt: string;
   className?: string;
   aspect?: string;
+  /**
+   * `contain` is the default, and on a marketplace for handmade work it is the
+   * only defensible one: a crocheted cardigan photographed upright lost its
+   * hood and its hem to a 4:3 crop, which is the part of the piece the client
+   * is trying to show. The frame stays a fixed size so the grid still lines
+   * up, and the piece sits on the sunk paper ground like a mounted print.
+   *
+   * `cover` remains for square thumbnails, where filling the tile matters more
+   * than seeing the whole frame and the crop is small.
+   */
+  fit?: "cover" | "contain";
 }) {
   if (!image) {
     return (
@@ -205,9 +217,17 @@ export function ImageFrame({
       src={image.url}
       alt={alt}
       loading="lazy"
+      // Real pixel dimensions, so the browser reserves the right box before
+      // the bytes arrive instead of reflowing the grid underneath the reader.
+      width={image.width}
+      height={image.height}
       // lift-media: scales a touch when its card is hovered, so the photograph
       // is the thing that responds rather than the frame around it.
-      className={cx("lift-media w-full bg-paper-sunk object-cover", className)}
+      className={cx(
+        "lift-media w-full bg-paper-sunk",
+        fit === "cover" ? "object-cover" : "object-contain",
+        className,
+      )}
       style={{ aspectRatio: aspect }}
     />
   );
