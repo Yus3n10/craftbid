@@ -16,8 +16,12 @@ services:
     region: singapore
     healthCheckPath: /health
 
+    # corepack's default shim location is /usr/bin, which is read-only on
+    # Render, so `corepack enable` alone fails with EROFS. Installing the shims
+    # under $HOME and putting that on PATH is the part that works.
     buildCommand: >-
-      corepack enable &&
+      corepack enable --install-directory "$HOME/.bin" &&
+      export PATH="$HOME/.bin:$PATH" &&
       pnpm install --frozen-lockfile &&
       pnpm --filter @craftbid/shared build &&
       pnpm --filter @craftbid/api build

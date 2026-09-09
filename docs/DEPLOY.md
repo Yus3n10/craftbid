@@ -102,9 +102,22 @@ Or configure it by hand:
 
 - **Runtime:** Node
 - **Region:** Singapore (closest to the Philippines)
-- **Build:** `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @craftbid/shared build && pnpm --filter @craftbid/api build`
+- **Build:** `corepack enable --install-directory "$HOME/.bin" && export PATH="$HOME/.bin:$PATH" && pnpm install --frozen-lockfile && pnpm --filter @craftbid/shared build && pnpm --filter @craftbid/api build`
 - **Start:** `node apps/api/dist/index.js`
 - **Health check path:** `/health`
+
+### Two build traps, both already handled
+
+Noting them because the error messages do not point at the cause:
+
+1. **`corepack enable` fails with `EROFS: read-only file system, unlink
+   '/usr/bin/pnpm'`.** Corepack writes its shims to `/usr/bin`, which is
+   read-only on Render. The build command installs them under `$HOME/.bin` and
+   puts that on `PATH` instead.
+2. **Render picks the newest Node it is allowed to.** An open-ended
+   `engines: ">=22"` got Node 26, which is far ahead of what the test suite
+   runs on, and both `sharp` and `oracledb` are native modules. `.node-version`
+   pins 22 and `engines` now has an upper bound.
 
 Environment variables are listed in `render.yaml`. The ones that catch people
 out:
@@ -122,7 +135,7 @@ out:
 
 Connect the repository and set:
 
-- **Build command:** `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @craftbid/shared build && pnpm --filter @craftbid/web build`
+- **Build command:** `corepack enable --install-directory "$HOME/.bin" && export PATH="$HOME/.bin:$PATH" && pnpm install --frozen-lockfile && pnpm --filter @craftbid/shared build && pnpm --filter @craftbid/web build`
 - **Build output directory:** `apps/web/dist`
 - **Environment variable:** `VITE_API_URL` = your Render URL, no trailing slash
 

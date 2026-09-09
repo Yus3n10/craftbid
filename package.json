@@ -5,7 +5,8 @@
   "type": "module",
   "description": "A marketplace connecting Filipino handmade-craft artists with clients who want to commission their work.",
   "engines": {
-    "node": ">=22"
+    "comment": "Upper bound is deliberate. An open-ended >=22 let Render pick Node 26, which is well ahead of the version the tests run on, and both sharp and oracledb are native modules.",
+    "node": ">=22 <25"
   },
   "packageManager": "pnpm@10.34.5",
   "scripts": {

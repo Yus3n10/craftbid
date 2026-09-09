@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/copy-migrations.mjs",
     "start": "node dist/index.js",
     "migrate": "tsx src/db/cli.ts up",
     "migrate:status": "tsx src/db/cli.ts status",
