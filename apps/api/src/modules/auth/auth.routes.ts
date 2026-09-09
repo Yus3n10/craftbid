@@ -93,11 +93,23 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     },
   );
 
-  app.post("/logout", async (request, reply) => {
-    await service.logout(request.cookies?.[REFRESH_COOKIE]);
-    clearSession(reply);
-    return reply.code(204).send();
-  });
+  app.post(
+    "/logout",
+    {
+      schema: {
+        body: z.object({ refreshToken: z.string().optional() }).optional(),
+      },
+    },
+    async (request, reply) => {
+      // The desktop build has no cookie to clear, so it sends the token it
+      // holds. Without this its refresh token would stay valid after sign-out.
+      const presented =
+        request.cookies?.[REFRESH_COOKIE] ?? request.body?.refreshToken;
+      await service.logout(presented);
+      clearSession(reply);
+      return reply.code(204).send();
+    },
+  );
 
   app.get(
     "/me",

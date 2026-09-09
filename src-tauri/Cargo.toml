@@ -1,0 +1,28 @@
+[package]
+name = "raxtan"
+version = "0.1.0"
+description = "Commission handmade work from Filipino artists"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+# Required for the mobile targets Tauri v2 supports. Desktop builds use it too.
+name = "raxtan_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+# Opens external links, such as an artist's Facebook or Instagram, in the
+# system browser rather than inside the app window.
+tauri-plugin-opener = "2"
+
+[profile.release]
+# Installer size matters when the audience may be on metered mobile data.
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

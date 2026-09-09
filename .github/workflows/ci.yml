@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Typecheck, test and build
+    runs-on: ubuntu-latest
+
+    services:
+      # The integration tests run against a real Oracle, never a mock. The
+      # constraints they exercise (the partial unique index for one accepted
+      # bid, the CHECK that stops a bid undercutting the minimum) live only in
+      # the database, so a mocked repository would prove nothing.
+      oracle:
+        image: gvenzl/oracle-free:23-slim
+        env:
+          ORACLE_PASSWORD: ci_sys_password
+          APP_USER: raxtan
+          APP_USER_PASSWORD: ci_app_password
+        ports:
+          - 1521:1521
+        # Without a larger /dev/shm the SGA cannot allocate and the container
+        # dies during listener startup with exit 255.
+        options: >-
+          --shm-size=2g
+          --health-cmd healthcheck.sh
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 40
+          --health-start-period 90s
+
+    env:
+      NODE_ENV: test
+      ORACLE_USER: raxtan
+      ORACLE_PASSWORD: ci_app_password
+      ORACLE_CONNECT_STRING: localhost:1521/FREEPDB1
+      JWT_SECRET: ci-only-secret-value-not-used-anywhere-real-0000
+      STORAGE_DRIVER: local
+      STORAGE_LOCAL_DIR: .storage
+      STORAGE_PUBLIC_BASE_URL: http://localhost:4000/media
+      VITE_API_URL: http://localhost:4000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared package
+        run: pnpm --filter @raxtan/shared build
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Apply migrations
+        run: pnpm --filter @raxtan/api migrate
+
+      - name: Run tests
+        run: pnpm --filter @raxtan/api test
+
+      - name: Production build
+        run: pnpm --filter @raxtan/api build && pnpm --filter @raxtan/web build
+
+      - name: Check no secrets were committed
+        run: |
+          if git ls-files | grep -E '(^|/)\.env$|\.pem$|ewallet|cwallet|tnsnames\.ora'; then
+            echo "A secret or wallet file is tracked in git."
+            exit 1
+          fi
+          echo "No secret or wallet files are tracked."

@@ -2,6 +2,14 @@ import { createContext, useContext, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { LoginInput, MeDto, RegisterInput } from "@raxtan/shared";
 import { ApiError, api } from "./api.js";
+import { clearTokens, getRefreshToken, storeTokens } from "./session.js";
+
+/** The shape both /auth/login and /auth/register return. */
+interface SessionResponse {
+  user: MeDto;
+  accessToken: string;
+  refreshToken: string;
+}
 
 interface AuthValue {
   user: MeDto | null;
@@ -32,21 +40,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     staleTime: 60_000,
   });
 
+  // storeTokens is a no-op in the web build, where the session lives in
+  // httpOnly cookies the client cannot read.
   const loginMutation = useMutation({
     mutationFn: (input: LoginInput) =>
-      api.post<{ user: MeDto }>("/auth/login", input),
-    onSuccess: (result) => queryClient.setQueryData(["me"], result.user),
+      api.post<SessionResponse>("/auth/login", input),
+    onSuccess: (result) => {
+      storeTokens(result);
+      queryClient.setQueryData(["me"], result.user);
+    },
   });
 
   const registerMutation = useMutation({
     mutationFn: (input: RegisterInput) =>
-      api.post<{ user: MeDto }>("/auth/register", input),
-    onSuccess: (result) => queryClient.setQueryData(["me"], result.user),
+      api.post<SessionResponse>("/auth/register", input),
+    onSuccess: (result) => {
+      storeTokens(result);
+      queryClient.setQueryData(["me"], result.user);
+    },
   });
 
   const logoutMutation = useMutation({
-    mutationFn: () => api.post<void>("/auth/logout"),
+    // Sends the refresh token so the desktop build's session is revoked
+    // server-side; in the web build this is an empty object and the cookie
+    // does the work.
+    mutationFn: () =>
+      api.post<void>("/auth/logout", {
+        refreshToken: getRefreshToken() ?? undefined,
+      }),
     onSuccess: () => {
+      clearTokens();
       queryClient.setQueryData(["me"], null);
       // Anything cached could be another user's view of the same route.
       queryClient.clear();

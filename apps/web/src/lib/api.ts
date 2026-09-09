@@ -1,4 +1,11 @@
 import type { ApiErrorDto } from "@raxtan/shared";
+import {
+  BEARER_MODE,
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+  storeTokens,
+} from "./session.js";
 
 declare const __API_URL__: string;
 
@@ -37,13 +44,32 @@ async function refreshSession(): Promise<boolean> {
       const response = await fetch(`${API_URL}/auth/refresh`, {
         method: "POST",
         credentials: "include",
-        // An explicit empty object, because a POST with no body at all fails
-        // JSON body validation with a 400 before the route is reached, which
-        // would make a genuinely renewable session look unrecoverable.
+        // An explicit body, because a POST with no body at all fails JSON body
+        // validation with a 400 before the route is reached, which would make
+        // a genuinely renewable session look unrecoverable. In bearer mode the
+        // stored refresh token travels here, since there is no cookie.
         headers: { "Content-Type": "application/json" },
-        body: "{}",
+        body: JSON.stringify(
+          BEARER_MODE ? { refreshToken: getRefreshToken() ?? undefined } : {},
+        ),
       });
-      return response.ok;
+
+      if (!response.ok) {
+        // The refresh token is spent or revoked; holding on to it only makes
+        // every later request pay for a doomed refresh.
+        if (BEARER_MODE) clearTokens();
+        return false;
+      }
+
+      if (BEARER_MODE) {
+        storeTokens(
+          (await response.json()) as {
+            accessToken: string;
+            refreshToken: string;
+          },
+        );
+      }
+      return true;
     } catch {
       return false;
     } finally {
@@ -72,13 +98,15 @@ export async function request<T>(
 ): Promise<T> {
   const { method = "GET", body, signal, retrying = false } = options;
 
-  const init: RequestInit = { method, credentials: "include", headers: {} };
-  if (signal) init.signal = signal;
+  const headers: Record<string, string> = {};
+  const accessToken = getAccessToken();
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
-  if (body !== undefined) {
-    init.headers = { "Content-Type": "application/json" };
-    init.body = JSON.stringify(body);
-  }
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+
+  const init: RequestInit = { method, credentials: "include", headers };
+  if (signal) init.signal = signal;
+  if (body !== undefined) init.body = JSON.stringify(body);
 
   const response = await fetch(`${API_URL}${path}`, init);
 
@@ -122,9 +150,13 @@ export async function uploadImage(
   const form = new FormData();
   form.append("file", file);
 
+  const accessToken = getAccessToken();
   const response = await fetch(`${API_URL}/images`, {
     method: "POST",
     credentials: "include",
+    // Content-Type is deliberately unset so the browser adds the multipart
+    // boundary itself.
+    ...(accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : {}),
     body: form,
   });
 

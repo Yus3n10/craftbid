@@ -22,9 +22,14 @@
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "test:api": "pnpm --filter @raxtan/api test",
-    "test:e2e": "pnpm --filter @raxtan/web test:e2e"
+    "test:e2e": "pnpm --filter @raxtan/web test:e2e",
+    "tauri": "tauri",
+    "desktop:icons": "tauri icon apps/web/public/icon-512.png",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "tauri build"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.2.0",
     "typescript": "^5.7.2"
   },
   "pnpm": {

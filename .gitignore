@@ -2,6 +2,9 @@
 .env
 .env.*
 !.env.example
+# Build-time config for the desktop app. No secrets: a public API URL and the
+# auth mode, both of which CI needs in order to build a release.
+!.env.desktop
 *.pem
 *.p12
 *.pfx
@@ -29,6 +32,10 @@ out/
 # === Tauri / Rust ===
 src-tauri/target/
 src-tauri/gen/
+# Generated from apps/web/public/icon-512.png by `pnpm tauri icon` during the
+# release build. Committing .ico and .icns binaries that cannot be regenerated
+# or reviewed here would be worse than generating them.
+src-tauri/icons/
 
 # === Local dev storage (uploaded images in dev) ===
 .storage/
