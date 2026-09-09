@@ -32,6 +32,68 @@ describe("authorization boundaries", () => {
     otherArtist = await registerUser("artist");
   });
 
+  /**
+   * Session cookies are SameSite=None in production, since the web app and the
+   * API are on different domains and a Lax cookie is never sent between them.
+   * That makes an Origin check the thing standing between a logged-in user and
+   * any site that wants to act as them.
+   */
+  describe("cross-site request forgery", () => {
+    it("refuses a cookie-authenticated write from a foreign origin", async () => {
+      const app = await getTestApp();
+      const posting = await createPosting(client);
+
+      const response = await app.inject({
+        method: "PATCH",
+        url: `/postings/${posting.id}`,
+        headers: {
+          origin: "https://attacker.example.com",
+          cookie: `craftbid_at=${client.token}`,
+        },
+        payload: { title: "Rewritten by another site" },
+      });
+
+      expect(response.statusCode).toBe(403);
+      expect(response.json().error.code).toBe("forbidden");
+    });
+
+    it("refuses a forged multipart upload, which CORS never preflights", async () => {
+      const app = await getTestApp();
+
+      // A cross-site form post can send multipart without a preflight, so this
+      // is the one route CORS alone would not have protected.
+      const response = await app.inject({
+        method: "POST",
+        url: "/images",
+        headers: {
+          origin: "https://attacker.example.com",
+          cookie: `craftbid_at=${client.token}`,
+          "content-type": "multipart/form-data; boundary=----x",
+        },
+        payload: "------x--\r\n",
+      });
+
+      expect(response.statusCode).toBe(403);
+    });
+
+    it("allows a bearer-authenticated write from any origin", async () => {
+      const app = await getTestApp();
+      const posting = await createPosting(client);
+
+      // The desktop build calls from tauri://localhost and carries a token
+      // rather than a cookie. A token has to be attached deliberately by
+      // script, which is precisely what forgery cannot do.
+      const response = await app.inject({
+        method: "PATCH",
+        url: `/postings/${posting.id}`,
+        headers: { ...authHeaders(client), origin: "tauri://localhost" },
+        payload: { title: "Edited from the desktop app" },
+      });
+
+      expect(response.statusCode).toBe(200);
+    });
+  });
+
   it("stops a client editing another client's posting", async () => {
     const app = await getTestApp();
     const posting = await createPosting(client);

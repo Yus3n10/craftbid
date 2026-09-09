@@ -106,6 +106,37 @@ export async function buildApp(
 
   await app.register(cookie);
 
+  /**
+   * CSRF defence for cookie-authenticated writes.
+   *
+   * Session cookies are SameSite=None in production, because the web app and
+   * the API are on different registrable domains and a Lax cookie is never
+   * sent between them. That alone would let any site trigger a state-changing
+   * request with the user's session attached. CORS is not the protection
+   * people assume: it governs reading the response, not sending the request,
+   * and multipart uploads are a "simple" request that never triggers a
+   * preflight at all.
+   *
+   * So a mutation carrying a browser Origin must carry one we allow. Requests
+   * bearing an Authorization header are exempt: a token has to be attached
+   * deliberately by script, which is the thing forgery cannot do, and the
+   * desktop build legitimately calls from tauri://localhost.
+   */
+  app.addHook("onRequest", async (request, reply) => {
+    if (["GET", "HEAD", "OPTIONS"].includes(request.method)) return;
+    if (request.headers.authorization) return;
+
+    const origin = request.headers.origin;
+    if (origin && !config.corsOrigins.includes(origin)) {
+      return reply.code(403).send({
+        error: {
+          code: "forbidden",
+          message: "This request did not come from an allowed origin.",
+        },
+      });
+    }
+  });
+
   if (enableRateLimit) {
     await app.register(rateLimit, {
       global: true,

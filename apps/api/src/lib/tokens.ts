@@ -90,7 +90,19 @@ export function cookieOptions(maxAgeSeconds: number) {
   return {
     httpOnly: true,
     secure: config.isProduction,
-    sameSite: "lax" as const,
+    /**
+     * The web app and the API sit on different registrable domains, because
+     * the free tiers that host them have no way to share one. Every API call
+     * is therefore cross-site, and a Lax cookie is not sent on those: signing
+     * in succeeded and the very next request came back 401.
+     *
+     * "none" is what makes the session usable at all here, and it requires
+     * Secure, which is why it is tied to production. The CSRF exposure it
+     * would otherwise open is closed by requireTrustedOrigin in app.ts, which
+     * rejects any cookie-authenticated mutation that does not carry an
+     * allowed Origin.
+     */
+    sameSite: config.isProduction ? ("none" as const) : ("lax" as const),
     path: "/",
     maxAge: maxAgeSeconds,
   };
