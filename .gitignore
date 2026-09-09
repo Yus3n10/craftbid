@@ -5,6 +5,9 @@
 # Build-time config for the desktop app. No secrets: a public API URL and the
 # auth mode, both of which CI needs in order to build a release.
 !.env.desktop
+# Same again for the deployed web build. A public API address is not a secret,
+# and the host bakes it in at build time, so it has to be in the repository.
+!.env.production
 # Every file an Oracle wallet zip unpacks. Listed in full because unzipping a
 # wallet into the repo by accident is an easy mistake, and keystore.jks and
 # truststore.jks carry the client key.
