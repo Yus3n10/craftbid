@@ -11,8 +11,32 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "craftbid",
   "compatibility_date": "2026-09-09",
+
+  // A script alongside the assets, purely so a cron trigger has somewhere to
+  // live. Assets are still matched first, and the fetch handler delegates
+  // straight back to them, so serving the site is unchanged.
+  "main": "./worker/keepalive.ts",
+
+  // Every ten minutes, against Render's fifteen-minute idle timeout. Runs on
+  // Cloudflare's scheduler rather than a workflow runner that can be delayed.
+  "triggers": {
+    "crons": ["*/10 * * * *"]
+  },
+
+  "vars": {
+    // Not a secret: the same origin the browser calls, visible in the bundle.
+    "API_ORIGIN": "https://craftbid-api.onrender.com"
+  },
+
+  "observability": {
+    // Cheap, and the only way to see whether a scheduled run actually fired.
+    "enabled": true
+  },
+
   "assets": {
     "directory": "./dist",
+    // Lets the script hand a request back to the asset server.
+    "binding": "ASSETS",
     // Client-side routing: a deep link such as /postings/<id> is not a file on
     // disk, so unknown paths must return index.html rather than a 404.
     //

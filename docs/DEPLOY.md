@@ -213,26 +213,35 @@ Set the repository variable so it knows where to ping:
 **Settings → Secrets and variables → Actions → Variables → New variable**
 `API_URL` = your Render URL.
 
-### The cold start is the slowest thing about the site
+### Keeping the API awake
 
 Render stops a free service after **15 minutes without a request**, and the
 next visitor waits 30 to 60 seconds while it starts. Nothing else on the site
 comes close to that, and it lands on first-time visitors.
 
-The workflow now pings every 10 minutes, which keeps the service up when it
-runs. It is best effort: GitHub delays scheduled workflows under load and stops
-running them on a repository quiet for 60 days.
+A **Cloudflare cron trigger** handles it. `apps/web/wrangler.jsonc` gives the
+site's Worker a `scheduled` handler that pings `/health` every ten minutes, so
+the container never idles out. It needs no extra account and no extra bill: the
+site is already deployed there, and cron triggers are included in the Workers
+free tier.
 
-**For something reliable, add a free external monitor.** UptimeRobot's free
-tier polls every 5 minutes:
+It lives beside the static assets rather than as a separate Worker so it
+deploys with the site and cannot drift out of sync with it. Assets are still
+matched before the script, and the script's `fetch` handler hands anything that
+reaches it straight back to the asset server, so serving the site is unchanged.
 
-1. Sign up at https://uptimerobot.com (no card)
-2. **Add New Monitor** → type **HTTP(s)**
-3. URL: `https://craftbid-api.onrender.com/health`
-4. Interval: **5 minutes**
+Watch it run:
 
-That alone removes almost every cold start, and it tells you when the API is
-down.
+```bash
+npx wrangler tail craftbid
+```
+
+The GitHub workflow still runs twice a week, but only as the backstop for the
+slower clock: the database stops after 7 idle days and is deleted after 90.
+
+**If you would rather not rely on Cloudflare for this**, a free UptimeRobot
+monitor on `https://craftbid-api.onrender.com/health` at a 5-minute interval
+does the same job and also tells you when the API is down.
 
 > GitHub also disables scheduled workflows on repositories with no activity for 60
 ---
