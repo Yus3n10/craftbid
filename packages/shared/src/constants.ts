@@ -81,17 +81,95 @@ export const REACTION_LABELS: Record<ReactionKind, string> = {
 
 export const LINK_PLATFORMS = [
   "facebook",
+  "messenger",
   "instagram",
+  "whatsapp",
+  "viber",
+  "telegram",
+  "email",
   "tiktok",
   "x",
   "youtube",
   "pinterest",
+  "etsy",
+  "behance",
   "shopee",
   "lazada",
   "website",
   "other",
 ] as const;
 export type LinkPlatform = (typeof LINK_PLATFORMS)[number];
+
+/**
+ * How each platform is named, and the hostnames that identify it.
+ *
+ * The hostnames exist so nobody has to pick from a dropdown: paste a link and
+ * the right platform is worked out from it. Getting that wrong is only a wrong
+ * logo, never a wrong destination, so guessing is safe here.
+ */
+export const PLATFORM_META: Record<
+  LinkPlatform,
+  { label: string; hosts: string[] }
+> = {
+  facebook: { label: "Facebook", hosts: ["facebook.com", "fb.com", "fb.me"] },
+  messenger: { label: "Messenger", hosts: ["m.me", "messenger.com"] },
+  instagram: { label: "Instagram", hosts: ["instagram.com", "instagr.am"] },
+  whatsapp: { label: "WhatsApp", hosts: ["wa.me", "whatsapp.com", "api.whatsapp.com"] },
+  viber: { label: "Viber", hosts: ["viber.com", "invite.viber.com"] },
+  telegram: { label: "Telegram", hosts: ["t.me", "telegram.me", "telegram.org"] },
+  email: { label: "Email", hosts: [] },
+  tiktok: { label: "TikTok", hosts: ["tiktok.com"] },
+  x: { label: "X", hosts: ["x.com", "twitter.com"] },
+  youtube: { label: "YouTube", hosts: ["youtube.com", "youtu.be"] },
+  pinterest: { label: "Pinterest", hosts: ["pinterest.com", "pin.it"] },
+  etsy: { label: "Etsy", hosts: ["etsy.com"] },
+  behance: { label: "Behance", hosts: ["behance.net"] },
+  shopee: { label: "Shopee", hosts: ["shopee.ph", "shopee.com"] },
+  lazada: { label: "Lazada", hosts: ["lazada.com.ph", "lazada.com"] },
+  website: { label: "Website", hosts: [] },
+  other: { label: "Other", hosts: [] },
+};
+
+/**
+ * Works out which platform a pasted link belongs to.
+ *
+ * Falls back to `website` for anything with a hostname and `other` only when
+ * the text is not a link at all, so a personal portfolio does not end up
+ * labelled "Other" just because it is not a social network.
+ */
+export function detectPlatform(raw: string): LinkPlatform {
+  const value = raw.trim();
+  if (!value) return "other";
+
+  if (/^mailto:/i.test(value) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+    return "email";
+  }
+
+  // Parsed by hand rather than with URL, which is a runtime global this
+  // package cannot assume: shared is compiled for both Node and the browser
+  // and pulling in the DOM lib to get one constructor would be the wrong
+  // trade. Strip the scheme, then take everything before the first /, ? or #,
+  // drop any userinfo and port, and lowercase what is left.
+  const host = value
+    .replace(/^[a-z][a-z0-9+.-]*:\/\//i, "")
+    .split(/[/?#]/)[0]!
+    .split("@")
+    .pop()!
+    .split(":")[0]!
+    .toLowerCase()
+    .replace(/^www\./, "");
+
+  if (!host.includes(".")) return "other";
+
+  for (const platform of LINK_PLATFORMS) {
+    const { hosts } = PLATFORM_META[platform];
+    if (hosts.some((candidate) => host === candidate || host.endsWith(`.${candidate}`))) {
+      return platform;
+    }
+  }
+
+  return "website";
+}
 
 export interface CraftCategory {
   slug: string;

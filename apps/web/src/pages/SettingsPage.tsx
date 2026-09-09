@@ -5,6 +5,7 @@ import {
   LIMITS,
   LINK_PLATFORMS,
   PH_REGIONS,
+  detectPlatform,
   type LinkPlatform,
   type MeDto,
 } from "@craftbid/shared";
@@ -13,6 +14,7 @@ import { useAuth } from "../lib/auth.js";
 import { cx } from "../lib/cx.js";
 import { Page } from "../components/layout/Shell.js";
 import { Button } from "../components/ui/Button.js";
+import { PlatformLogo, platformLabel } from "../components/ui/PlatformLogos.js";
 import { Field, Select, TextArea, TextInput } from "../components/ui/Field.js";
 import { Card, ThreadRule } from "../components/ui/Primitives.js";
 import { FormError, PageHeading } from "../components/ui/States.js";
@@ -326,7 +328,7 @@ export function SettingsPage() {
 
         <Section
           title="Where else to find you"
-          description="Public links on your profile. Only https addresses are accepted."
+          description="Paste a link and the platform is worked out from it. Clients use these to reach you directly, so a Messenger, WhatsApp or Viber link is often more useful than a website."
         >
           <form
             className="space-y-4"
@@ -340,10 +342,24 @@ export function SettingsPage() {
 
             <ul className="space-y-3">
               {links.map((link, index) => (
-                <li key={index} className="flex gap-2">
+                <li key={index} className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+                  <span
+                    className="flex size-9 shrink-0 items-center justify-center rounded-md border border-fiber bg-paper-sunk text-ink-soft"
+                    title={platformLabel(link.platform)}
+                  >
+                    <PlatformLogo platform={link.platform} />
+                  </span>
+
+                  {/*
+                    The platform is derived from the link as it is typed, and
+                    the select is here to correct a wrong guess rather than to
+                    be filled in first. Asking someone to categorise their own
+                    Instagram profile before pasting it is work the computer
+                    can do.
+                  */}
                   <Select
                     aria-label="Platform"
-                    className="w-40 shrink-0"
+                    className="w-36 shrink-0"
                     value={link.platform}
                     onChange={(event) =>
                       setLinks((current) =>
@@ -357,24 +373,24 @@ export function SettingsPage() {
                   >
                     {LINK_PLATFORMS.map((platform) => (
                       <option key={platform} value={platform}>
-                        {platform}
+                        {platformLabel(platform)}
                       </option>
                     ))}
                   </Select>
                   <TextInput
                     aria-label="Link address"
-                    type="url"
-                    placeholder="https://facebook.com/yourpage"
+                    placeholder="https://instagram.com/yourname or you@gmail.com"
                     value={link.url}
-                    onChange={(event) =>
+                    onChange={(event) => {
+                      const url = event.target.value;
                       setLinks((current) =>
                         current.map((item, position) =>
                           position === index
-                            ? { ...item, url: event.target.value }
+                            ? { ...item, url, platform: detectPlatform(url) }
                             : item,
                         ),
-                      )
-                    }
+                      );
+                    }}
                   />
                   <Button
                     type="button"
@@ -399,7 +415,7 @@ export function SettingsPage() {
                 size="sm"
                 disabled={links.length >= LIMITS.linksPerUser}
                 onClick={() =>
-                  setLinks((current) => [...current, { platform: "facebook", url: "" }])
+                  setLinks((current) => [...current, { platform: "website", url: "" }])
                 }
               >
                 Add a link

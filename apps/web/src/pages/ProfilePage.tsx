@@ -12,6 +12,7 @@ import { useAuth } from "../lib/auth.js";
 import { materialColor } from "../lib/materials.js";
 import { Page } from "../components/layout/Shell.js";
 import { ButtonLink } from "../components/ui/Button.js";
+import { PlatformLogo, platformLabel } from "../components/ui/PlatformLogos.js";
 import { Stars } from "../components/ui/Stars.js";
 import { Avatar, Card, Tag, ThreadRule } from "../components/ui/Primitives.js";
 import {
@@ -22,49 +23,34 @@ import {
 } from "../components/ui/States.js";
 import { PostCard } from "../components/PostCard.js";
 
-const PLATFORM_LABELS: Record<string, string> = {
-  facebook: "Facebook",
-  instagram: "Instagram",
-  tiktok: "TikTok",
-  x: "X",
-  youtube: "YouTube",
-  pinterest: "Pinterest",
-  shopee: "Shopee",
-  lazada: "Lazada",
-  website: "Website",
-  other: "Link",
-};
 
 function LinkList({ links }: { links: ExternalLinkDto[] }) {
   if (links.length === 0) return null;
+
   return (
     <div>
-      <h2 className="eyebrow mb-2">Find them elsewhere</h2>
+      <h2 className="eyebrow mb-2">Reach them directly</h2>
       <ul className="flex flex-wrap gap-2">
-        {links.map((link) => (
-          <li key={`${link.platform}-${link.url}`}>
-            <a
-              href={link.url}
-              target="_blank"
-              // noreferrer and nofollow because these are user-supplied links
-              // to sites Craftbid does not vouch for.
-              rel="noopener noreferrer nofollow"
-              className="inline-flex items-center gap-1.5 rounded-sm border border-fiber bg-paper px-2.5 py-1 text-sm text-ink-soft transition-colors hover:border-fiber-strong hover:text-ink"
-            >
-              {link.label ?? PLATFORM_LABELS[link.platform] ?? link.platform}
-              <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true">
-                <path
-                  d="M4 2h6v6M10 2L2.5 9.5"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  fill="none"
-                />
-              </svg>
-            </a>
-          </li>
-        ))}
+        {links.map((link) => {
+          const isEmail = link.url.toLowerCase().startsWith("mailto:");
+          return (
+            <li key={`${link.platform}-${link.url}`}>
+              <a
+                href={link.url}
+                // An email link stays in this tab: opening a mail client in a
+                // new browser tab leaves an empty one behind.
+                {...(isEmail ? {} : { target: "_blank" })}
+                // noreferrer and nofollow because these are user-supplied links
+                // to sites Craftbid does not vouch for.
+                rel="noopener noreferrer nofollow"
+                className="inline-flex items-center gap-2 rounded-sm border border-fiber bg-paper px-2.5 py-1.5 text-sm text-ink-soft transition-colors hover:border-fiber-strong hover:text-ink"
+              >
+                <PlatformLogo platform={link.platform} className="size-4 shrink-0" />
+                {link.label ?? platformLabel(link.platform)}
+              </a>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

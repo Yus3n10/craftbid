@@ -395,3 +395,57 @@ describe("the social layer", () => {
     });
   });
 });
+
+/**
+ * Contact links.
+ *
+ * The scheme rules are the security-relevant part: a javascript: or data: URL
+ * rendered as a profile link is stored cross-site scripting, and the profile
+ * is the one page strangers are invited to look at.
+ */
+describe("contact links", () => {
+  let artist: Session;
+
+  beforeEach(async () => {
+    await resetData();
+    artist = await registerUser("artist");
+  });
+
+  async function save(links: unknown) {
+    const app = await getTestApp();
+    return app.inject({
+      method: "PUT",
+      url: "/me/links",
+      headers: authHeaders(artist),
+      payload: { links },
+    });
+  }
+
+  it("accepts the messaging platforms artists actually use", async () => {
+    const response = await save([
+      { platform: "messenger", url: "https://m.me/nenahooks" },
+      { platform: "whatsapp", url: "https://wa.me/639171234567" },
+      { platform: "viber", url: "https://invite.viber.com/?g2=abc" },
+      { platform: "telegram", url: "https://t.me/nenahooks" },
+    ]);
+    expect(response.statusCode).toBe(200);
+    expect(response.json().links).toHaveLength(4);
+  });
+
+  it("turns a bare email address into a mailto link", async () => {
+    const response = await save([{ platform: "email", url: "nena@gmail.com" }]);
+    expect(response.statusCode).toBe(200);
+    // Nobody should have to know to type the prefix.
+    expect(response.json().links[0].url).toBe("mailto:nena@gmail.com");
+  });
+
+  it.each([
+    ["javascript:alert(1)"],
+    ["data:text/html,<script>alert(1)</script>"],
+    ["http://insecure.example.com"],
+    ["vbscript:msgbox(1)"],
+  ])("refuses %s", async (url) => {
+    const response = await save([{ platform: "website", url }]);
+    expect(response.statusCode).toBe(400);
+  });
+});

@@ -42,9 +42,31 @@ export const updateArtistProfileSchema = z.object({
     .optional(),
 });
 
+/**
+ * A contact link.
+ *
+ * Two schemes and no others. https for anything on the web, mailto for an
+ * email address, and a bare address is normalised into a mailto so nobody has
+ * to know to type the prefix. Everything else is rejected here and again by a
+ * CHECK on the table, because a javascript: or data: URL rendered as a profile
+ * link is a stored cross-site scripting hole.
+ */
+export const contactUrlSchema = z
+  .string()
+  .trim()
+  .min(1, "Add a link or an email address.")
+  .max(500)
+  .transform((value) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? `mailto:${value}` : value,
+  )
+  .refine(
+    (value) => /^https:\/\/\S+\.\S+/i.test(value) || /^mailto:[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(value),
+    "Use a link starting with https:// or an email address.",
+  );
+
 export const externalLinkSchema = z.object({
   platform: z.enum(LINK_PLATFORMS),
-  url: httpsUrlSchema,
+  url: contactUrlSchema,
   label: optionalText(60),
 });
 
