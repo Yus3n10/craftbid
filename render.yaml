@@ -17,9 +17,12 @@ services:
     healthCheckPath: /health
 
     # corepack's default shim location is /usr/bin, which is read-only on
-    # Render, so `corepack enable` alone fails with EROFS. Installing the shims
-    # under $HOME and putting that on PATH is the part that works.
+    # Render, so `corepack enable` alone fails with EROFS. The shims go under
+    # $HOME instead, which then goes on PATH. The mkdir is required:
+    # --install-directory expects the directory to already exist and fails with
+    # ENOENT otherwise.
     buildCommand: >-
+      mkdir -p "$HOME/.bin" &&
       corepack enable --install-directory "$HOME/.bin" &&
       export PATH="$HOME/.bin:$PATH" &&
       pnpm install --frozen-lockfile &&
