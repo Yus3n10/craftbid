@@ -77,3 +77,48 @@ export async function markAllRead(
     { userId: uuidToBuf(userId) },
   );
 }
+
+/**
+ * Inserts a notification, replacing any unread one already sent by the same
+ * person about the same post.
+ *
+ * Without this, someone cycling love to support to like leaves three notices
+ * for one opinion, and a post that collects a few undecided readers buries
+ * everything else in the list. Only unread notices are replaced: one already
+ * read is a record of something the recipient saw, and rewriting history under
+ * them is worse than a duplicate.
+ */
+export async function notifyOncePerActor(
+  input: {
+    userId: string;
+    type: NotificationType;
+    postId: string;
+    actorId: string;
+    payload: Record<string, unknown>;
+  },
+  tx: Queryable,
+): Promise<void> {
+  await tx.run(
+    `DELETE FROM notifications
+      WHERE user_id = :userId
+        AND type = :type
+        AND read_at IS NULL
+        AND JSON_VALUE(payload, '$.postId') = :postId
+        AND JSON_VALUE(payload, '$.actorId') = :actorId`,
+    {
+      userId: uuidToBuf(input.userId),
+      type: input.type,
+      postId: input.postId,
+      actorId: input.actorId,
+    },
+  );
+
+  await notify(
+    {
+      userId: input.userId,
+      type: input.type,
+      payload: { ...input.payload, postId: input.postId, actorId: input.actorId },
+    },
+    tx,
+  );
+}

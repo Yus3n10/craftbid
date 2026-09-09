@@ -254,6 +254,126 @@ describe("the social layer", () => {
     });
   });
 
+  describe("notifications", () => {
+    async function noticesFor(session: Session) {
+      const app = await getTestApp();
+      const response = await app.inject({
+        method: "GET",
+        url: "/notifications?limit=20",
+        headers: authHeaders(session),
+      });
+      return response.json().items as { type: string; payload: Record<string, unknown> }[];
+    }
+
+    it("tells the artist when someone reacts, and which reaction it was", async () => {
+      const app = await getTestApp();
+      await app.inject({
+        method: "PUT",
+        url: `/posts/${postId}/reaction`,
+        headers: authHeaders(client),
+        payload: { kind: "support" },
+      });
+
+      const notices = await noticesFor(artist);
+      expect(notices).toHaveLength(1);
+      expect(notices[0]!.type).toBe("post_reaction");
+      expect(notices[0]!.payload).toMatchObject({ kind: "support", postId });
+    });
+
+    it("leaves one notice when someone cycles through reactions", async () => {
+      const app = await getTestApp();
+      for (const kind of ["like", "support", "love"]) {
+        await app.inject({
+          method: "PUT",
+          url: `/posts/${postId}/reaction`,
+          headers: authHeaders(client),
+          payload: { kind },
+        });
+      }
+
+      // Three clicks, one opinion. Three notices would bury everything else.
+      const notices = await noticesFor(artist);
+      expect(notices).toHaveLength(1);
+      expect(notices[0]!.payload).toMatchObject({ kind: "love" });
+    });
+
+    it("keeps one notice per person, not per post", async () => {
+      const app = await getTestApp();
+      for (const session of [client, bystander]) {
+        await app.inject({
+          method: "PUT",
+          url: `/posts/${postId}/reaction`,
+          headers: authHeaders(session),
+          payload: { kind: "love" },
+        });
+      }
+
+      expect(await noticesFor(artist)).toHaveLength(2);
+    });
+
+    it("tells the artist about every comment separately", async () => {
+      const app = await getTestApp();
+      for (const body of ["The first thing said.", "A second, separate thought."]) {
+        await app.inject({
+          method: "POST",
+          url: `/posts/${postId}/comments`,
+          headers: authHeaders(client),
+          payload: { body },
+        });
+      }
+
+      // Unlike reactions: two comments are two things somebody said.
+      const notices = await noticesFor(artist);
+      expect(notices).toHaveLength(2);
+      expect(notices.every((n) => n.type === "post_comment")).toBe(true);
+    });
+
+    it("does not notify the artist about their own reaction or comment", async () => {
+      const app = await getTestApp();
+      await app.inject({
+        method: "PUT",
+        url: `/posts/${postId}/reaction`,
+        headers: authHeaders(artist),
+        payload: { kind: "like" },
+      });
+      await app.inject({
+        method: "POST",
+        url: `/posts/${postId}/comments`,
+        headers: authHeaders(artist),
+        payload: { body: "Answering a question about my own piece." },
+      });
+
+      expect(await noticesFor(artist)).toHaveLength(0);
+    });
+
+    it("keeps a notice the artist has already read", async () => {
+      const app = await getTestApp();
+      await app.inject({
+        method: "PUT",
+        url: `/posts/${postId}/reaction`,
+        headers: authHeaders(client),
+        payload: { kind: "love" },
+      });
+      await app.inject({
+        method: "POST",
+        url: "/notifications/read",
+        headers: authHeaders(artist),
+      });
+
+      await app.inject({
+        method: "PUT",
+        url: `/posts/${postId}/reaction`,
+        headers: authHeaders(client),
+        payload: { kind: "like" },
+      });
+
+      // Deduplication only replaces unread notices. One already read is a
+      // record of something the artist saw, and rewriting it under them would
+      // be worse than a duplicate.
+      expect(await noticesFor(artist)).toHaveLength(2);
+    });
+  });
+
   describe("craft requests stay out of it", () => {
     it("has no reaction, comment or save endpoint for a posting", async () => {
       const app = await getTestApp();

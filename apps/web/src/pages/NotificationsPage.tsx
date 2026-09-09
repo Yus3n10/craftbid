@@ -19,15 +19,38 @@ const COPY: Record<NotificationType, string> = {
   application_rejected: "Your bid was not chosen this time.",
   commission_completed: "A commission was closed.",
   review_received: "Someone left you a review.",
+  post_reaction: "Someone reacted to your work.",
+  post_comment: "Someone commented on your work.",
 };
+
+/**
+ * Reaction copy says which reaction it was, because "someone reacted" is
+ * almost no information and the three kinds mean genuinely different things.
+ */
+const REACTION_COPY: Record<string, string> = {
+  love: "Someone loved a piece of your work.",
+  support: "Someone backed your work.",
+  like: "Someone liked a piece of your work.",
+};
+
+function describe(notification: NotificationDto): string {
+  if (notification.type === "post_reaction") {
+    const kind = (notification.payload as { kind?: string }).kind;
+    return (kind && REACTION_COPY[kind]) ?? COPY.post_reaction;
+  }
+  return COPY[notification.type];
+}
 
 function linkFor(notification: NotificationDto): string {
   const payload = notification.payload as {
     postingId?: string;
     commissionId?: string;
+    postId?: string;
   };
   if (payload.commissionId) return `/commissions/${payload.commissionId}`;
   if (payload.postingId) return `/postings/${payload.postingId}`;
+  // A reaction or comment leads to the piece it was about.
+  if (payload.postId) return `/posts/${payload.postId}`;
   return "/commissions";
 }
 
@@ -89,7 +112,7 @@ export function NotificationsPage() {
                 >
                   <div className="flex items-start justify-between gap-4 pl-3">
                     <div>
-                      <p className="text-sm text-ink">{COPY[notification.type]}</p>
+                      <p className="text-sm text-ink">{describe(notification)}</p>
                       <p className="mt-1 text-xs text-ink-faint">
                         {new Date(notification.createdAt).toLocaleString("en-PH", {
                           day: "numeric",

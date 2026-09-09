@@ -56,6 +56,8 @@ export const NOTIFICATION_TYPES = [
   "application_rejected",
   "commission_completed",
   "review_received",
+  "post_reaction",
+  "post_comment",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
