@@ -102,26 +102,33 @@ Or configure it by hand:
 
 - **Runtime:** Node
 - **Region:** Singapore (closest to the Philippines)
-- **Build:** `mkdir -p "$HOME/.bin" && corepack enable --install-directory "$HOME/.bin" && export PATH="$HOME/.bin:$PATH" && pnpm install --frozen-lockfile && pnpm --filter @craftbid/shared build && pnpm --filter @craftbid/api build`
+- **Build:** `npm install -g pnpm@10.34.5 && pnpm install --frozen-lockfile && pnpm --filter @craftbid/shared build && pnpm --filter @craftbid/api build`
 - **Start:** `node apps/api/dist/index.js`
 - **Health check path:** `/health`
 
-### Three build traps, all already handled
+### Build traps, all hit on real deploys
 
-Every one of these was hit on a real deploy, and none of the error messages
-point at the cause:
+None of these error messages point at their cause.
 
-1. **`corepack enable` fails with `EROFS: read-only file system, unlink
-   '/usr/bin/pnpm'`.** Corepack writes its shims to `/usr/bin`, which is
-   read-only on Render. They go under `$HOME/.bin` instead, which is then added
-   to `PATH`.
-2. **Then it fails with `ENOENT: lstat '/opt/render/.bin'`.**
-   `--install-directory` does not create the directory, so the `mkdir -p` in
-   front of it is load-bearing rather than defensive.
-3. **Render picks the newest Node it is allowed to.** An open-ended
-   `engines: ">=22"` got Node 26, well ahead of the version the test suite runs
-   on, and both `sharp` and `oracledb` are native modules. `.node-version` pins
-   22 and `engines` now has an upper bound.
+**Editing `render.yaml` does not change an existing service.** Render copies
+`buildCommand` into the service's own settings when the Blueprint is first
+created, and reads the file again only on an explicit Blueprint sync. A commit
+that fixes the build command will be checked out and then ignored, and the log
+shows the old command next to the new commit hash. Either edit the build
+command in **Settings → Build Command**, or re-sync the Blueprint.
+
+**Do not use corepack here.** It cost three failed deploys. Its shims default
+to `/usr/bin`, which is read-only (`EROFS`); pointing it elsewhere with
+`--install-directory` then fails with `ENOENT` because it does not create the
+directory; and it still needs a `PATH` edit afterwards. `npm install -g pnpm`
+installs beside the Node that Render provisioned, under
+`/opt/render/project/nodes/<version>/`, which is writable and already on
+`PATH`.
+
+**Render picks the newest Node it is allowed to.** An open-ended
+`engines: ">=22"` got Node 26, well ahead of the version the test suite runs
+on, and both `sharp` and `oracledb` are native modules. `.node-version` pins 22
+and `engines` now has an upper bound.
 
 Environment variables are listed in `render.yaml`. The ones that catch people
 out:
@@ -139,7 +146,7 @@ out:
 
 Connect the repository and set:
 
-- **Build command:** `mkdir -p "$HOME/.bin" && corepack enable --install-directory "$HOME/.bin" && export PATH="$HOME/.bin:$PATH" && pnpm install --frozen-lockfile && pnpm --filter @craftbid/shared build && pnpm --filter @craftbid/web build`
+- **Build command:** `npm install -g pnpm@10.34.5 && pnpm install --frozen-lockfile && pnpm --filter @craftbid/shared build && pnpm --filter @craftbid/web build`
 - **Build output directory:** `apps/web/dist`
 - **Environment variable:** `VITE_API_URL` = your Render URL, no trailing slash
 

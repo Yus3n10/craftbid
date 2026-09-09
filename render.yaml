@@ -16,15 +16,17 @@ services:
     region: singapore
     healthCheckPath: /health
 
-    # corepack's default shim location is /usr/bin, which is read-only on
-    # Render, so `corepack enable` alone fails with EROFS. The shims go under
-    # $HOME instead, which then goes on PATH. The mkdir is required:
-    # --install-directory expects the directory to already exist and fails with
-    # ENOENT otherwise.
+    # Installing pnpm with npm rather than corepack, after corepack cost three
+    # failed deploys: its shims default to the read-only /usr/bin (EROFS), and
+    # pointing it elsewhere needs both a pre-created directory and a PATH edit.
+    #
+    # npm puts a global install next to the Node that Render provisioned, under
+    # /opt/render/project/nodes/<version>/, which is writable and already on
+    # PATH. No directory to create, no PATH to manipulate.
+    #
+    # Keep this version in step with `packageManager` in the root package.json.
     buildCommand: >-
-      mkdir -p "$HOME/.bin" &&
-      corepack enable --install-directory "$HOME/.bin" &&
-      export PATH="$HOME/.bin:$PATH" &&
+      npm install -g pnpm@10.34.5 &&
       pnpm install --frozen-lockfile &&
       pnpm --filter @craftbid/shared build &&
       pnpm --filter @craftbid/api build
