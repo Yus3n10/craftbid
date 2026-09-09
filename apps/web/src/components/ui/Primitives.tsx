@@ -22,8 +22,9 @@ export function Card({
       style={selvedgeStyle(categorySlug)}
       className={cx(
         "selvedge relative overflow-hidden rounded-md border border-fiber bg-paper-raised",
-        interactive &&
-          "transition-shadow duration-200 hover:shadow-lift focus-within:shadow-lift",
+        // `lift` carries the hover movement and the paired image scale; the
+        // focus ring still has to appear for keyboard users, who get no hover.
+        interactive && "lift focus-within:shadow-lift",
         className,
       )}
     >
@@ -204,7 +205,9 @@ export function ImageFrame({
       src={image.url}
       alt={alt}
       loading="lazy"
-      className={cx("w-full bg-paper-sunk object-cover", className)}
+      // lift-media: scales a touch when its card is hovered, so the photograph
+      // is the thing that responds rather than the frame around it.
+      className={cx("lift-media w-full bg-paper-sunk object-cover", className)}
       style={{ aspectRatio: aspect }}
     />
   );

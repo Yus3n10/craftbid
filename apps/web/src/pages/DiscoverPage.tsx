@@ -74,7 +74,7 @@ export function DiscoverPage() {
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
         <>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="stagger grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {isLoading ? (
               <CardSkeleton count={8} />
             ) : (

@@ -5,6 +5,7 @@ import { formatPeso } from "@craftbid/shared";
 import { api } from "../lib/api.js";
 import { Page } from "../components/layout/Shell.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
+import { Stars } from "../components/ui/Stars.js";
 import {
   Card,
   ImageFrame,
@@ -20,15 +21,19 @@ import {
   RowSkeleton,
 } from "../components/ui/States.js";
 
-function Stars({ average, count }: { average: number | null; count: number }) {
+function RatingSummary({
+  average,
+  count,
+}: {
+  average: number | null;
+  count: number;
+}) {
   if (count === 0) {
     return <span className="text-xs text-ink-faint">No reviews yet</span>;
   }
   return (
     <span className="flex items-center gap-1.5 text-xs text-ink-soft">
-      <span aria-hidden="true" className="text-amber">
-        {"★".repeat(Math.round(average ?? 0)).padEnd(5, "☆")}
-      </span>
+      <Stars value={average ?? 0} />
       <span className="tabular">
         {average?.toFixed(1)} ({count})
       </span>
@@ -60,7 +65,7 @@ function ApplicationRow({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1.5">
             <UserChip user={application.artist} size={40} />
-            <Stars
+            <RatingSummary
               average={application.artistRating.average}
               count={application.artistRating.count}
             />

@@ -81,7 +81,10 @@ test.describe("marketplace", () => {
       .fill(
         "A handmade crochet bouquet for a wedding, white roses with light blue accents, about 25cm across.",
       );
-    await page.getByLabel("Craft").selectOption("crochet");
+    // By role, not label. "Craft" as a substring also matches the header's
+    // "Craftbid home" link, and the exact string misses because the required
+    // marker makes the accessible name "Craft*".
+    await page.getByRole("combobox", { name: /Craft/ }).selectOption("crochet");
     await page.getByLabel("Starting budget").fill("1500");
     await page.getByRole("button", { name: "Post request" }).click();
 

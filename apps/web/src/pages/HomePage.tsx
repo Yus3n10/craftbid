@@ -122,7 +122,7 @@ function LatestRequests() {
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="stagger grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {isLoading ? (
             <CardSkeleton count={3} />
           ) : data && data.items.length > 0 ? (
@@ -169,7 +169,7 @@ function RecentWork() {
         {error ? (
           <ErrorState error={error} onRetry={() => void refetch()} />
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="stagger grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {isLoading ? (
               <CardSkeleton count={4} />
             ) : data && data.items.length > 0 ? (

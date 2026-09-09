@@ -121,6 +121,127 @@
   }
 }
 
+/*
+  Motion.
+
+  One rhythm for the whole interface, so nothing feels like it was tuned in
+  isolation. Entering uses ease-out and takes longer; leaving uses ease-in and
+  is quicker, because a thing arriving deserves more attention than a thing
+  going away.
+
+  Everything below animates transform and opacity only. Animating width, height
+  or top forces layout on every frame, which is what makes a cheap interface
+  stutter on the mid-range Android most of this audience is holding.
+
+  The reduced-motion block above already flattens all of it to nothing.
+*/
+@theme {
+  --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --duration-quick: 140ms;
+  --duration-base: 220ms;
+}
+
+@layer utilities {
+  /*
+    Content arriving after a fetch. A short rise rather than a fade alone: the
+    movement is what tells you something resolved, and 8px is enough to read as
+    intent without reading as decoration.
+  */
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .rise-in {
+    animation: rise-in var(--duration-base) var(--ease-enter) both;
+  }
+
+  /*
+    Grid entrance. Staggering by index tells the eye the cards are a sequence
+    rather than a wall, and capping at the eighth keeps a long list from making
+    the reader wait for the bottom row.
+  */
+  .stagger > * {
+    animation: rise-in var(--duration-base) var(--ease-enter) both;
+  }
+  .stagger > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger > *:nth-child(2) { animation-delay: 40ms; }
+  .stagger > *:nth-child(3) { animation-delay: 80ms; }
+  .stagger > *:nth-child(4) { animation-delay: 120ms; }
+  .stagger > *:nth-child(5) { animation-delay: 160ms; }
+  .stagger > *:nth-child(6) { animation-delay: 200ms; }
+  .stagger > *:nth-child(7) { animation-delay: 240ms; }
+  .stagger > *:nth-child(n + 8) { animation-delay: 280ms; }
+
+  /*
+    Cards. The lift is 2px and the shadow barely changes: on a page of
+    photographs the work should move, not the furniture around it. Paired with
+    an image scale so the card feels like one object under the cursor.
+
+    Guarded on (hover: hover) so a phone, where every tap is briefly a hover,
+    does not leave cards stuck in their raised state.
+  */
+  @media (hover: hover) {
+    .lift {
+      transition:
+        transform var(--duration-base) var(--ease-enter),
+        box-shadow var(--duration-base) var(--ease-enter);
+    }
+    .lift:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px -8px rgb(31 58 77 / 0.18);
+    }
+    .lift:hover .lift-media {
+      transform: scale(1.03);
+    }
+  }
+
+  .lift-media {
+    transition: transform 420ms var(--ease-enter);
+    will-change: transform;
+  }
+
+  /* Pressing anything should feel like pressing something. */
+  .press {
+    transition: transform var(--duration-quick) var(--ease-exit);
+  }
+  .press:active {
+    transform: scale(0.97);
+  }
+
+  /*
+    Stated here as well as in the base layer, rather than trusting the cascade
+    to carry it. `!important` inverts layer precedence, so reasoning about
+    whether a base-layer override still beats a utility-layer animation is
+    exactly the kind of subtlety that silently stops working after a refactor.
+    Someone who asked their system to stop moving things should be obeyed by
+    the rule that sits next to the movement.
+  */
+  @media (prefers-reduced-motion: reduce) {
+    .rise-in,
+    .stagger > * {
+      animation: none;
+    }
+    .lift,
+    .lift-media,
+    .press {
+      transition: none;
+    }
+    .lift:hover,
+    .lift:hover .lift-media,
+    .press:active {
+      transform: none;
+    }
+  }
+}
+
 @layer components {
   /*
     The signature: a selvedge, the self-finished edge that stops woven cloth

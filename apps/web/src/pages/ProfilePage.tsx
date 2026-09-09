@@ -12,6 +12,7 @@ import { useAuth } from "../lib/auth.js";
 import { materialColor } from "../lib/materials.js";
 import { Page } from "../components/layout/Shell.js";
 import { ButtonLink } from "../components/ui/Button.js";
+import { Stars } from "../components/ui/Stars.js";
 import { Avatar, Card, Tag, ThreadRule } from "../components/ui/Primitives.js";
 import {
   CardSkeleton,
@@ -137,9 +138,7 @@ function Reviews({ username }: { username: string }) {
                     </span>
                   </div>
                 </div>
-                <span className="text-amber" aria-label={`${review.rating} out of 5`}>
-                  {"★".repeat(review.rating).padEnd(5, "☆")}
-                </span>
+                <Stars value={review.rating} />
               </div>
               {review.body && (
                 <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-ink-soft">
@@ -164,7 +163,7 @@ function Portfolio({ username }: { username: string }) {
   if (error) return <ErrorState error={error} onRetry={() => void refetch()} />;
 
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="stagger grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {isLoading ? (
         <CardSkeleton count={3} />
       ) : data && data.items.length > 0 ? (

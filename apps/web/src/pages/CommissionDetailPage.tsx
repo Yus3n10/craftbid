@@ -7,6 +7,7 @@ import { useAuth } from "../lib/auth.js";
 import { cx } from "../lib/cx.js";
 import { Page } from "../components/layout/Shell.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
+import { StarPicker, Stars } from "../components/ui/Stars.js";
 import { Field, TextArea } from "../components/ui/Field.js";
 import {
   Avatar,
@@ -58,22 +59,8 @@ function ReviewForm({ commission }: { commission: CommissionDto }) {
 
           <fieldset>
             <legend className="mb-2 text-sm font-medium text-ink">Rating</legend>
-            <div className="flex gap-1">
-              {[1, 2, 3, 4, 5].map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setRating(value)}
-                  aria-label={`${value} star${value === 1 ? "" : "s"}`}
-                  aria-pressed={rating === value}
-                  className={cx(
-                    "rounded-sm px-1 text-3xl leading-none transition-colors",
-                    value <= rating ? "text-amber" : "text-fiber-strong hover:text-amber",
-                  )}
-                >
-                  ★
-                </button>
-              ))}
+            <div className="text-3xl leading-none">
+              <StarPicker value={rating} onChange={setRating} />
             </div>
           </fieldset>
 
@@ -203,12 +190,7 @@ export function CommissionDetailPage() {
                               {review.reviewer.displayName}
                             </span>
                           </div>
-                          <span
-                            className="text-amber"
-                            aria-label={`${review.rating} out of 5`}
-                          >
-                            {"★".repeat(review.rating).padEnd(5, "☆")}
-                          </span>
+                          <Stars value={review.rating} />
                         </div>
                         {review.body && (
                           <p className="mt-3 whitespace-pre-wrap text-sm text-ink-soft">

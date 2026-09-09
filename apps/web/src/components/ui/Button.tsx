@@ -20,8 +20,11 @@ const SIZES: Record<Size, string> = {
   lg: "h-12 px-6 text-base",
 };
 
+// `press` gives the 3% squash on pointer-down. Tapping a button on a phone
+// otherwise has no acknowledgement until the network answers, and on a slow
+// connection that gap is long enough for people to tap again.
 const BASE =
-  "inline-flex items-center justify-center gap-2 rounded-md font-medium " +
+  "inline-flex items-center justify-center gap-2 rounded-md font-medium press " +
   "transition-colors duration-150 disabled:opacity-50 disabled:pointer-events-none " +
   "whitespace-nowrap";
 
