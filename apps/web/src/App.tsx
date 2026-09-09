@@ -1,26 +1,45 @@
-import type { ReactNode } from "react";
+import { Suspense, lazy, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import type { UserRole } from "@raxtan/shared";
 import { useAuth } from "./lib/auth.js";
 import { Page, Shell } from "./components/layout/Shell.js";
-import { EmptyState, RowSkeleton } from "./components/ui/States.js";
+import { CardSkeleton, EmptyState, RowSkeleton } from "./components/ui/States.js";
 
-import { HomePage } from "./pages/HomePage.js";
-import { LoginPage } from "./pages/LoginPage.js";
-import { RegisterPage } from "./pages/RegisterPage.js";
-import { PostingsPage } from "./pages/PostingsPage.js";
-import { PostingDetailPage } from "./pages/PostingDetailPage.js";
-import { PostingFormPage } from "./pages/PostingFormPage.js";
-import { PostingApplicationsPage } from "./pages/PostingApplicationsPage.js";
-import { DiscoverPage } from "./pages/DiscoverPage.js";
-import { ProfilePage } from "./pages/ProfilePage.js";
-import { PostFormPage } from "./pages/PostFormPage.js";
-import { MyPostingsPage } from "./pages/MyPostingsPage.js";
-import { MyApplicationsPage } from "./pages/MyApplicationsPage.js";
-import { CommissionsPage } from "./pages/CommissionsPage.js";
-import { CommissionDetailPage } from "./pages/CommissionDetailPage.js";
-import { NotificationsPage } from "./pages/NotificationsPage.js";
-import { SettingsPage } from "./pages/SettingsPage.js";
+/**
+ * Routes are code-split.
+ *
+ * The audience is largely on Philippine mobile data, where the difference
+ * between shipping the whole application and shipping the one screen someone
+ * asked for is paid in seconds on the first load. The landing page in
+ * particular should not carry the settings form or the bid comparison screen.
+ */
+const HomePage = lazy(async () => ({ default: (await import("./pages/HomePage.js")).HomePage }));
+const LoginPage = lazy(async () => ({ default: (await import("./pages/LoginPage.js")).LoginPage }));
+const RegisterPage = lazy(async () => ({ default: (await import("./pages/RegisterPage.js")).RegisterPage }));
+const PostingsPage = lazy(async () => ({ default: (await import("./pages/PostingsPage.js")).PostingsPage }));
+const PostingDetailPage = lazy(async () => ({ default: (await import("./pages/PostingDetailPage.js")).PostingDetailPage }));
+const PostingFormPage = lazy(async () => ({ default: (await import("./pages/PostingFormPage.js")).PostingFormPage }));
+const PostingApplicationsPage = lazy(async () => ({ default: (await import("./pages/PostingApplicationsPage.js")).PostingApplicationsPage }));
+const DiscoverPage = lazy(async () => ({ default: (await import("./pages/DiscoverPage.js")).DiscoverPage }));
+const ProfilePage = lazy(async () => ({ default: (await import("./pages/ProfilePage.js")).ProfilePage }));
+const PostFormPage = lazy(async () => ({ default: (await import("./pages/PostFormPage.js")).PostFormPage }));
+const MyPostingsPage = lazy(async () => ({ default: (await import("./pages/MyPostingsPage.js")).MyPostingsPage }));
+const MyApplicationsPage = lazy(async () => ({ default: (await import("./pages/MyApplicationsPage.js")).MyApplicationsPage }));
+const CommissionsPage = lazy(async () => ({ default: (await import("./pages/CommissionsPage.js")).CommissionsPage }));
+const CommissionDetailPage = lazy(async () => ({ default: (await import("./pages/CommissionDetailPage.js")).CommissionDetailPage }));
+const NotificationsPage = lazy(async () => ({ default: (await import("./pages/NotificationsPage.js")).NotificationsPage }));
+const SettingsPage = lazy(async () => ({ default: (await import("./pages/SettingsPage.js")).SettingsPage }));
+
+/** Shown while a route chunk is still arriving. */
+function RouteFallback() {
+  return (
+    <Page>
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <CardSkeleton count={3} />
+      </div>
+    </Page>
+  );
+}
 
 /**
  * Route guards are a convenience, not a control. Every one of these routes is
@@ -78,8 +97,9 @@ function RequireAuth({
 
 export function App() {
   return (
-    <Routes>
-      <Route element={<Shell />}>
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
+        <Route element={<Shell />}>
         <Route index element={<HomePage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
@@ -192,7 +212,8 @@ export function App() {
             </Page>
           }
         />
-      </Route>
-    </Routes>
+        </Route>
+      </Routes>
+    </Suspense>
   );
 }
