@@ -49,9 +49,13 @@ const envSchema = z
     STORAGE_DRIVER: z.enum(["local", "imagekit"]).default("local"),
     STORAGE_LOCAL_DIR: z.string().default(".storage"),
     STORAGE_PUBLIC_BASE_URL: z.string().default("http://localhost:4000/media"),
-    IMAGEKIT_PUBLIC_KEY: z.string().optional(),
-    IMAGEKIT_PRIVATE_KEY: z.string().optional(),
-    IMAGEKIT_URL_ENDPOINT: z.string().optional(),
+    // Trimmed because these are pasted into a dashboard by hand, and a single
+    // trailing newline is enough to make ImageKit answer every upload with
+    // 403 "Your account cannot be authenticated" — a message that points at
+    // the account rather than at the whitespace actually causing it.
+    IMAGEKIT_PUBLIC_KEY: z.string().trim().optional(),
+    IMAGEKIT_PRIVATE_KEY: z.string().trim().optional(),
+    IMAGEKIT_URL_ENDPOINT: z.string().trim().optional(),
   })
   .superRefine((env, ctx) => {
     if (env.STORAGE_DRIVER === "imagekit") {
@@ -67,6 +71,20 @@ const envSchema = z
             message: `${key} is required when STORAGE_DRIVER=imagekit`,
           });
         }
+      }
+
+      // The two keys sit next to each other in the ImageKit dashboard and are
+      // easy to transpose. Swapped, they authenticate nothing and every upload
+      // fails at runtime with a 403 that blames the account.
+      const priv = env.IMAGEKIT_PRIVATE_KEY;
+      if (priv && !priv.startsWith("private_")) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["IMAGEKIT_PRIVATE_KEY"],
+          message: priv.startsWith("public_")
+            ? "This is the public key. IMAGEKIT_PRIVATE_KEY needs the private key, which begins with private_."
+            : "An ImageKit private key begins with private_. Check it was copied whole.",
+        });
       }
     }
 
