@@ -53,6 +53,17 @@ writes them to a temporary directory at startup (`apps/api/src/db/wallet.ts`).
 > that includes the PEM wallet. `cwallet.sso` is Thick-mode only and will not
 > work here.
 
+**Set `ORACLE_WALLET_PASSWORD` as well.** Open `ewallet.pem` and look at the
+first line. If it reads `-----BEGIN ENCRYPTED PRIVATE KEY-----`, which is what
+the console produces whenever a wallet password was set on download, the
+password is required to decrypt it.
+
+Omitting it does not fail cleanly: the pool is created without connecting,
+the service starts and serves traffic, and then the first query sits for about
+sixty seconds before returning `NJS-505: unable to initiate TLS connection`.
+`initPool` now checks for this and refuses to start with a message naming the
+variable.
+
 `ORACLE_CONNECT_STRING` is a TNS alias from `tnsnames.ora`, such as
 `myadb_tp`. The `_tp` service is the right one for a small application.
 
@@ -142,9 +153,26 @@ out:
 
 ---
 
-## 4. The web app on Cloudflare Pages
+## 4. The web app on Cloudflare
 
-Connect the repository and set:
+Cloudflare now steers new projects into **Workers Builds**, which runs a deploy
+command rather than just publishing a directory. `apps/web/wrangler.jsonc`
+configures the site as an assets-only Worker for that flow:
+
+- **Build command:** `npm install -g pnpm@10.34.5 && pnpm install --frozen-lockfile && pnpm --filter @craftbid/shared build && pnpm --filter @craftbid/web build`
+- **Deploy command:** `npx wrangler deploy -c apps/web/wrangler.jsonc`
+- **Environment variable:** `VITE_API_URL` = your Render URL, no trailing slash
+
+The `-c` matters. A bare `npx wrangler deploy` from the repository root fails
+with *"has been run in the root of a workspace instead of targeting a specific
+project"*, because wrangler sees `pnpm-workspace.yaml` and declines to guess.
+
+`not_found_handling: "single-page-application"` in that config is what makes a
+deep link such as `/postings/<id>` resolve instead of 404ing.
+
+### On the older Pages flow
+
+If you have a Pages project instead, there is no deploy command; set: 
 
 - **Build command:** `npm install -g pnpm@10.34.5 && pnpm install --frozen-lockfile && pnpm --filter @craftbid/shared build && pnpm --filter @craftbid/web build`
 - **Build output directory:** `apps/web/dist`

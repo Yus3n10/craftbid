@@ -55,6 +55,13 @@ services:
       - key: ORACLE_EWALLET_PEM_B64
         sync: false
 
+      # Required whenever ewallet.pem begins with "BEGIN ENCRYPTED PRIVATE
+      # KEY", which is what the OCI console produces when a wallet password is
+      # set on download. Without it the TLS handshake fails with NJS-505 after
+      # roughly a minute of silence.
+      - key: ORACLE_WALLET_PASSWORD
+        sync: false
+
       # A free instance is capped at 512MB and sleeps when idle, so a large
       # pool would be held open across a sleep and produce ORA-03113 on wake.
       - key: ORACLE_POOL_MIN

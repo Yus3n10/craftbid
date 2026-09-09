@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import oracledb from "oracledb";
 import { config } from "../config.js";
 import { materialiseWallet } from "./wallet.js";
@@ -15,6 +17,26 @@ oracledb.fetchAsString = [oracledb.CLOB];
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
 
 let pool: oracledb.Pool | undefined;
+
+/**
+ * Fails fast when the wallet is encrypted but no password was supplied.
+ *
+ * Without this the symptom is NJS-505 ("unable to initiate TLS connection")
+ * after about a minute of silence, on the first query rather than at startup,
+ * because a pool with poolMin 0 connects lazily. Naming the missing variable
+ * up front turns an hour of guesswork into one line of log.
+ */
+function assertWalletNeedsNoPassword(walletDir: string): void {
+  const pem = join(walletDir, "ewallet.pem");
+  if (!existsSync(pem)) return;
+
+  if (readFileSync(pem, "utf8").includes("ENCRYPTED PRIVATE KEY")) {
+    throw new Error(
+      "ewallet.pem is an encrypted private key but ORACLE_WALLET_PASSWORD is not set. " +
+        "Set it to the password chosen when the wallet was downloaded from the OCI console.",
+    );
+  }
+}
 
 export async function initPool(): Promise<oracledb.Pool> {
   if (pool) return pool;
@@ -44,6 +66,8 @@ export async function initPool(): Promise<oracledb.Pool> {
     attributes.walletLocation = walletDir;
     if (config.db.walletPassword) {
       attributes.walletPassword = config.db.walletPassword;
+    } else {
+      assertWalletNeedsNoPassword(walletDir);
     }
   }
 

@@ -40,7 +40,10 @@ jobs:
             echo "Attempt $attempt: HTTP $status"
             cat /tmp/health.json 2>/dev/null || true
             echo
-            if [ "$status" = "200" ]; then
+            # /health answers 200 whenever the process is up, including when
+            # the database is unreachable, so the body is what matters here.
+            # Only a real query resets the idle timer.
+            if [ "$status" = "200" ] && grep -q '"database":"reachable"' /tmp/health.json; then
               echo "Database reachable; idle timer reset."
               exit 0
             fi

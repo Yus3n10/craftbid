@@ -205,16 +205,27 @@ export async function buildApp(
    * ninety, so it deliberately touches the database rather than only reporting
    * that the process is up.
    */
-  app.get("/health", async (_request, reply) => {
+  app.get("/health", async (request, reply) => {
     const { db } = await import("./db/query.js");
+
+    let database: "reachable" | "unreachable" = "unreachable";
     try {
       await db.one(`SELECT 1 AS ok FROM dual`);
-      return reply.send({ status: "ok", database: "reachable" });
-    } catch {
-      return reply
-        .code(503)
-        .send({ status: "degraded", database: "unreachable" });
+      database = "reachable";
+    } catch (error) {
+      // Logged rather than swallowed. A health check that hides why it is
+      // unhealthy is worse than no health check: the first deploy failure
+      // reported nothing at all.
+      request.log.error({ err: error }, "Health check could not reach database");
     }
+
+    // Deliberately 200 even when the database is unreachable. The host gates a
+    // deploy on this endpoint, and Always Free Autonomous Database stops itself
+    // when idle, so a 503 here would refuse to bring the service up precisely
+    // when the keep-alive needs to reach it to wake the database — a deadlock
+    // that resolves itself only by hand. Report the degradation in the body and
+    // let the caller decide.
+    return reply.send({ status: "ok", database });
   });
 
   app.get("/categories", async () => CRAFT_CATEGORIES);

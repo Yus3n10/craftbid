@@ -1,0 +1,21 @@
+{
+  // Deploys the built SPA to Cloudflare as an assets-only Worker. There is no
+  // server code here: `wrangler deploy` uploads apps/web/dist and Cloudflare
+  // serves it from the edge.
+  //
+  // This file exists because `wrangler deploy` run from the repository root
+  // refuses to guess, reporting that it "has been run in the root of a
+  // workspace instead of targeting a specific project". Pointing it at this
+  // config with `-c` names the project explicitly. Paths below resolve
+  // relative to this file, not to the working directory.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "craftbid",
+  "compatibility_date": "2026-09-09",
+  "assets": {
+    "directory": "./dist",
+    // Client-side routing: a deep link such as /postings/<id> is not a file on
+    // disk, so unknown paths must return index.html rather than a 404. This
+    // supersedes public/_redirects, which only Pages reads.
+    "not_found_handling": "single-page-application"
+  }
+}
