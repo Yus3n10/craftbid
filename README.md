@@ -116,6 +116,7 @@ invalidate a bid that was fair when it was made.
 | `pnpm db:migrate` | Apply pending migrations |
 | `pnpm db:reset` | **Drop every table** and re-apply (local only; refuses if a wallet is configured) |
 | `pnpm --filter @craftbid/api seed` | Load demo data |
+| `pnpm --filter @craftbid/api purge:accounts` | List accounts matching a username prefix (default `smoketest_`) and everything they own. Dry run; add `-- --commit` to delete |
 | `pnpm test` | API integration tests |
 | `pnpm test:e2e` | Playwright, desktop and mobile viewports |
 | `pnpm typecheck` | Every package |
@@ -164,7 +165,7 @@ prove nothing about the behaviour that matters.
 
 ```bash
 pnpm db:up          # Oracle must be running
-pnpm test           # 51 API integration tests
+pnpm test           # 61 API integration tests
 pnpm test:e2e       # 10 browser tests, desktop and mobile
 ```
 
@@ -173,6 +174,17 @@ below the minimum, duplicate bids, bidding on a closed request, a second
 acceptance on the same request, review eligibility, and direct attempts to
 mutate another user's postings, applications, commissions and posts. The rate
 limiter has its own file, since the rest of the suite runs with limits off.
+
+Uploads have their own file too, and it exists because of a bug that reached
+production. Every other suite inserts image rows directly, which is right for
+tests about who may attach an image, but it meant `POST /images` had never
+run: not the magic-byte sniffing, not sharp, not the storage driver. The
+endpoint was broken in production while CI stayed green. Those tests now
+assert on the bytes that reach storage, including that EXIF is stripped and
+that a client-supplied filename never reaches a storage path.
+
+Cross-site request forgery has three tests as well, covering the multipart
+case that CORS never preflights and the desktop build's bearer exemption.
 
 ---
 

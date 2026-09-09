@@ -11,13 +11,33 @@ import { setStorage, type ObjectStorage } from "../lib/storage/index.js";
  * mocked repository would assert nothing about the behaviour that matters.
  */
 
-/** Storage is faked: the tests are about records, not bytes on disk. */
+/**
+ * Storage is faked, but it keeps what it is given.
+ *
+ * Most suites only care that a record points at an object. The upload tests
+ * care what the bytes became, since re-encoding and EXIF stripping are the
+ * whole point of that endpoint, and discarding them here meant those could
+ * never be asserted.
+ */
+const storedObjects = new Map<string, { body: Buffer; contentType: string }>();
+
 const memoryStorage: ObjectStorage = {
   name: "memory",
-  async put() {},
-  async remove() {},
+  async put(key, body, contentType) {
+    storedObjects.set(key, { body, contentType });
+  },
+  async remove(key) {
+    storedObjects.delete(key);
+  },
   urlFor: (key) => `https://test.local/${key}`,
 };
+
+/** What was actually written for a key, for tests that assert on the bytes. */
+export function storedObject(
+  key: string,
+): { body: Buffer; contentType: string } | undefined {
+  return storedObjects.get(key);
+}
 
 let app: FastifyInstance | undefined;
 
