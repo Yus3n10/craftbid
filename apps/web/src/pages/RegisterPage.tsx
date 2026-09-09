@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
-import type { UserRole } from "@raxtan/shared";
-import { LIMITS } from "@raxtan/shared";
+import type { UserRole } from "@craftbid/shared";
+import { LIMITS } from "@craftbid/shared";
 import { ApiError } from "../lib/api.js";
 import { useAuth } from "../lib/auth.js";
 import { cx } from "../lib/cx.js";
@@ -71,17 +71,17 @@ export function RegisterPage() {
 
   return (
     <Page width="narrow">
-      <h1 className="font-display text-3xl">Join RaxTan</h1>
+      <h1 className="font-display text-3xl">Join Craftbid</h1>
       <ThreadRule className="mt-4 w-16" />
       <p className="mt-4 text-ink-soft">
-        Choose how you will use RaxTan. This decides what you can do, and it
+        Choose how you will use Craftbid. This decides what you can do, and it
         cannot be switched later.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-6" noValidate>
         <fieldset>
           <legend className="mb-3 text-sm font-medium text-ink">
-            How will you use RaxTan?
+            How will you use Craftbid?
           </legend>
           <div className="grid gap-3 sm:grid-cols-2">
             {ROLES.map((option) => {

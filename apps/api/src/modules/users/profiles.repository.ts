@@ -5,7 +5,7 @@ import type {
   LinkPlatform,
   RatingSummaryDto,
   UserRole,
-} from "@raxtan/shared";
+} from "@craftbid/shared";
 import { bufToUuid, newId, uuidToBuf } from "../../db/ids.js";
 import { db, type BindValue, type Queryable } from "../../db/query.js";
 import { getStorage } from "../../lib/storage/index.js";

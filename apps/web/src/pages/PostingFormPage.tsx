@@ -7,7 +7,7 @@ import {
   MONEY,
   formatPeso,
   type PostingDto,
-} from "@raxtan/shared";
+} from "@craftbid/shared";
 import { ApiError, api } from "../lib/api.js";
 import { Page } from "../components/layout/Shell.js";
 import { Button } from "../components/ui/Button.js";

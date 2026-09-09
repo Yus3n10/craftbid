@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync, FastifyReply } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
-import { loginSchema, passwordSchema, registerSchema } from "@raxtan/shared";
+import { loginSchema, passwordSchema, registerSchema } from "@craftbid/shared";
 import { config } from "../../config.js";
 import {
   ACCESS_COOKIE,

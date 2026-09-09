@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { UPLOAD } from "@raxtan/shared";
+import { UPLOAD } from "@craftbid/shared";
 import { ApiError, uploadImage } from "../lib/api.js";
 import { Button } from "./ui/Button.js";
 

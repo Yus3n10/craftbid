@@ -22,7 +22,7 @@ import * as postsRepo from "../modules/posts/posts.repository.js";
  * the look of a populated grid without passing off invented work as real.
  */
 
-const SEED_PASSWORD = "raxtan demo password";
+const SEED_PASSWORD = "craftbid demo password";
 
 /**
  * Draws a plain weave: continuous warp threads, weft threads crossing them, and

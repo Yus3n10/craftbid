@@ -1,5 +1,5 @@
 import { Link, Outlet } from "react-router-dom";
-import { BRAND } from "@raxtan/shared";
+import { BRAND } from "@craftbid/shared";
 import { Header } from "./Header.js";
 import { Logo } from "./Logo.js";
 
@@ -62,7 +62,7 @@ export function Shell() {
           </div>
 
           <p className="mt-10 border-t border-fiber pt-6 text-xs text-ink-faint">
-            Prices are shown in Philippine pesos. RaxTan does not handle payment;
+            Prices are shown in Philippine pesos. Craftbid does not handle payment;
             clients and artists agree terms directly.
           </p>
         </div>

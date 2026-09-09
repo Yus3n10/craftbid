@@ -1,5 +1,5 @@
 {
-  "name": "@raxtan/web",
+  "name": "@craftbid/web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@raxtan/shared": "workspace:*",
+    "@craftbid/shared": "workspace:*",
     "@tanstack/react-query": "^5.64.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

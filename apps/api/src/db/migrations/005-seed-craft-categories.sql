@@ -1,6 +1,6 @@
 -- Seeds the craft categories.
 --
--- These must stay identical to CRAFT_CATEGORIES in @raxtan/shared, which the
+-- These must stay identical to CRAFT_CATEGORIES in @craftbid/shared, which the
 -- frontend uses to render filters before it has talked to the API. An
 -- integration test compares the two and fails if they drift, so this file and
 -- that constant are edited together or not at all.

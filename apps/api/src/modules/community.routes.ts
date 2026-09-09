@@ -5,7 +5,7 @@ import {
   createReportSchema,
   paginationSchema,
   usernameSchema,
-} from "@raxtan/shared";
+} from "@craftbid/shared";
 import { notFound } from "../lib/errors.js";
 import * as notifications from "./notifications/notifications.repository.js";
 import * as reports from "./reports/reports.service.js";

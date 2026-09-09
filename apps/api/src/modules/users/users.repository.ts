@@ -1,4 +1,4 @@
-import type { UserRole, UserStatus } from "@raxtan/shared";
+import type { UserRole, UserStatus } from "@craftbid/shared";
 import { bufToUuid, newId, uuidToBuf } from "../../db/ids.js";
 import { db, type Queryable } from "../../db/query.js";
 

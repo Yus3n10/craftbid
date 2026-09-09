@@ -4,7 +4,7 @@ import type {
   CreateReviewInput,
   Paginated,
   ReviewDto,
-} from "@raxtan/shared";
+} from "@craftbid/shared";
 import { newId } from "../../db/ids.js";
 import { DbError, withTransaction } from "../../db/query.js";
 import { badRequest, conflict, notFound } from "../../lib/errors.js";

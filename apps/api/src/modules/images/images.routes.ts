@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { UPLOAD } from "@raxtan/shared";
+import { UPLOAD } from "@craftbid/shared";
 import { badRequest } from "../../lib/errors.js";
 import { processUpload } from "./images.service.js";
 

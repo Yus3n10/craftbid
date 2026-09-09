@@ -168,6 +168,6 @@ export const PAGINATION = {
 
 /** Single source of the product name, so a rename is a one-file change. */
 export const BRAND = {
-  name: "RaxTan",
+  name: "Craftbid",
   tagline: "Commission handmade work from Filipino artists.",
 } as const;

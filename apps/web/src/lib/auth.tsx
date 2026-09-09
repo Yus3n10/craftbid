@@ -1,6 +1,6 @@
 import { createContext, useContext, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { LoginInput, MeDto, RegisterInput } from "@raxtan/shared";
+import type { LoginInput, MeDto, RegisterInput } from "@craftbid/shared";
 import { ApiError, api } from "./api.js";
 import { clearTokens, getRefreshToken, storeTokens } from "./session.js";
 

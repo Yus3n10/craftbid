@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import type { CommissionDto, Paginated } from "@raxtan/shared";
+import type { CommissionDto, Paginated } from "@craftbid/shared";
 import { api } from "../lib/api.js";
 import { useAuth } from "../lib/auth.js";
 import { Page } from "../components/layout/Shell.js";

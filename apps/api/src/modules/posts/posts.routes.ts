@@ -5,7 +5,7 @@ import {
   createArtistPostSchema,
   idParamSchema,
   updateArtistPostSchema,
-} from "@raxtan/shared";
+} from "@craftbid/shared";
 import * as service from "./posts.service.js";
 
 export const postRoutes: FastifyPluginAsync = async (fastify) => {

@@ -76,12 +76,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: "RaxTan ${{ github.ref_name }}"
+          releaseName: "Craftbid ${{ github.ref_name }}"
           releaseBody: |
-            Desktop build of RaxTan.
+            Desktop build of Craftbid.
 
             Download the installer for your platform below. The app connects to
-            the hosted RaxTan API, so an internet connection is required.
+            the hosted Craftbid API, so an internet connection is required.
 
             The macOS and Windows builds are unsigned: macOS will need
             right-click then Open on first launch, and Windows will show a

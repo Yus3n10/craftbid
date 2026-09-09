@@ -35,7 +35,7 @@ importers:
       '@fastify/static':
         specifier: ^8.0.4
         version: 8.3.0
-      '@raxtan/shared':
+      '@craftbid/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       dotenv:
@@ -84,7 +84,7 @@ importers:
 
   apps/web:
     dependencies:
-      '@raxtan/shared':
+      '@craftbid/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@tanstack/react-query':

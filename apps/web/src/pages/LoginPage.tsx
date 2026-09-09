@@ -83,7 +83,7 @@ export function LoginPage() {
         </form>
 
         <p className="mt-6 text-sm text-ink-soft">
-          New to RaxTan?{" "}
+          New to Craftbid?{" "}
           <Link to="/register" className="font-medium text-indigo hover:underline">
             Create an account
           </Link>

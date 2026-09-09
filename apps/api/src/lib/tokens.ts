@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { SignJWT, jwtVerify } from "jose";
-import type { UserRole } from "@raxtan/shared";
+import type { UserRole } from "@craftbid/shared";
 import { config } from "../config.js";
 
 /**
@@ -15,8 +15,8 @@ import { config } from "../config.js";
  * a token any XSS can exfiltrate.
  */
 
-export const ACCESS_COOKIE = "raxtan_at";
-export const REFRESH_COOKIE = "raxtan_rt";
+export const ACCESS_COOKIE = "craftbid_at";
+export const REFRESH_COOKIE = "craftbid_rt";
 
 export interface AccessTokenClaims {
   sub: string;
@@ -28,8 +28,8 @@ export async function signAccessToken(claims: AccessTokenClaims): Promise<string
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(claims.sub)
     .setIssuedAt()
-    .setIssuer("raxtan")
-    .setAudience("raxtan-api")
+    .setIssuer("craftbid")
+    .setAudience("craftbid-api")
     .setExpirationTime(config.auth.accessTokenTtl)
     .sign(config.auth.jwtSecret);
 }
@@ -39,8 +39,8 @@ export async function verifyAccessToken(
 ): Promise<AccessTokenClaims | null> {
   try {
     const { payload } = await jwtVerify(token, config.auth.jwtSecret, {
-      issuer: "raxtan",
-      audience: "raxtan-api",
+      issuer: "craftbid",
+      audience: "craftbid-api",
     });
     if (typeof payload.sub !== "string") return null;
     if (payload.role !== "client" && payload.role !== "artist") return null;

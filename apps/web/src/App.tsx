@@ -1,6 +1,6 @@
 import { Suspense, lazy, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import type { UserRole } from "@raxtan/shared";
+import type { UserRole } from "@craftbid/shared";
 import { useAuth } from "./lib/auth.js";
 import { Page, Shell } from "./components/layout/Shell.js";
 import { CardSkeleton, EmptyState, RowSkeleton } from "./components/ui/States.js";

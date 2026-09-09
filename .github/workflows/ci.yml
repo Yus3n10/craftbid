@@ -23,7 +23,7 @@ jobs:
         image: gvenzl/oracle-free:23-slim
         env:
           ORACLE_PASSWORD: ci_sys_password
-          APP_USER: raxtan
+          APP_USER: craftbid
           APP_USER_PASSWORD: ci_app_password
         ports:
           - 1521:1521
@@ -39,7 +39,7 @@ jobs:
 
     env:
       NODE_ENV: test
-      ORACLE_USER: raxtan
+      ORACLE_USER: craftbid
       ORACLE_PASSWORD: ci_app_password
       ORACLE_CONNECT_STRING: localhost:1521/FREEPDB1
       JWT_SECRET: ci-only-secret-value-not-used-anywhere-real-0000
@@ -65,19 +65,19 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build shared package
-        run: pnpm --filter @raxtan/shared build
+        run: pnpm --filter @craftbid/shared build
 
       - name: Typecheck
         run: pnpm typecheck
 
       - name: Apply migrations
-        run: pnpm --filter @raxtan/api migrate
+        run: pnpm --filter @craftbid/api migrate
 
       - name: Run tests
-        run: pnpm --filter @raxtan/api test
+        run: pnpm --filter @craftbid/api test
 
       - name: Production build
-        run: pnpm --filter @raxtan/api build && pnpm --filter @raxtan/web build
+        run: pnpm --filter @craftbid/api build && pnpm --filter @craftbid/web build
 
       - name: Check no secrets were committed
         run: |

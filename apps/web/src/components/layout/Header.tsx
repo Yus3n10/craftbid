@@ -54,7 +54,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-fiber bg-paper/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4">
-        <Link to="/" className="shrink-0" aria-label="RaxTan home">
+        <Link to="/" className="shrink-0" aria-label="Craftbid home">
           <Logo />
         </Link>
 
@@ -109,7 +109,7 @@ export function Header() {
                 Sign in
               </ButtonLink>
               <ButtonLink to="/register" size="sm">
-                Join RaxTan
+                Join Craftbid
               </ButtonLink>
             </>
           )}
@@ -179,7 +179,7 @@ export function Header() {
                     Sign in
                   </ButtonLink>
                   <ButtonLink to="/register" size="sm">
-                    Join RaxTan
+                    Join Craftbid
                   </ButtonLink>
                 </>
               )}

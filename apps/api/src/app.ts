@@ -11,7 +11,7 @@ import {
   validatorCompiler,
 } from "fastify-type-provider-zod";
 import { ZodError } from "zod";
-import { CRAFT_CATEGORIES, UPLOAD } from "@raxtan/shared";
+import { CRAFT_CATEGORIES, UPLOAD } from "@craftbid/shared";
 import { config } from "./config.js";
 import { DbError } from "./db/query.js";
 import { AppError } from "./lib/errors.js";

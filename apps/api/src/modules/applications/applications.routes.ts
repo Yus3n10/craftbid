@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
-import { applicationListQuerySchema, idParamSchema } from "@raxtan/shared";
+import { applicationListQuerySchema, idParamSchema } from "@craftbid/shared";
 import * as service from "./applications.service.js";
 
 export const applicationRoutes: FastifyPluginAsync = async (fastify) => {

@@ -1,4 +1,4 @@
-# RaxTan — Filipino Handmade Crafts Marketplace
+# Craftbid — Filipino Handmade Crafts Marketplace
 
 **Design document — 2026-09-08**
 

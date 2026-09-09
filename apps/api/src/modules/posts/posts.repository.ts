@@ -1,4 +1,4 @@
-import type { ArtistPostDto, ImageDto, UserRole } from "@raxtan/shared";
+import type { ArtistPostDto, ImageDto, UserRole } from "@craftbid/shared";
 import { bufToUuid, uuidToBuf } from "../../db/ids.js";
 import { db, type BindValue, type Queryable } from "../../db/query.js";
 import { getStorage } from "../../lib/storage/index.js";

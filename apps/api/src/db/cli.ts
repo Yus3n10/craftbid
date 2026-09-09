@@ -2,8 +2,8 @@
  * Migration CLI.
  *
  *   pnpm db:migrate          apply pending migrations
- *   pnpm --filter @raxtan/api migrate:status
- *   pnpm --filter @raxtan/api migrate:reset   drop everything (local only)
+ *   pnpm --filter @craftbid/api migrate:status
+ *   pnpm --filter @craftbid/api migrate:reset   drop everything (local only)
  */
 
 import { closePool, initPool } from "./pool.js";

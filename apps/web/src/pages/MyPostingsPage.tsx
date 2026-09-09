@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import type { Paginated, PostingDto } from "@raxtan/shared";
+import type { Paginated, PostingDto } from "@craftbid/shared";
 import { api } from "../lib/api.js";
 import { Page } from "../components/layout/Shell.js";
 import { ButtonLink } from "../components/ui/Button.js";

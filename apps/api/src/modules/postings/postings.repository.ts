@@ -4,7 +4,7 @@ import type {
   PostingListQuery,
   PostingStatus,
   UserRole,
-} from "@raxtan/shared";
+} from "@craftbid/shared";
 import { bufToUuid, uuidToBuf } from "../../db/ids.js";
 import { db, type BindValue, type Queryable } from "../../db/query.js";
 import { getStorage } from "../../lib/storage/index.js";

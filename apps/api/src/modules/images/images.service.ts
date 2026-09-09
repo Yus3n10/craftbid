@@ -1,5 +1,5 @@
 import sharp from "sharp";
-import { UPLOAD } from "@raxtan/shared";
+import { UPLOAD } from "@craftbid/shared";
 import { newId } from "../../db/ids.js";
 import { badRequest } from "../../lib/errors.js";
 import { getStorage } from "../../lib/storage/index.js";

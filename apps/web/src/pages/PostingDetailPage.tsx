@@ -8,7 +8,7 @@ import {
   type ArtistPostDto,
   type Paginated,
   type PostingDto,
-} from "@raxtan/shared";
+} from "@craftbid/shared";
 import { ApiError, api } from "../lib/api.js";
 import { useAuth } from "../lib/auth.js";
 import { cx } from "../lib/cx.js";

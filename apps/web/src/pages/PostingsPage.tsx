@@ -1,6 +1,6 @@
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { CRAFT_CATEGORIES, type Paginated, type PostingDto } from "@raxtan/shared";
+import { CRAFT_CATEGORIES, type Paginated, type PostingDto } from "@craftbid/shared";
 import { api } from "../lib/api.js";
 import { useAuth } from "../lib/auth.js";
 import { Page } from "../components/layout/Shell.js";

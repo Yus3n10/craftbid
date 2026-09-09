@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 import fp from "fastify-plugin";
-import type { UserRole } from "@raxtan/shared";
+import type { UserRole } from "@craftbid/shared";
 import { forbidden, unauthorized } from "../lib/errors.js";
 import { ACCESS_COOKIE, verifyAccessToken } from "../lib/tokens.js";
 

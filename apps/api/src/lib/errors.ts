@@ -1,4 +1,4 @@
-import type { ApiErrorDto } from "@raxtan/shared";
+import type { ApiErrorDto } from "@craftbid/shared";
 
 /**
  * Every failure the API returns deliberately is an AppError. Anything else that

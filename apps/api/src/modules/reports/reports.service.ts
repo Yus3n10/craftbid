@@ -1,4 +1,4 @@
-import type { CreateReportInput, ReportTargetType } from "@raxtan/shared";
+import type { CreateReportInput, ReportTargetType } from "@craftbid/shared";
 import { newId, uuidToBuf } from "../../db/ids.js";
 import { DbError, db } from "../../db/query.js";
 import { badRequest, conflict, notFound } from "../../lib/errors.js";

@@ -1,4 +1,4 @@
-# RaxTan
+# Craftbid
 
 A marketplace where people commission handmade work from Filipino craft
 artists, and artists bid for it.
@@ -19,7 +19,7 @@ sculpture, jewelry, woodcraft, paper craft, candles and soap.
 **You need:** Node 22+, [pnpm](https://pnpm.io) 10+, and Docker.
 
 ```bash
-git clone <your-fork-url> raxtan && cd raxtan
+git clone <your-fork-url> craftbid && cd craftbid
 pnpm install
 cp .env.example .env
 ```
@@ -35,7 +35,7 @@ Start Oracle, apply the schema, and load demo data:
 ```bash
 pnpm db:up
 pnpm db:migrate
-pnpm --filter @raxtan/api seed
+pnpm --filter @craftbid/api seed
 ```
 
 Oracle takes about 50 seconds to come up the first time. Then:
@@ -47,7 +47,7 @@ pnpm dev
 The web app is at http://localhost:5173 and the API at http://localhost:4000.
 
 The seed creates six people. Sign in as any of them with the password
-`raxtan demo password`:
+`craftbid demo password`:
 
 | Email | Role |
 |---|---|
@@ -115,7 +115,7 @@ invalidate a bid that was fair when it was made.
 | `pnpm db:up` / `pnpm db:down` | Start or stop the Oracle container |
 | `pnpm db:migrate` | Apply pending migrations |
 | `pnpm db:reset` | **Drop every table** and re-apply (local only; refuses if a wallet is configured) |
-| `pnpm --filter @raxtan/api seed` | Load demo data |
+| `pnpm --filter @craftbid/api seed` | Load demo data |
 | `pnpm test` | API integration tests |
 | `pnpm test:e2e` | Playwright, desktop and mobile viewports |
 | `pnpm typecheck` | Every package |
@@ -129,7 +129,7 @@ tables between cases so each starts from a known state. After a test run,
 re-seed:
 
 ```bash
-pnpm db:reset && pnpm --filter @raxtan/api seed
+pnpm db:reset && pnpm --filter @craftbid/api seed
 ```
 
 ---

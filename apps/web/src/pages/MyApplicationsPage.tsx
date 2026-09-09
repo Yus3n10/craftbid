@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ApplicationDto, Paginated } from "@raxtan/shared";
+import type { ApplicationDto, Paginated } from "@craftbid/shared";
 import { api } from "../lib/api.js";
 import { Page } from "../components/layout/Shell.js";
 import { Button } from "../components/ui/Button.js";

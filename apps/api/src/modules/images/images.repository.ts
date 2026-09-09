@@ -1,4 +1,4 @@
-import type { ImageDto } from "@raxtan/shared";
+import type { ImageDto } from "@craftbid/shared";
 import { bufToUuid, uuidToBuf } from "../../db/ids.js";
 import { db, type Queryable } from "../../db/query.js";
 import { getStorage } from "../../lib/storage/index.js";

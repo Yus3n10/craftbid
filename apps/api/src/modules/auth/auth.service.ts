@@ -1,4 +1,4 @@
-import type { LoginInput, RegisterInput, UserRole } from "@raxtan/shared";
+import type { LoginInput, RegisterInput, UserRole } from "@craftbid/shared";
 import { uuidToBuf } from "../../db/ids.js";
 import { DbError, withTransaction } from "../../db/query.js";
 import { badRequest, conflict, unauthorized } from "../../lib/errors.js";

@@ -19,8 +19,8 @@ export default defineConfig(({ mode }) => {
         registerType: "autoUpdate",
         includeAssets: ["favicon.svg"],
         manifest: {
-          name: "RaxTan",
-          short_name: "RaxTan",
+          name: "Craftbid",
+          short_name: "Craftbid",
           description: "Commission handmade work from Filipino artists.",
           theme_color: "#1F3A4D",
           background_color: "#F7F4EE",

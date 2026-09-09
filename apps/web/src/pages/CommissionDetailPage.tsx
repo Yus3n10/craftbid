@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { LIMITS, type CommissionDto } from "@raxtan/shared";
+import { LIMITS, type CommissionDto } from "@craftbid/shared";
 import { api } from "../lib/api.js";
 import { useAuth } from "../lib/auth.js";
 import { cx } from "../lib/cx.js";
@@ -230,7 +230,7 @@ export function CommissionDetailPage() {
               <span className="eyebrow block">Agreed price</span>
               <Money centavos={commission.agreedPriceCentavos} size="lg" className="mt-1 block" />
               <p className="mt-2 text-sm text-ink-faint">
-                RaxTan does not handle payment. Settle directly with each other.
+                Craftbid does not handle payment. Settle directly with each other.
               </p>
 
               <dl className="mt-5 space-y-2 border-t border-fiber pt-4 text-sm">

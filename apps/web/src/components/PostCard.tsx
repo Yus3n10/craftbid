@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import type { ArtistPostDto } from "@raxtan/shared";
+import type { ArtistPostDto } from "@craftbid/shared";
 import { Card, ImageFrame, UserChip } from "./ui/Primitives.js";
 
 /**

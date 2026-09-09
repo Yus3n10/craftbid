@@ -4,8 +4,8 @@ import type {
   PostingDto,
   PostingListQuery,
   UpdatePostingInput,
-} from "@raxtan/shared";
-import { LIMITS } from "@raxtan/shared";
+} from "@craftbid/shared";
+import { LIMITS } from "@craftbid/shared";
 import { newId } from "../../db/ids.js";
 import { withTransaction } from "../../db/query.js";
 import { badRequest, forbidden, notFound } from "../../lib/errors.js";

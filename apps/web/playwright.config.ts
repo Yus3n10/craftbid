@@ -22,7 +22,7 @@ export default defineConfig({
 
   webServer: [
     {
-      command: "pnpm --filter @raxtan/api dev",
+      command: "pnpm --filter @craftbid/api dev",
       url: "http://localhost:4000/health",
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
@@ -33,7 +33,7 @@ export default defineConfig({
       env: { NODE_ENV: "test" },
     },
     {
-      command: "pnpm --filter @raxtan/web dev",
+      command: "pnpm --filter @craftbid/web dev",
       url: "http://localhost:5173",
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,

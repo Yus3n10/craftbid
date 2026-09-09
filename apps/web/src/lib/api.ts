@@ -1,4 +1,4 @@
-import type { ApiErrorDto } from "@raxtan/shared";
+import type { ApiErrorDto } from "@craftbid/shared";
 import {
   BEARER_MODE,
   clearTokens,

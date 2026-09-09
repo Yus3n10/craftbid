@@ -1,6 +1,6 @@
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { CRAFT_CATEGORIES, type ArtistPostDto, type Paginated } from "@raxtan/shared";
+import { CRAFT_CATEGORIES, type ArtistPostDto, type Paginated } from "@craftbid/shared";
 import { api } from "../lib/api.js";
 import { useAuth } from "../lib/auth.js";
 import { Page } from "../components/layout/Shell.js";
@@ -45,7 +45,7 @@ export function DiscoverPage() {
       <PageHeading
         eyebrow="For clients"
         title="Discover work"
-        description="Pieces made by artists on RaxTan. Find someone whose hand you like, then invite them to bid on your request."
+        description="Pieces made by artists on Craftbid. Find someone whose hand you like, then invite them to bid on your request."
         actions={
           user?.role === "artist" ? (
             <ButtonLink to="/posts/new">Add to portfolio</ButtonLink>

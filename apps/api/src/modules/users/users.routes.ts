@@ -6,7 +6,7 @@ import {
   updateExternalLinksSchema,
   updateProfileSchema,
   usernameSchema,
-} from "@raxtan/shared";
+} from "@craftbid/shared";
 import * as service from "./users.service.js";
 
 export const userRoutes: FastifyPluginAsync = async (fastify) => {

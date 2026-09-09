@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { CRAFT_CATEGORIES, type ArtistPostDto, type Paginated, type PostingDto } from "@raxtan/shared";
+import { CRAFT_CATEGORIES, type ArtistPostDto, type Paginated, type PostingDto } from "@craftbid/shared";
 import { api } from "../lib/api.js";
 import { useAuth } from "../lib/auth.js";
 import { materialColor } from "../lib/materials.js";
@@ -28,7 +28,7 @@ function Hero() {
           <span className="block text-indigo">Someone can make it.</span>
         </h1>
         <p className="mt-6 max-w-xl text-lg text-ink-soft">
-          RaxTan is where Filipino crafters and the people who commission them
+          Craftbid is where Filipino crafters and the people who commission them
           find each other. Post what you want made, or bid on work that suits
           your hands.
         </p>
@@ -74,7 +74,7 @@ function CategoryStrip() {
   return (
     <section className="border-b border-fiber">
       <div className="mx-auto max-w-6xl px-4 py-10">
-        <h2 className="eyebrow mb-4">Crafts on RaxTan</h2>
+        <h2 className="eyebrow mb-4">Crafts on Craftbid</h2>
         <ul className="flex flex-wrap gap-2">
           {CRAFT_CATEGORIES.map((category) => (
             <li key={category.slug}>

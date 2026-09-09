@@ -4,13 +4,13 @@
     {
       "name": "web",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@raxtan/web", "dev"],
+      "runtimeArgs": ["--filter", "@craftbid/web", "dev"],
       "port": 5173
     },
     {
       "name": "api",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@raxtan/api", "dev"],
+      "runtimeArgs": ["--filter", "@craftbid/api", "dev"],
       "port": 4000
     }
   ]

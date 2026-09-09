@@ -18,8 +18,8 @@
  */
 export const BEARER_MODE = import.meta.env.VITE_AUTH_MODE === "bearer";
 
-const ACCESS_KEY = "raxtan.accessToken";
-const REFRESH_KEY = "raxtan.refreshToken";
+const ACCESS_KEY = "craftbid.accessToken";
+const REFRESH_KEY = "craftbid.refreshToken";
 
 function read(key: string): string | null {
   try {

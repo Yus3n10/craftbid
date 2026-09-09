@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CRAFT_CATEGORIES, LIMITS, type ArtistPostDto } from "@raxtan/shared";
+import { CRAFT_CATEGORIES, LIMITS, type ArtistPostDto } from "@craftbid/shared";
 import { ApiError, api } from "../lib/api.js";
 import { useAuth } from "../lib/auth.js";
 import { Page } from "../components/layout/Shell.js";

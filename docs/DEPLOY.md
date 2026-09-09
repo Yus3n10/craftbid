@@ -69,8 +69,8 @@ ORACLE_PASSWORD=...
 ```
 
 ```bash
-pnpm --filter @raxtan/api migrate
-pnpm --filter @raxtan/api migrate:status   # confirm all applied
+pnpm --filter @craftbid/api migrate
+pnpm --filter @craftbid/api migrate:status   # confirm all applied
 ```
 
 `db:reset` refuses to run whenever `ORACLE_WALLET_DIR` is set, so it cannot be
@@ -102,7 +102,7 @@ Or configure it by hand:
 
 - **Runtime:** Node
 - **Region:** Singapore (closest to the Philippines)
-- **Build:** `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @raxtan/shared build && pnpm --filter @raxtan/api build`
+- **Build:** `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @craftbid/shared build && pnpm --filter @craftbid/api build`
 - **Start:** `node apps/api/dist/index.js`
 - **Health check path:** `/health`
 
@@ -122,7 +122,7 @@ out:
 
 Connect the repository and set:
 
-- **Build command:** `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @raxtan/shared build && pnpm --filter @raxtan/web build`
+- **Build command:** `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @craftbid/shared build && pnpm --filter @craftbid/web build`
 - **Build output directory:** `apps/web/dist`
 - **Environment variable:** `VITE_API_URL` = your Render URL, no trailing slash
 

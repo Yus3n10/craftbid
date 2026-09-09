@@ -3,8 +3,8 @@ import type {
   ApplicationStatus,
   CreateApplicationInput,
   Paginated,
-} from "@raxtan/shared";
-import { formatPeso } from "@raxtan/shared";
+} from "@craftbid/shared";
+import { formatPeso } from "@craftbid/shared";
 import { bufToUuid, newId, uuidToBuf } from "../../db/ids.js";
 import { DbError, withTransaction } from "../../db/query.js";
 import { badRequest, conflict, forbidden, notFound } from "../../lib/errors.js";

@@ -6,7 +6,7 @@ import {
   createReviewSchema,
   idParamSchema,
   paginationSchema,
-} from "@raxtan/shared";
+} from "@craftbid/shared";
 import * as service from "./commissions.service.js";
 
 export const commissionRoutes: FastifyPluginAsync = async (fastify) => {

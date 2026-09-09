@@ -7,7 +7,7 @@ import {
   idParamSchema,
   postingListQuerySchema,
   updatePostingSchema,
-} from "@raxtan/shared";
+} from "@craftbid/shared";
 import * as applications from "../applications/applications.service.js";
 import * as service from "./postings.service.js";
 

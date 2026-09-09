@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { NotificationDto, NotificationType } from "@raxtan/shared";
+import type { NotificationDto, NotificationType } from "@craftbid/shared";
 import { api } from "../lib/api.js";
 import { cx } from "../lib/cx.js";
 import { Page } from "../components/layout/Shell.js";

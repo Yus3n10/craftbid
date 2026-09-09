@@ -50,7 +50,7 @@ export class DbError extends Error {
     this.errorNum = err.errorNum ?? -1;
     this.cause = cause;
 
-    // e.g. "unique constraint (RAXTAN.UX_APP_ONE_ACCEPTED) violated"
+    // e.g. "unique constraint (CRAFTBID.UX_APP_ONE_ACCEPTED) violated"
     const match = /\(([A-Z0-9_$#.]+)\)/i.exec(err.message ?? "");
     if (match?.[1]) {
       const parts = match[1].split(".");

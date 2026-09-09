@@ -7,9 +7,13 @@ import { z } from "zod";
 // to this module rather than the working directory, because pnpm runs scripts
 // with the package as cwd and the file lives two levels above it. Works
 // identically from src/ under tsx and from dist/ after a build.
-loadEnv({
-  path: resolve(dirname(fileURLToPath(import.meta.url)), "../../..", ".env"),
-});
+//
+// ENV_FILE selects a different one, which is how a command can be pointed at
+// the cloud database without editing the file local development uses. Mixing
+// the two in one file is how someone ends up running a migration, or a reset,
+// against production while believing they are on their laptop.
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
+loadEnv({ path: resolve(repoRoot, process.env.ENV_FILE ?? ".env") });
 
 /**
  * Configuration is validated once at startup and the process refuses to boot on

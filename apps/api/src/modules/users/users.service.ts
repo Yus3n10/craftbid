@@ -4,7 +4,7 @@ import type {
   UpdateArtistProfileInput,
   UpdateProfileInput,
   ExternalLinkInput,
-} from "@raxtan/shared";
+} from "@craftbid/shared";
 import { bufToUuid } from "../../db/ids.js";
 import { withTransaction } from "../../db/query.js";
 import { badRequest, forbidden, notFound } from "../../lib/errors.js";

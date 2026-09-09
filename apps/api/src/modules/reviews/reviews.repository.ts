@@ -1,4 +1,4 @@
-import type { ReviewDto, UserRole } from "@raxtan/shared";
+import type { ReviewDto, UserRole } from "@craftbid/shared";
 import { bufToUuid, uuidToBuf } from "../../db/ids.js";
 import { db, type Queryable } from "../../db/query.js";
 import { getStorage } from "../../lib/storage/index.js";

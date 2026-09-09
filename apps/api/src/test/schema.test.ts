@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CRAFT_CATEGORIES } from "@raxtan/shared";
+import { CRAFT_CATEGORIES } from "@craftbid/shared";
 import { db } from "../db/query.js";
 import { bufToUuid, newId, uuidToBuf } from "../db/ids.js";
 

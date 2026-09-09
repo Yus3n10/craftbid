@@ -33,7 +33,7 @@ export function materialiseWallet(): string | undefined {
     );
   }
 
-  const dir = mkdtempSync(join(tmpdir(), "raxtan-wallet-"));
+  const dir = mkdtempSync(join(tmpdir(), "craftbid-wallet-"));
 
   writeFileSync(join(dir, "tnsnames.ora"), Buffer.from(tnsnames, "base64"), {
     mode: 0o600,

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import type { PostingDto } from "@raxtan/shared";
+import type { PostingDto } from "@craftbid/shared";
 import { Card, ImageFrame, Money, StatusBadge } from "./ui/Primitives.js";
 
 function timeAgo(iso: string): string {

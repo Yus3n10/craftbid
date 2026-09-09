@@ -1,4 +1,4 @@
-import type { NotificationDto, NotificationType } from "@raxtan/shared";
+import type { NotificationDto, NotificationType } from "@craftbid/shared";
 import { bufToUuid, newId, uuidToBuf } from "../../db/ids.js";
 import { db, type Queryable } from "../../db/query.js";
 

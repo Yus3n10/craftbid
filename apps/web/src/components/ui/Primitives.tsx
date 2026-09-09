@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import type { ImageDto, UserSummaryDto } from "@raxtan/shared";
-import { formatPesoCompact } from "@raxtan/shared";
+import type { ImageDto, UserSummaryDto } from "@craftbid/shared";
+import { formatPesoCompact } from "@craftbid/shared";
 import { cx } from "../../lib/cx.js";
 import { selvedgeStyle } from "../../lib/materials.js";
 

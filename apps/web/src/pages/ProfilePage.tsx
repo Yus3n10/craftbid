@@ -6,7 +6,7 @@ import type {
   Paginated,
   PublicProfileDto,
   ReviewDto,
-} from "@raxtan/shared";
+} from "@craftbid/shared";
 import { api } from "../lib/api.js";
 import { useAuth } from "../lib/auth.js";
 import { materialColor } from "../lib/materials.js";
@@ -46,7 +46,7 @@ function LinkList({ links }: { links: ExternalLinkDto[] }) {
               href={link.url}
               target="_blank"
               // noreferrer and nofollow because these are user-supplied links
-              // to sites RaxTan does not vouch for.
+              // to sites Craftbid does not vouch for.
               rel="noopener noreferrer nofollow"
               className="inline-flex items-center gap-1.5 rounded-sm border border-fiber bg-paper px-2.5 py-1 text-sm text-ink-soft transition-colors hover:border-fiber-strong hover:text-ink"
             >
@@ -110,7 +110,7 @@ function Reviews({ username }: { username: string }) {
     return (
       <p className="text-ink-soft">
         No reviews yet. Reviews can only be written after a commission arranged
-        through RaxTan is finished, so every one here is from real work.
+        through Craftbid is finished, so every one here is from real work.
       </p>
     );
   }
@@ -375,7 +375,7 @@ export function ProfilePage() {
           <div className="mt-10">
             <EmptyState
               title="No commissions yet"
-              description="This client has not completed a commission on RaxTan so far."
+              description="This client has not completed a commission on Craftbid so far."
             />
           </div>
         )}

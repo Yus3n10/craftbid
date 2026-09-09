@@ -44,7 +44,7 @@ export function Logo({ size = 26 }: { size?: number }) {
         />
       </svg>
       <span className="font-display text-xl font-semibold tracking-tight text-ink">
-        RaxTan
+        Craftbid
       </span>
     </span>
   );
