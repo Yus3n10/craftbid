@@ -1,5 +1,6 @@
 import oracledb from "oracledb";
 import { config } from "../config.js";
+import { materialiseWallet } from "./wallet.js";
 
 /**
  * node-oracledb runs in Thin mode by default from v6 onward, so no Oracle
@@ -32,10 +33,15 @@ export async function initPool(): Promise<oracledb.Pool> {
   };
 
   // Autonomous Database connects over mTLS. In Thin mode the wallet must be a
-  // PEM file (ewallet.pem) — cwallet.sso is Thick-mode only.
-  if (config.db.walletDir) {
-    attributes.configDir = config.db.walletDir;
-    attributes.walletLocation = config.db.walletDir;
+  // PEM file (ewallet.pem); cwallet.sso is Thick-mode only.
+  //
+  // A local path is used when given. Otherwise, on a host that offers only
+  // environment variables, the wallet is written out from them at startup.
+  const walletDir = config.db.walletDir ?? materialiseWallet();
+
+  if (walletDir) {
+    attributes.configDir = walletDir;
+    attributes.walletLocation = walletDir;
     if (config.db.walletPassword) {
       attributes.walletPassword = config.db.walletPassword;
     }

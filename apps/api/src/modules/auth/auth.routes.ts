@@ -12,6 +12,22 @@ import {
 import * as service from "./auth.service.js";
 import { getMe } from "../users/users.service.js";
 
+/**
+ * Body for the two routes that work with or without one.
+ *
+ * A bare `.optional()` is not enough: Fastify hands the validator an absent
+ * body and the result comes back as a validation failure, so a plain POST to
+ * logout answered 400. Preprocessing an absent body into an empty object makes
+ * the optional field genuinely optional.
+ *
+ * The browser sends nothing here and relies on its cookie; the desktop build
+ * has no cookie and sends the token it holds.
+ */
+const optionalRefreshTokenBody = z.preprocess(
+  (value) => value ?? {},
+  z.object({ refreshToken: z.string().optional() }),
+);
+
 function setSession(reply: FastifyReply, tokens: service.SessionTokens): void {
   reply.setCookie(
     ACCESS_COOKIE,
@@ -77,9 +93,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
   app.post(
     "/refresh",
     {
-      schema: {
-        body: z.object({ refreshToken: z.string().optional() }).optional(),
-      },
+      schema: { body: optionalRefreshTokenBody },
     },
     async (request, reply) => {
       const presented =
@@ -96,9 +110,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
   app.post(
     "/logout",
     {
-      schema: {
-        body: z.object({ refreshToken: z.string().optional() }).optional(),
-      },
+      schema: { body: optionalRefreshTokenBody },
     },
     async (request, reply) => {
       // The desktop build has no cookie to clear, so it sends the token it

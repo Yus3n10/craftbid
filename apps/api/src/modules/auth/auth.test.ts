@@ -206,6 +206,20 @@ describe("authentication", () => {
     expect(replay.statusCode).toBe(401);
   });
 
+  it("accepts logout and refresh with no request body at all", async () => {
+    const app = await getTestApp();
+
+    // A POST with no body is the natural way to call these. Fastify answered
+    // 400 for a while because the optional body schema rejected an absent
+    // body, which broke sign-out and made renewable sessions look dead.
+    const logout = await app.inject({ method: "POST", url: "/auth/logout" });
+    expect(logout.statusCode).toBe(204);
+
+    const refresh = await app.inject({ method: "POST", url: "/auth/refresh" });
+    // No session to refresh, so 401 is right. The point is that it is not 400.
+    expect(refresh.statusCode).toBe(401);
+  });
+
   it("logs out and invalidates the refresh token", async () => {
     const app = await getTestApp();
     const registration = await app.inject({

@@ -1,0 +1,74 @@
+# Render blueprint for the API.
+#
+# Render is used rather than a serverless host because the Oracle driver needs
+# a long-lived process holding real TCP sockets. Serverless and edge runtimes
+# cannot run it at all: Thick mode needs a native Instant Client, and Thin mode
+# needs full node:net and node:tls with custom PEM wallet material.
+#
+# Secrets are marked `sync: false` so Render prompts for them instead of them
+# living in this file.
+services:
+  - type: web
+    name: raxtan-api
+    runtime: node
+    plan: free
+    # Closest region to the Philippines, which is where the users are.
+    region: singapore
+    healthCheckPath: /health
+
+    buildCommand: >-
+      corepack enable &&
+      pnpm install --frozen-lockfile &&
+      pnpm --filter @raxtan/shared build &&
+      pnpm --filter @raxtan/api build
+
+    startCommand: node apps/api/dist/index.js
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+
+      # Autonomous Database. ORACLE_CONNECT_STRING is a TNS alias from the
+      # wallet's tnsnames.ora, such as myadb_tp.
+      - key: ORACLE_USER
+        sync: false
+      - key: ORACLE_PASSWORD
+        sync: false
+      - key: ORACLE_CONNECT_STRING
+        sync: false
+
+      # The two wallet files Thin mode needs, base64 encoded. They are written
+      # to a temporary directory at startup. See docs/DEPLOY.md.
+      - key: ORACLE_TNSNAMES_B64
+        sync: false
+      - key: ORACLE_EWALLET_PEM_B64
+        sync: false
+
+      # A free instance is capped at 512MB and sleeps when idle, so a large
+      # pool would be held open across a sleep and produce ORA-03113 on wake.
+      - key: ORACLE_POOL_MIN
+        value: 0
+      - key: ORACLE_POOL_MAX
+        value: 4
+
+      - key: JWT_SECRET
+        generateValue: true
+
+      # The deployed web origin. Cookies are sent cross-origin, so this must be
+      # exact, with no trailing slash.
+      - key: CORS_ORIGINS
+        sync: false
+
+      # Render's disk is ephemeral and wiped on every deploy, so the local
+      # storage driver would silently lose every uploaded image. Config refuses
+      # to boot with it in production.
+      - key: STORAGE_DRIVER
+        value: imagekit
+      - key: IMAGEKIT_PUBLIC_KEY
+        sync: false
+      - key: IMAGEKIT_PRIVATE_KEY
+        sync: false
+      - key: IMAGEKIT_URL_ENDPOINT
+        sync: false

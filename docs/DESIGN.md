@@ -117,8 +117,8 @@ Reviews are immutable by design. Notifications are in-app rows only.
 
 ## 3. Data model
 
-17 tables. The brief listed candidate tables and said not to create them blindly —
-two were deliberately **not** built:
+18 tables, plus `schema_migrations`. The brief listed candidate tables and said
+not to create them blindly, and two were deliberately **not** built:
 
 - **No `client_profiles`.** Clients need no field an artist does not also need.
   Shared profile fields live on `users`; only artist-specific data gets a side table.

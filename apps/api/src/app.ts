@@ -67,6 +67,30 @@ export async function buildApp(
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
 
+  /**
+   * A POST with no body is ordinary for an action like logout or refresh, but
+   * Fastify's default JSON parser rejects an empty body with a 400 before the
+   * route is ever reached. Treating it as an absent body lets the route's own
+   * optional schema decide, instead of every bodyless action needing the
+   * caller to remember to send `{}`.
+   */
+  app.addContentTypeParser(
+    "application/json",
+    { parseAs: "string" },
+    (_request, body, done) => {
+      const text = typeof body === "string" ? body.trim() : "";
+      if (text.length === 0) {
+        done(null, undefined);
+        return;
+      }
+      try {
+        done(null, JSON.parse(text));
+      } catch (error) {
+        done(error as Error);
+      }
+    },
+  );
+
   await app.register(helmet, {
     contentSecurityPolicy: false,
     // Images are served from this origin but loaded by the web app on another,
