@@ -1,14 +1,10 @@
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { CRAFT_CATEGORIES, type ArtistPostDto, type Paginated, type PostingDto } from "@craftbid/shared";
-import { api } from "../lib/api.js";
+import { CRAFT_CATEGORIES } from "@craftbid/shared";
 import { useAuth } from "../lib/auth.js";
 import { materialColor } from "../lib/materials.js";
 import { ButtonLink } from "../components/ui/Button.js";
 import { ThreadRule } from "../components/ui/Primitives.js";
-import { CardSkeleton, EmptyState, ErrorState } from "../components/ui/States.js";
-import { PostingCard } from "../components/PostingCard.js";
-import { PostCard } from "../components/PostCard.js";
+import { Feed } from "../components/Feed.js";
 import { WorkRibbon } from "../components/WorkRibbon.js";
 
 /**
@@ -120,106 +116,27 @@ function CategoryStrip() {
   );
 }
 
-function LatestRequests() {
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["postings", "home"],
-    queryFn: () =>
-      api.get<Paginated<PostingDto>>("/postings?status=open&limit=3&sort=newest"),
-  });
 
-  return (
-    <section className="mx-auto max-w-6xl px-4 py-14">
-      <div className="mb-6 flex items-end justify-between gap-4">
-        <div>
-          <h2 className="font-display text-2xl sm:text-3xl">Open craft requests</h2>
-          <ThreadRule className="mt-3 w-20" />
-        </div>
-        <Link
-          to="/postings"
-          className="shrink-0 text-sm font-medium text-indigo hover:underline"
-        >
-          See all requests
-        </Link>
-      </div>
 
-      {error ? (
-        <ErrorState error={error} onRetry={() => void refetch()} />
-      ) : (
-        <div className="stagger grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {isLoading ? (
-            <CardSkeleton count={3} />
-          ) : data && data.items.length > 0 ? (
-            data.items.map((posting) => (
-              <PostingCard key={posting.id} posting={posting} />
-            ))
-          ) : (
-            <div className="sm:col-span-2 lg:col-span-3">
-              <EmptyState
-                title="No open requests yet"
-                description="Nobody has posted a craft request so far. If you want something made, yours would be the first."
-                action={{ label: "Post a craft request", to: "/postings/new" }}
-              />
-            </div>
-          )}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function RecentWork() {
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["posts", "home"],
-    queryFn: () => api.get<Paginated<ArtistPostDto>>("/posts?limit=4"),
-  });
-
-  return (
-    <section className="border-t border-fiber bg-paper-raised">
-      <div className="mx-auto max-w-6xl px-4 py-14">
-        <div className="mb-6 flex items-end justify-between gap-4">
-          <div>
-            <h2 className="font-display text-2xl sm:text-3xl">Recent work</h2>
-            <ThreadRule className="mt-3 w-20" />
-          </div>
-          <Link
-            to="/discover"
-            className="shrink-0 text-sm font-medium text-indigo hover:underline"
-          >
-            Discover artists
-          </Link>
-        </div>
-
-        {error ? (
-          <ErrorState error={error} onRetry={() => void refetch()} />
-        ) : (
-          <div className="stagger grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {isLoading ? (
-              <CardSkeleton count={4} />
-            ) : data && data.items.length > 0 ? (
-              data.items.map((post) => <PostCard key={post.id} post={post} />)
-            ) : (
-              <div className="sm:col-span-2 lg:col-span-4">
-                <EmptyState
-                  title="No work posted yet"
-                  description="Artists have not shared any pieces yet. If you make things, your portfolio would be the first here."
-                  action={{ label: "Join as an artist", to: "/register" }}
-                />
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-
+/**
+ * The home page.
+ *
+ * A signed-out visitor gets the hero first, because they still need telling
+ * what this is. Once someone has an account the explanation is wasted space,
+ * so they land straight in the feed.
+ */
 export function HomePage() {
+  const { user } = useAuth();
+
   return (
     <>
-      <Hero />
-      <CategoryStrip />
-      <LatestRequests />
-      <RecentWork />
+      {!user && (
+        <>
+          <Hero />
+          <CategoryStrip />
+        </>
+      )}
+      <Feed />
     </>
   );
 }

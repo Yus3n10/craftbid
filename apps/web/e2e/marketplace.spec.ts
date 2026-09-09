@@ -50,9 +50,13 @@ async function signOut(page: Page): Promise<void> {
   }
 
   // Confirms the session is actually gone rather than just the button: a
-  // protected route must now send us to sign in.
-  await page.goto("/commissions");
-  await expect(page).toHaveURL(/\/login/, { timeout: 15_000 });
+  // protected route must now send us to sign in. Retried, because the click
+  // only starts the sign-out request and the cookie is cleared by its
+  // response, so a single immediate navigation can still carry a live session.
+  await expect(async () => {
+    await page.goto("/commissions");
+    await expect(page).toHaveURL(/\/login/, { timeout: 3_000 });
+  }).toPass({ timeout: 25_000 });
 }
 
 test.describe("marketplace", () => {
@@ -63,8 +67,11 @@ test.describe("marketplace", () => {
     ).toBeVisible();
     await expect(page.getByRole("heading", { name: "I want something made" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "I make things" })).toBeVisible();
-    // Exact, or it also matches any posting title containing the word.
-    await expect(page.getByRole("link", { name: "Crochet", exact: true })).toBeVisible();
+    // Categories are now listed in two places on the home page: the strip
+    // under the hero and the feed's sidebar. Either proves the point.
+    await expect(
+      page.getByRole("link", { name: "Crochet", exact: true }).first(),
+    ).toBeVisible();
   });
 
   test("a client posts a request and an artist bids on it", async ({ page }) => {

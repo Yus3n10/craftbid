@@ -24,9 +24,11 @@ import {
   UserChip,
 } from "../components/ui/Primitives.js";
 import { ErrorState, FormError, RowSkeleton } from "../components/ui/States.js";
+import { Lightbox } from "../components/Lightbox.js";
 
 function Gallery({ posting }: { posting: PostingDto }) {
   const [active, setActive] = useState(0);
+  const [zoomed, setZoomed] = useState<number | null>(null);
   if (posting.images.length === 0) return null;
 
   const current = posting.images[active] ?? posting.images[0]!;
@@ -40,7 +42,12 @@ function Gallery({ posting }: { posting: PostingDto }) {
         height, so a tall photo is shown whole without pushing the description
         and the bid form off the screen.
       */}
-      <div className="flex justify-center overflow-hidden rounded-md border border-fiber bg-paper-sunk">
+      <button
+        type="button"
+        onClick={() => setZoomed(active)}
+        aria-label={`View reference image ${active + 1} full size`}
+        className="flex w-full cursor-zoom-in justify-center overflow-hidden rounded-md border border-fiber bg-paper-sunk"
+      >
         <img
           src={current.url}
           alt={`Reference image ${active + 1} for ${posting.title}`}
@@ -48,7 +55,7 @@ function Gallery({ posting }: { posting: PostingDto }) {
           height={current.height}
           className="max-h-[32rem] w-auto max-w-full object-contain"
         />
-      </div>
+      </button>
       {posting.images.length > 1 && (
         <ul className="flex flex-wrap gap-2">
           {posting.images.map((image, index) => (
@@ -69,6 +76,14 @@ function Gallery({ posting }: { posting: PostingDto }) {
           ))}
         </ul>
       )}
+
+      <Lightbox
+        images={posting.images}
+        index={zoomed}
+        onClose={() => setZoomed(null)}
+        onIndexChange={setZoomed}
+        alt={`Reference image for ${posting.title}`}
+      />
     </div>
   );
 }

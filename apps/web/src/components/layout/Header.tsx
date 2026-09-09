@@ -7,6 +7,7 @@ import { cx } from "../../lib/cx.js";
 import { Avatar } from "../ui/Primitives.js";
 import { Button, ButtonLink } from "../ui/Button.js";
 import { Logo } from "./Logo.js";
+import { SearchBox } from "../SearchBox.js";
 
 function navClass({ isActive }: { isActive: boolean }): string {
   return cx(
@@ -58,13 +59,17 @@ export function Header() {
           <Logo />
         </Link>
 
-        <nav className="hidden flex-1 items-center gap-1 md:flex" aria-label="Main">
+        <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
           {links.map((link) => (
             <NavLink key={link.to} to={link.to} className={navClass}>
               {link.label}
             </NavLink>
           ))}
         </nav>
+
+        <div className="mx-4 hidden max-w-sm flex-1 md:block">
+          <SearchBox />
+        </div>
 
         <div className="ml-auto hidden items-center gap-2 md:flex">
           {user ? (
@@ -136,6 +141,9 @@ export function Header() {
 
       {menuOpen && (
         <div id="mobile-nav" className="border-t border-fiber bg-paper-raised md:hidden">
+          <div className="mx-auto max-w-6xl px-4 pt-3">
+            <SearchBox onNavigate={() => setMenuOpen(false)} />
+          </div>
           <nav className="mx-auto max-w-6xl px-4 py-3" aria-label="Main">
             <ul className="space-y-1">
               {links.map((link) => (

@@ -21,6 +21,8 @@ const PostingDetailPage = lazy(async () => ({ default: (await import("./pages/Po
 const PostingFormPage = lazy(async () => ({ default: (await import("./pages/PostingFormPage.js")).PostingFormPage }));
 const PostingApplicationsPage = lazy(async () => ({ default: (await import("./pages/PostingApplicationsPage.js")).PostingApplicationsPage }));
 const DiscoverPage = lazy(async () => ({ default: (await import("./pages/DiscoverPage.js")).DiscoverPage }));
+const SearchPage = lazy(async () => ({ default: (await import("./pages/SearchPage.js")).SearchPage }));
+const PostDetailPage = lazy(async () => ({ default: (await import("./pages/PostDetailPage.js")).PostDetailPage }));
 const ProfilePage = lazy(async () => ({ default: (await import("./pages/ProfilePage.js")).ProfilePage }));
 const PostFormPage = lazy(async () => ({ default: (await import("./pages/PostFormPage.js")).PostFormPage }));
 const MyPostingsPage = lazy(async () => ({ default: (await import("./pages/MyPostingsPage.js")).MyPostingsPage }));
@@ -132,6 +134,7 @@ export function App() {
         />
 
         <Route path="discover" element={<DiscoverPage />} />
+        <Route path="search" element={<SearchPage />} />
         <Route path="artists/:username" element={<ProfilePage />} />
         <Route
           path="posts/new"
@@ -141,6 +144,7 @@ export function App() {
             </RequireAuth>
           }
         />
+        <Route path="posts/:id" element={<PostDetailPage />} />
         <Route
           path="posts/:id/edit"
           element={
