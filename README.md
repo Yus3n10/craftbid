@@ -238,9 +238,12 @@ These are real and deliberate, not oversights.
   plugin (`pnpm tauri info`), and the web build it wraps is verified, but the
   Rust build itself is unproven. Its external-link behaviour is likewise
   unverified.
-- **The production database is unverified.** Everything is built and tested
-  against Oracle Free, which shares the dialect, but no Autonomous Database
-  wallet was available.
+- ~~The production database is unverified.~~ **Verified.** The schema applies
+  cleanly to an Always Free Autonomous Database (Oracle **19c**, Singapore),
+  connected with `oracledb` in Thin mode using the PEM wallet. All 19 tables,
+  the 13 seeded categories and every integrity constraint are present. The
+  choice to avoid 23ai-only syntax mattered: the instance is 19c, and a
+  `BOOLEAN` column would have failed there.
 - **The free API sleeps.** Render spins a free service down after 15 minutes,
   so the first request after a quiet spell takes 30 to 60 seconds.
 - **Always Free Autonomous Database is deleted after 90 idle days**, and stops
