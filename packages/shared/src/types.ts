@@ -12,6 +12,7 @@ import type {
   LinkPlatform,
   NotificationType,
   PostingStatus,
+  ReactionKind,
   UserRole,
 } from "./constants.js";
 
@@ -122,6 +123,42 @@ export interface ArtistPostDto extends ArtistPostSummaryDto {
   images: ImageDto[];
   artist: UserSummaryDto;
   createdAt: string;
+  reactions: ReactionSummary;
+  commentCount: number;
+  /** Whether the signed-in viewer saved this. Absent when signed out. */
+  saved?: boolean;
+}
+
+/**
+ * Counts per kind, plus what the viewer themselves chose.
+ *
+ * `mine` is what lets the reaction bar show its own state without a second
+ * request, and it is null for a signed-out reader rather than absent, so the
+ * client never has to tell "not loaded" from "not reacted".
+ */
+export interface ReactionSummary {
+  love: number;
+  support: number;
+  like: number;
+  total: number;
+  mine: ReactionKind | null;
+}
+
+export interface CommentDto {
+  id: string;
+  body: string;
+  author: UserSummaryDto;
+  createdAt: string;
+  /** True when the viewer wrote it, so the client can offer to delete. */
+  mine: boolean;
+}
+
+/** One search over artists, clients, portfolio posts and open requests. */
+export interface SearchResultsDto {
+  artists: UserSummaryDto[];
+  clients: UserSummaryDto[];
+  posts: ArtistPostSummaryDto[];
+  requests: { id: string; title: string; minBudgetCentavos: number; category: CategoryDto }[];
 }
 
 export interface CommissionDto {

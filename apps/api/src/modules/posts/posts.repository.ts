@@ -75,7 +75,19 @@ async function imagesForPosts(
   return result;
 }
 
-function mapPost(row: PostRow, images: ImageDto[]): ArtistPostDto {
+/**
+ * A post as the database knows it, before the social layer is attached.
+ *
+ * Named as its own type so the compiler refuses a route that returns a post
+ * without going through `social.decorate`. Filling in zeroes here instead
+ * would have compiled and quietly served every card with no reactions.
+ */
+export type UndecoratedPost = Omit<
+  ArtistPostDto,
+  "reactions" | "commentCount" | "saved"
+>;
+
+function mapPost(row: PostRow, images: ImageDto[]): UndecoratedPost {
   const storage = getStorage();
   return {
     id: bufToUuid(row.id)!,
@@ -114,7 +126,7 @@ function mapPost(row: PostRow, images: ImageDto[]): ArtistPostDto {
 export async function findById(
   id: string,
   q: Queryable = db,
-): Promise<ArtistPostDto | null> {
+): Promise<UndecoratedPost | null> {
   const row = await q.one<PostRow>(
     `${POST_SELECT} WHERE p.id = :id AND p.status = 'published'`,
     { id: uuidToBuf(id) },
@@ -139,7 +151,7 @@ export async function findOwner(
 export async function list(
   filter: { artistUsername?: string; categorySlug?: string; limit: number; offset: number },
   q: Queryable = db,
-): Promise<{ items: ArtistPostDto[]; total: number }> {
+): Promise<{ items: UndecoratedPost[]; total: number }> {
   const where = ["p.status = 'published'"];
   const binds: Record<string, BindValue> = {};
 

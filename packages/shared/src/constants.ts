@@ -60,6 +60,23 @@ export const NOTIFICATION_TYPES = [
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
 /** Platforms an artist may link for off-platform contact. */
+/**
+ * Reactions.
+ *
+ * Three, deliberately, and each says something a marketplace for handmade work
+ * actually needs to distinguish: the piece is beautiful, the maker is worth
+ * backing, or a plain nod. A longer list would collect noise, and a single
+ * "like" would flatten praise for the work into praise for the person.
+ */
+export const REACTION_KINDS = ["love", "support", "like"] as const;
+export type ReactionKind = (typeof REACTION_KINDS)[number];
+
+export const REACTION_LABELS: Record<ReactionKind, string> = {
+  love: "Love",
+  support: "Support",
+  like: "Like",
+};
+
 export const LINK_PLATFORMS = [
   "facebook",
   "instagram",
@@ -129,6 +146,7 @@ export const LIMITS = {
   username: { min: 3, max: 30 },
   password: { min: 10, max: 200 },
   bio: { max: 1000 },
+  commentBody: { max: 1000 },
   headline: { max: 120 },
   postingTitle: { min: 8, max: 140 },
   postingDescription: { min: 30, max: 5000 },

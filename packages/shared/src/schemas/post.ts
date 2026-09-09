@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CRAFT_CATEGORY_SLUGS, LIMITS } from "../constants.js";
+import { CRAFT_CATEGORY_SLUGS, LIMITS, REACTION_KINDS } from "../constants.js";
 import { optionalText, paginationSchema, uuidSchema } from "./common.js";
 
 /**
@@ -26,3 +26,29 @@ export const artistPostListQuerySchema = paginationSchema.extend({
 });
 
 export type CreateArtistPostInput = z.infer<typeof createArtistPostSchema>;
+
+export const setReactionSchema = z.object({
+  kind: z.enum(REACTION_KINDS),
+});
+
+export const createCommentSchema = z.object({
+  body: z
+    .string()
+    .trim()
+    .min(1, "Write something first.")
+    .max(LIMITS.commentBody.max),
+});
+
+/**
+ * The feed. Separate from the profile listing because it has its own axes:
+ * everything, only what you saved, or only a single craft.
+ */
+export const feedQuerySchema = paginationSchema.extend({
+  category: z.enum(CRAFT_CATEGORY_SLUGS as [string, ...string[]]).optional(),
+  saved: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((value) => value === "true"),
+});
+
+export type CreateCommentInput = z.infer<typeof createCommentSchema>;

@@ -3,6 +3,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
   artistPostListQuerySchema,
   createArtistPostSchema,
+  feedQuerySchema,
   idParamSchema,
   updateArtistPostSchema,
 } from "@craftbid/shared";
@@ -16,13 +17,23 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
   app.get(
     "/posts",
     { schema: { querystring: artistPostListQuerySchema } },
-    async (request) => service.listPosts(request.query),
+    async (request) => service.listPosts(request.query, request.user?.id ?? null),
+  );
+
+  /**
+   * The home feed. Same posts, but able to narrow to what this reader saved,
+   * which the public listing cannot answer because it depends on who asks.
+   */
+  app.get(
+    "/feed",
+    { schema: { querystring: feedQuerySchema } },
+    async (request) => service.feed(request.query, request.user?.id ?? null),
   );
 
   app.get(
     "/posts/:id",
     { schema: { params: idParamSchema } },
-    async (request) => service.getPost(request.params.id),
+    async (request) => service.getPost(request.params.id, request.user?.id ?? null),
   );
 
   app.post(

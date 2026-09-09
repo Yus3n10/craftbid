@@ -35,3 +35,14 @@ export const optionalText = (max: number) =>
     .max(max)
     .transform((value) => (value.length === 0 ? undefined : value))
     .optional();
+
+/**
+ * One search box over three kinds of thing. `q` is short on purpose: a
+ * substring scan cannot use an index, so the length cap is what stops a very
+ * long term turning into a slow full-table read.
+ */
+export const searchQuerySchema = z.object({
+  q: z.string().trim().min(2, "Type at least two characters.").max(80),
+  kind: z.enum(["all", "artists", "clients", "posts", "requests"]).default("all"),
+  limit: z.coerce.number().int().min(1).max(20).default(6),
+});

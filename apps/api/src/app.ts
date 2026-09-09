@@ -24,6 +24,8 @@ import { postingRoutes } from "./modules/postings/postings.routes.js";
 import { applicationRoutes } from "./modules/applications/applications.routes.js";
 import { commissionRoutes } from "./modules/commissions/commissions.routes.js";
 import { postRoutes } from "./modules/posts/posts.routes.js";
+import { socialRoutes } from "./modules/social/social.routes.js";
+import { searchRoutes } from "./modules/search.routes.js";
 import { communityRoutes } from "./modules/community.routes.js";
 
 /** One entry of Fastify's `error.validation` array. */
@@ -268,6 +270,8 @@ export async function buildApp(
   await app.register(applicationRoutes);
   await app.register(commissionRoutes);
   await app.register(postRoutes);
+  await app.register(socialRoutes);
+  await app.register(searchRoutes);
   await app.register(communityRoutes);
 
   return app;
