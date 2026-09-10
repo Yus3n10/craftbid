@@ -11,6 +11,9 @@ import { expect, test, type Page } from "@playwright/test";
  * reverting its fix and watching it fail.
  */
 
+/** Where `vite preview` serves the build. Must match the config's baseURL. */
+const SITE_ORIGIN = "http://localhost:4178";
+
 /**
  * True for a call to the API and nothing else.
  *
@@ -20,9 +23,15 @@ import { expect, test, type Page } from "@playwright/test";
  * with a page of JSON. Everything after that is confusing -- there is no
  * #root in the document to look at -- and none of it is the thing under test.
  * Origin first, then path.
+ *
+ * Anything not served by the site is the API, rather than a named host,
+ * because VITE_API_URL is baked in at build time and differs by where the
+ * build happened: onrender.com locally, localhost:4000 in CI. Naming one of
+ * them would leave the other unstubbed, and an unstubbed call does not fail
+ * the test, it just quietly makes it prove nothing.
  */
 function isApiCall(url: URL, path: RegExp): boolean {
-  return url.hostname.endsWith("onrender.com") && path.test(url.pathname);
+  return url.origin !== SITE_ORIGIN && path.test(url.pathname);
 }
 
 const SIGNED_OUT = {

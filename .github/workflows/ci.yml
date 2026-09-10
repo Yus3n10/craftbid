@@ -79,6 +79,17 @@ jobs:
       - name: Production build
         run: pnpm --filter @craftbid/api build && pnpm --filter @craftbid/web build
 
+      # The only browser suite that runs here, because it is the only one that
+      # can: it stubs every API call and needs neither the database nor a
+      # server. It also covers the one class of fault a deploy introduces
+      # rather than a commit -- a route chunk the running page can no longer
+      # fetch -- which is exactly the fault nothing else in this file can see.
+      - name: Install Chromium for the resilience tests
+        run: pnpm --filter @craftbid/web exec playwright install --with-deps chromium
+
+      - name: Resilience tests
+        run: pnpm --filter @craftbid/web exec playwright test -c playwright.resilience.config.ts
+
       - name: Check no secrets were committed
         run: |
           if git ls-files | grep -E '(^|/)\.env$|\.pem$|ewallet|cwallet|tnsnames\.ora'; then
