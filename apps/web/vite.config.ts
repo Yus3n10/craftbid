@@ -49,6 +49,34 @@ export default defineConfig(({ mode }) => {
       __API_URL__: JSON.stringify(env.VITE_API_URL ?? "http://localhost:4000"),
     },
     server: { port: 5173 },
-    build: { outDir: "dist", sourcemap: true },
+    build: {
+      outDir: "dist",
+      sourcemap: true,
+      rollupOptions: {
+        output: {
+          /**
+           * React, the router and the query client in a chunk of their own.
+           *
+           * They were part of the entry chunk, which meant every deploy gave
+           * the entry a new hash and made a returning reader download all of
+           * it again -- roughly 170KB gzipped, of which the ~50KB that is
+           * actually this application is the only part that changed. These
+           * three change when they are upgraded and not otherwise, so split
+           * out they stay in the browser cache across deploys.
+           *
+           * They belong together rather than in three chunks because they are
+           * always all needed: nothing renders without React, and every screen
+           * is inside the router. Three requests to fetch one dependency graph
+           * would cost more on a high-latency connection than it saves.
+           */
+          manualChunks: (id) =>
+            /node_modules[\/](react|react-dom|scheduler|react-router|react-router-dom|@tanstack)[\/]/.test(
+              id,
+            )
+              ? "vendor"
+              : undefined,
+        },
+      },
+    },
   };
 });

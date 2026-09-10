@@ -24,6 +24,7 @@
     "test": "pnpm -r test",
     "test:api": "pnpm --filter @craftbid/api test",
     "test:e2e": "pnpm --filter @craftbid/web test:e2e",
+    "test:resilience": "pnpm --filter @craftbid/web test:resilience",
     "tauri": "tauri",
     "desktop:icons": "tauri icon apps/web/public/icon-512.png",
     "desktop:dev": "tauri dev",

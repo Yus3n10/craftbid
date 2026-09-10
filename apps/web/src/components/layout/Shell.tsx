@@ -1,9 +1,12 @@
-import { Link, Outlet } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import { BRAND } from "@craftbid/shared";
 import { Header } from "./Header.js";
 import { Logo } from "./Logo.js";
+import { ErrorBoundary } from "../ErrorBoundary.js";
 
 export function Shell() {
+  const { pathname } = useLocation();
+
   return (
     <div className="flex min-h-dvh flex-col">
       <a
@@ -15,8 +18,26 @@ export function Shell() {
 
       <Header />
 
+      {/*
+        The error boundary sits here, inside the chrome, so a screen that fails
+        to render leaves the header, the search box and the footer alone and
+        the rest of the app still reachable. Around the router instead, the one
+        thing a reader could do about a broken page would be to retype a URL.
+
+        The Suspense boundary deliberately stays where it was, above the
+        router, and is not moved down beside this one. Above the router it
+        already holds mounted content, so React keeps the current page on
+        screen through a navigation and swaps it when the next chunk lands.
+        Nested here it would be a boundary with nothing to hold, and every
+        navigation would flash a skeleton over a page that was perfectly fine.
+
+        resetKey, not key: see the note on that prop. A key here would remount
+        this subtree on every navigation and cost the same skeleton flash.
+      */}
       <main id="main" className="flex-1">
-        <Outlet />
+        <ErrorBoundary resetKey={pathname} label="the current page">
+          <Outlet />
+        </ErrorBoundary>
       </main>
 
       <footer className="mt-20 border-t border-fiber bg-paper-raised">

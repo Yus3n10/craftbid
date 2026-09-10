@@ -21,6 +21,25 @@ export const BEARER_MODE = import.meta.env.VITE_AUTH_MODE === "bearer";
 const ACCESS_KEY = "craftbid.accessToken";
 const REFRESH_KEY = "craftbid.refreshToken";
 
+/**
+ * Whether this browser has ever held a session.
+ *
+ * The session cookies are httpOnly, so the client cannot look at them to find
+ * out whether it has one. Without that, a 401 on the first /auth/me of a visit
+ * was indistinguishable from an expired access token, and the client answered
+ * every one of them by attempting a refresh. For a signed-out visitor -- which
+ * is every first-time visitor, and the whole audience the landing page exists
+ * for -- that refresh cannot possibly succeed, and it is a full round trip to
+ * Render before the app can even decide to render the signed-out header.
+ *
+ * A flag written on sign-in and cleared on sign-out settles it. Being wrong is
+ * cheap in both directions: a stale flag costs the one doomed refresh this
+ * avoids, and a missing one signs the reader out a little early, which the
+ * next sign-in fixes. Nothing is authorised by it and nothing sensitive is in
+ * it, so it is a hint, not a credential.
+ */
+const SEEN_KEY = "craftbid.hadSession";
+
 function read(key: string): string | null {
   try {
     return localStorage.getItem(key);
@@ -51,13 +70,27 @@ export function storeTokens(tokens: {
   accessToken?: string;
   refreshToken?: string;
 }): void {
+  write(SEEN_KEY, "1");
   if (!BEARER_MODE) return;
   if (tokens.accessToken) write(ACCESS_KEY, tokens.accessToken);
   if (tokens.refreshToken) write(REFRESH_KEY, tokens.refreshToken);
 }
 
 export function clearTokens(): void {
+  write(SEEN_KEY, null);
   if (!BEARER_MODE) return;
   write(ACCESS_KEY, null);
   write(REFRESH_KEY, null);
+}
+
+/**
+ * True when a refresh is worth attempting at all.
+ *
+ * In bearer mode the stored token answers it outright. In cookie mode the flag
+ * is the only evidence available, and its absence means no session was ever
+ * established here.
+ */
+export function mayHaveSession(): boolean {
+  if (BEARER_MODE) return read(REFRESH_KEY) !== null;
+  return read(SEEN_KEY) !== null;
 }

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ApiError } from "../../lib/api.js";
+import { ApiError, TimeoutError } from "../../lib/api.js";
 import { cx } from "../../lib/cx.js";
 import { Button, ButtonLink } from "./Button.js";
 import { ThreadRule } from "./Primitives.js";
@@ -104,6 +104,12 @@ export function ErrorState({
   if (offline) {
     title = "You are offline";
     message = "Reconnect to the internet and try again.";
+  } else if (error instanceof TimeoutError) {
+    // Named for what the reader can do about it. The service stopping after
+    // fifteen idle minutes is the ordinary cause, and it does come back.
+    title = "The service is still waking up";
+    message =
+      "Craftbid's server stops when nobody has used it for a while and takes up to a minute to start again. Try again and it should load.";
   } else if (isApiError && error.status === 404) {
     title = "Not found";
     message = "This page does not exist, or it was removed by its owner.";

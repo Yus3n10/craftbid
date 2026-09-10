@@ -377,8 +377,16 @@ export function SettingsPage() {
                       </option>
                     ))}
                   </Select>
+                  {/*
+                    basis-64 with min-w-0 so the address field is the part that
+                    gives way when the row runs out of room: it shrinks to the
+                    space left over, and wraps onto its own line on a narrow
+                    screen rather than pushing itself and the Remove button
+                    past the edge of the card.
+                  */}
                   <TextInput
                     aria-label="Link address"
+                    className="min-w-0 flex-1 basis-64"
                     placeholder="https://instagram.com/yourname or you@gmail.com"
                     value={link.url}
                     onChange={(event) => {
@@ -396,6 +404,7 @@ export function SettingsPage() {
                     type="button"
                     variant="ghost"
                     size="md"
+                    className="shrink-0"
                     onClick={() =>
                       setLinks((current) =>
                         current.filter((_, position) => position !== index),

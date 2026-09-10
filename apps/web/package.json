@@ -9,7 +9,8 @@
     "build:desktop": "tsc -b && vite build --mode desktop",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:resilience": "vite build && playwright test -c playwright.resilience.config.ts"
   },
   "dependencies": {
     "@craftbid/shared": "workspace:*",

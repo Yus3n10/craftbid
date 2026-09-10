@@ -7,10 +7,32 @@ import type {
 import { cx } from "../../lib/cx.js";
 
 const CONTROL =
-  "w-full rounded-md border bg-paper-raised px-3 py-2 text-ink " +
+  "rounded-md border bg-paper-raised px-3 py-2 text-ink " +
   "placeholder:text-ink-faint transition-colors " +
   "focus:border-indigo focus:outline-none focus:ring-2 focus:ring-indigo/20 " +
   "disabled:bg-paper-sunk disabled:text-ink-faint";
+
+/**
+ * A control fills its container unless the caller has already said how wide it
+ * should be.
+ *
+ * cx() joins class names, it does not merge them, so a caller passing `w-36`
+ * used to leave both that and the `w-full` baked into CONTROL in the class
+ * list. Which one applied was then decided by the order Tailwind happens to
+ * emit its width rules, and it emits `w-full` last. The caller lost silently:
+ * the platform select on the contact-links row rendered at the full width of
+ * the row and pushed the address field and its Remove button off the edge of
+ * the card, so the link could not be typed.
+ *
+ * Withholding the default when the caller has supplied a width of their own
+ * means only one width rule is ever in play. `flex-1`, `basis-*` and `size-*`
+ * count as widths here because they decide the same thing inside a flex row.
+ */
+const WIDTH_SUPPLIED = /(?:^|\s)(?:w-|min-w-|max-w-|size-|basis-|flex-1|grow)/;
+
+function control(className: string | undefined, ...rest: (string | false | null | undefined)[]) {
+  return cx(WIDTH_SUPPLIED.test(className ?? "") ? "" : "w-full", CONTROL, ...rest, className);
+}
 
 interface FieldProps {
   label: string;
@@ -75,7 +97,7 @@ export function TextInput({
 }: InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean }) {
   return (
     <input
-      className={cx(CONTROL, invalid ? "border-rust" : "border-fiber-strong", className)}
+      className={control(className, invalid ? "border-rust" : "border-fiber-strong")}
       aria-invalid={invalid || undefined}
       {...rest}
     />
@@ -89,11 +111,10 @@ export function TextArea({
 }: TextareaHTMLAttributes<HTMLTextAreaElement> & { invalid?: boolean }) {
   return (
     <textarea
-      className={cx(
-        CONTROL,
+      className={control(
+        className,
         "min-h-28 resize-y leading-relaxed",
         invalid ? "border-rust" : "border-fiber-strong",
-        className,
       )}
       aria-invalid={invalid || undefined}
       {...rest}
@@ -109,11 +130,10 @@ export function Select({
 }: SelectHTMLAttributes<HTMLSelectElement> & { invalid?: boolean }) {
   return (
     <select
-      className={cx(
-        CONTROL,
+      className={control(
+        className,
         "appearance-none bg-[length:1rem] bg-[right_0.75rem_center] bg-no-repeat pr-9",
         invalid ? "border-rust" : "border-fiber-strong",
-        className,
       )}
       style={{
         backgroundImage:
@@ -161,8 +181,8 @@ export function PesoInput({
         step={1}
         aria-describedby={describedBy}
         aria-invalid={invalid || undefined}
-        className={cx(
-          CONTROL,
+        className={control(
+          undefined,
           "tabular pl-7",
           invalid ? "border-rust" : "border-fiber-strong",
         )}

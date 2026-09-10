@@ -233,7 +233,81 @@ old command beside the new commit hash.
 `--dry-run` does not catch it because only the server validates that file.
 `not_found_handling: "single-page-application"` covers the same need.
 
-### 4.8 Smaller ones
+### 4.8 A deploy blanked the page for anyone already on the site
+
+**Symptom.** After a while on the home page, clicking through to Craft requests
+or another tab gave a white page. The URL had changed, so it read as the app
+having stopped. Only a full refresh brought it back.
+
+**Cause.** Three things lining up, none of them wrong on its own:
+
+1. Every route is a dynamic import, and a deploy renames every chunk it
+   rebuilds. A page open across a deploy still holds the old filenames.
+2. Those files do not 404. `not_found_handling: "single-page-application"`
+   answers any unknown path with index.html, so the browser is handed
+   `text/html` where it asked for a module and refuses it on MIME grounds.
+   Verified against production: a missing `/assets/*.js` returns **200
+   text/html**.
+3. **There was no error boundary anywhere in the app.** React unmounted the
+   whole tree, leaving an empty `<div id="root">`.
+
+The service worker made it a certainty rather than a race: `autoUpdate`
+compiles to skipWaiting + clientsClaim + cleanupOutdatedCaches, so a new worker
+activates under the open page and deletes the precache that page is relying on.
+
+**Why a refresh was the only way out.** React caches a lazy component's
+rejection. Navigating away and back replays the same failure, so nothing inside
+the app could recover it. Confirmed by putting the chunk back on disk mid-session:
+it fetched with a 200 and the tree stayed dead.
+
+**Fix.** `apps/web/src/components/ErrorBoundary.tsx`. It recognises a
+chunk-load failure and reloads once per minute per tab, which lands on the build
+that actually has the files; index.html is `max-age=0, must-revalidate`, so a
+plain reload is enough. Anything that survives the reload is not a stale build,
+so it stops and offers a button instead of flashing forever. The boundary sits
+inside `Shell`, so a screen that fails leaves the header and footer alone.
+
+**Note on 4.5.** The stale-build advice there was "hard-reload once". That was
+the right instinct and it is now automatic.
+
+### 4.9 Skeletons that never resolved into anything
+
+**Symptom.** A tab sometimes showed only skeleton loaders. They never became
+content and never became an error. A refresh was the only way out.
+
+**Cause.** `fetch` has no timeout. Render stops the free service after fifteen
+idle minutes, and a request into that gap can be accepted and never answered.
+A pending promise is a query stuck in `isLoading`, which is a skeleton for as
+long as the tab is open. Measured by hanging the API on the live site: after 12
+seconds, still 8 skeletons, no error, no retry.
+
+**Fix.** A 20s deadline per attempt in `apps/web/src/lib/api.ts`, raised as a
+`TimeoutError` carrying status 408. 20s rather than something tighter because a
+cold start legitimately takes 30-60s; the retry predicate in `main.tsx` now
+exempts 408 so React Query's two retries give a genuinely waking service three
+attempts. `ErrorState` names the cause, since "still waking up" tells the reader
+that trying again will work.
+
+### 4.10 The platform dropdown covered the whole contact-links row
+
+**Symptom.** On the settings form, the platform select under "Where else to
+find you" stretched the full width of the card and pushed the address field and
+its Remove button off the edge. The link could not be typed.
+
+**Cause.** `cx` joins class names, it does not merge them. `<Select
+className="w-36 shrink-0">` emitted **both** `w-full` (from `CONTROL`) and
+`w-36`, and Tailwind's own source order decides which wins. It emits `w-full`
+last, so the caller lost silently. With `shrink-0` on the select and
+`sm:flex-nowrap` on the row, nothing could give way. Measured in a 600px row:
+the select computed to **600px** and the address field to **26px**.
+
+**Fix.** `CONTROL` no longer carries a width; `control()` in `Field.tsx` adds
+`w-full` only when the caller has not supplied a width of their own, so one
+width rule is ever in play. The address field now takes `min-w-0 flex-1
+basis-64` so it is the part that gives way, and wraps instead of overflowing on
+a narrow screen. This was a footgun for every caller, not just this one.
+
+### 4.11 Smaller ones
 
 - **Sign-in dropped users on the home page.** Both auth pages redirected an
   already-authenticated visitor to `/` *and* navigated imperatively after the
@@ -309,8 +383,34 @@ Measured on the live site rather than guessed:
 | API warm | 100–380ms |
 | DOM ready | 21ms |
 
-**None of that is the problem.** What costs 30–60 seconds is Render stopping
-the service after 15 idle minutes, and it lands on first-time visitors.
+Render stopping the service after 15 idle minutes is still the worst of it, at
+30–60 seconds, and it lands on first-time visitors. Three other things were
+worth fixing:
+
+**The entry bundle was 607KB, 173KB gzipped.** Route splitting had already
+happened, but the route chunks are 3–22KB each and everything else was in the
+entry, so a deploy made a returning reader re-download all of it to get the
+~30KB that had actually changed. React, the router and the query client now
+build as a separate `vendor` chunk: entry **131KB / 29KB gzipped**, vendor
+480KB / 146KB, and the vendor hash does not move when application code does.
+
+**Every signed-out visitor paid a doomed `/auth/refresh`.** The cookies are
+httpOnly, so a 401 on the first `/auth/me` was indistinguishable from an
+expired access token and the client answered it by attempting a refresh that
+could not succeed. Measured on the live site: a whole extra round trip, 208ms,
+before the app could decide to render the signed-out header. A flag written on
+sign-in and cleared on sign-out (`mayHaveSession` in `session.ts`) settles it.
+
+**Nothing was actually slow about navigation.** Measured frame by frame it is
+~90-140ms with no blank frame and no skeleton, because React holds the current
+page through the transition. Worth knowing before moving that Suspense
+boundary: it is above the router *because* it already holds mounted content
+there. Nested inside `Shell` beside the error boundary, or keyed by pathname, it
+becomes a boundary with nothing to hold and every navigation flashes a skeleton
+over a page that was fine. Both were tried and measured; see the comment in
+`Shell.tsx`.
+
+What the reports of slowness actually were is 4.8 and 4.9 above.
 
 `apps/web/worker/keepalive.ts` is a Cloudflare cron trigger pinging `/health`
 every ten minutes. It lives beside the static assets so it ships with the site;
@@ -332,6 +432,7 @@ stale-while-revalidate; categories an hour; uploaded bytes a year.
 pnpm db:up          # Oracle must be running
 pnpm test           # 91 API integration tests
 pnpm test:e2e       # 10 browser tests, desktop and mobile
+pnpm test:resilience  # 3 browser tests, no database or API needed
 ```
 
 Integration tests run against **real Oracle in Docker, never a mock**. The
@@ -343,6 +444,17 @@ prove nothing.
 ```bash
 pnpm db:reset && pnpm --filter @craftbid/api seed
 ```
+
+`test:resilience` is separate because it needs neither: it runs against a
+production build served by `vite preview` with every API call intercepted, so it
+runs from a checkout with nothing else started. It covers the two failures in
+4.8 and 4.9, which the marketplace suite structurally cannot reach because that
+suite drives a healthy build against a healthy API. It runs with
+`serviceWorkers: "block"`, both because a chunk the precache no longer holds is
+the state being tested and because `page.route` cannot see a request a service
+worker answers, so with one registered the interception silently does nothing
+and the tests pass having tested nothing. Each of the three was checked by
+reverting its fix and watching it fail.
 
 Coverage worth knowing about: authorisation boundaries attacked directly at the
 API; the bid minimum and duplicate-bid constraints; upload validation including
@@ -440,10 +552,20 @@ Ordered by what I would do next.
 6. **`complete()` returns 400 where 403 would be right.** The refusal is
    correct; the status code is an authorisation failure dressed as a validation
    error.
-7. **The local folder is still `raxtan`.** Cosmetic; rename it when nothing is
+7. **`uploadImage` has no deadline**, unlike every other request. Deliberate
+   for now: a large photo on mobile data can legitimately outlast 20s, and a
+   stuck upload shows a spinner on a button the reader can see rather than a
+   page of skeletons. It wants its own, longer deadline rather than the shared
+   one.
+8. **The contact-links row is three lines tall on a narrow screen**: select,
+   address, Remove. Correct and never overflowing, but the lonely Remove is
+   untidy. The tempting fix, reordering it up beside the select with
+   `order-last` on the address field, makes visual order disagree with tab
+   order, so it needs a different layout rather than an ordering trick.
+9. **The local folder is still `raxtan`.** Cosmetic; rename it when nothing is
    running.
-8. **An orphaned ~2KB image** sits on ImageKit from an early purge, before the
-   storage-removal bug in that script was fixed.
+10. **An orphaned ~2KB image** sits on ImageKit from an early purge, before the
+    storage-removal bug in that script was fixed.
 
 ### Things that will bite you
 

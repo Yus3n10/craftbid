@@ -32,7 +32,15 @@ const CommissionDetailPage = lazy(async () => ({ default: (await import("./pages
 const NotificationsPage = lazy(async () => ({ default: (await import("./pages/NotificationsPage.js")).NotificationsPage }));
 const SettingsPage = lazy(async () => ({ default: (await import("./pages/SettingsPage.js")).SettingsPage }));
 
-/** Shown while a route chunk is still arriving. */
+/**
+ * Shown while a route chunk is still arriving.
+ *
+ * Only reached on a first load or a hard reload, when there is no page on
+ * screen to keep. On a navigation this boundary already has content, so React
+ * holds the current page instead of rendering this, which is why it is the
+ * only Suspense boundary in the app and sits above the router rather than
+ * beside the error boundary inside Shell.
+ */
 function RouteFallback() {
   return (
     <Page>
