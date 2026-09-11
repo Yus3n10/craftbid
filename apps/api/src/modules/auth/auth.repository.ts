@@ -6,6 +6,8 @@ export interface RefreshTokenRecord {
   userId: string;
   expiresAt: Date;
   revokedAt: Date | null;
+  /** "Keep me logged in" was ticked when this session began. */
+  persistent: boolean;
 }
 
 interface RefreshTokenRow {
@@ -13,21 +15,23 @@ interface RefreshTokenRow {
   userId: Buffer;
   expiresAt: Date;
   revokedAt: Date | null;
+  persistent: number;
 }
 
 export async function storeRefreshToken(
-  input: { userId: string; tokenHash: string; expiresAt: Date },
+  input: { userId: string; tokenHash: string; expiresAt: Date; persistent: boolean },
   q: Queryable = db,
 ): Promise<string> {
   const id = newId();
   await q.run(
-    `INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at)
-     VALUES (:id, :userId, :tokenHash, :expiresAt)`,
+    `INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at, persistent)
+     VALUES (:id, :userId, :tokenHash, :expiresAt, :persistent)`,
     {
       id: uuidToBuf(id),
       userId: uuidToBuf(input.userId),
       tokenHash: input.tokenHash,
       expiresAt: input.expiresAt,
+      persistent: input.persistent ? 1 : 0,
     },
   );
   return id;
@@ -39,7 +43,7 @@ export async function findByTokenHash(
   q: Queryable = db,
 ): Promise<RefreshTokenRecord | null> {
   const row = await q.one<RefreshTokenRow>(
-    `SELECT id, user_id, expires_at, revoked_at
+    `SELECT id, user_id, expires_at, revoked_at, persistent
        FROM refresh_tokens
       WHERE token_hash = :tokenHash`,
     { tokenHash },
@@ -50,6 +54,7 @@ export async function findByTokenHash(
     userId: bufToUuid(row.userId)!,
     expiresAt: row.expiresAt,
     revokedAt: row.revokedAt,
+    persistent: row.persistent === 1,
   };
 }
 

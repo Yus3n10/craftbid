@@ -12,10 +12,10 @@
   "name": "craftbid",
   "compatibility_date": "2026-09-09",
 
-  // A script alongside the assets, purely so a cron trigger has somewhere to
-  // live. Assets are still matched first, and the fetch handler delegates
-  // straight back to them, so serving the site is unchanged.
-  "main": "./worker/keepalive.ts",
+  // A script alongside the assets: it answers /api/* by forwarding to the API
+  // (so the session cookies are first-party, see worker/api-proxy.ts) and
+  // carries the cron trigger. Every other path is still served from assets.
+  "main": "./worker/index.ts",
 
   // Every ten minutes, against Render's fifteen-minute idle timeout. Runs on
   // Cloudflare's scheduler rather than a workflow runner that can be delayed.
@@ -37,6 +37,11 @@
     "directory": "./dist",
     // Lets the script hand a request back to the asset server.
     "binding": "ASSETS",
+    // The API lives at /api on this origin. These paths must reach the script
+    // before the asset server: under single-page-application handling, a path
+    // with no file behind it is otherwise answered with index.html, and every
+    // API call would come back as the app's HTML.
+    "run_worker_first": ["/api/*"],
     // Client-side routing: a deep link such as /postings/<id> is not a file on
     // disk, so unknown paths must return index.html rather than a 404.
     //

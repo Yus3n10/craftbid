@@ -9,6 +9,37 @@
       content="Craftbid connects Filipino handmade-craft artists with people who want to commission their work."
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+
+    <!--
+      Link previews. These have to be in the HTML the server sends, not added by
+      React: Messenger's and Facebook's crawlers, and most others, read the
+      first response and never run the app. Cloudflare serves this same file
+      for every route, so a shared link to any page shows this card.
+
+      Absolute URLs throughout, because a crawler resolves nothing relative to
+      the page it was given. Change them together if the site moves domain.
+
+      The preview image (og:image, og:image:width/height/type/alt, and
+      twitter:card "summary_large_image") is added with the image the client
+      supplies. Until then the card is text only, rather than pointing at a
+      file that does not exist and showing a broken image.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Craftbid" />
+    <meta property="og:locale" content="en_PH" />
+    <meta property="og:url" content="https://craftbid.pgeagoni.workers.dev/" />
+    <meta property="og:title" content="Craftbid — Commission handmade work from Filipino artists" />
+    <meta
+      property="og:description"
+      content="Craftbid connects Filipino handmade-craft artists with people who want to commission their work."
+    />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Craftbid — Commission handmade work from Filipino artists" />
+    <meta
+      name="twitter:description"
+      content="Craftbid connects Filipino handmade-craft artists with people who want to commission their work."
+    />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

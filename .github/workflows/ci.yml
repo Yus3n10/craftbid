@@ -84,6 +84,11 @@ jobs:
       # server. It also covers the one class of fault a deploy introduces
       # rather than a commit -- a route chunk the running page can no longer
       # fetch -- which is exactly the fault nothing else in this file can see.
+      # The Worker in front of the API: routing, the open-proxy guard, client
+      # address forwarding and cache bypass. Plain Node, no browser needed.
+      - name: Worker tests
+        run: pnpm --filter @craftbid/web test:worker
+
       - name: Install Chromium for the resilience tests
         run: pnpm --filter @craftbid/web exec playwright install --with-deps chromium
 

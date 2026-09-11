@@ -90,7 +90,7 @@ and it is why the web app is on Cloudflare.
 
 | Piece | Where | The catch |
 |---|---|---|
-| Web | Cloudflare Workers (static assets) | — |
+| Web | Cloudflare Workers (static assets, plus `/api` forwarded to Render) | `/api/*` calls count toward the Workers request allowance |
 | API | Render free web service | **Stops after 15 idle minutes** |
 | Database | Oracle Always Free ADB, 19c, Singapore | **Stops after 7 idle days, deleted after 90** |
 | Images | ImageKit | 20GB/month bandwidth |
@@ -307,7 +307,74 @@ width rule is ever in play. The address field now takes `min-w-0 flex-1
 basis-64` so it is the part that gives way, and wraps instead of overflowing on
 a narrow screen. This was a footgun for every caller, not just this one.
 
-### 4.11 Smaller ones
+### 4.11 Signed in on an iPhone, then "You need to sign in to do that"
+
+**Symptom.** A new user signed in on a phone, opened "My bids", and got
+*"This did not load. You need to sign in to do that."* Separately, the client
+had to sign in again every time he reopened Craftbid from Messenger.
+
+**Cause.** Two faults that hid each other.
+
+1. The web app is on `craftbid.pgeagoni.workers.dev` and the API on
+   `craftbid-api.onrender.com`, so the session cookies the API set were
+   **third-party cookies**. WebKit blocks those by default, and WebKit is every
+   browser on an iPhone, Messenger's in-app browser included. Measured against
+   production on an iPhone WebKit profile: login `200`, zero cookies stored for
+   the API, then `/auth/me 401` and `/auth/refresh 401`.
+2. The frontend took the signed-in user from the **login response body**. That
+   response arrives whether or not the browser keeps the cookies that came with
+   it, so the header and menu showed a signed-in user while the browser held no
+   session. The first page that needed one answered 401.
+
+The same fault explains the Messenger complaint: there was never a stored
+session to keep. A "Keep me logged in" checkbox alone would have changed
+nothing on an iPhone.
+
+**Why it was invisible.** Chrome on desktop and Android still accepts
+third-party cookies, and every test ran on Chromium against `localhost`, where
+the web app and API are the same site. The handover's own 4.2 fix
+(`SameSite=None`) was correct for Chrome and made no difference to WebKit.
+
+**Fix.** The API is now served at `/api` on the site's own origin by the
+existing Worker (`apps/web/worker/api-proxy.ts`), which makes the cookies
+first-party. Nothing about the API or its cookies changed. The frontend now
+confirms the session with `/auth/me` after signing in, and a 401 there
+becomes a clear message instead of a false signed-in state.
+
+**Verified** on WebKit (iPhone 13 profile) through the real Worker under
+`wrangler dev` against the real API: a new account's cookies are stored
+first-party and "My bids" opens.
+
+**Things to keep.** `run_worker_first: ["/api/*"]` in `wrangler.jsonc`, and the
+Worker assigning the upstream path rather than resolving it (a path like
+`/api//attacker.example` would otherwise swap the host and make it an open
+proxy; there is a test for that).
+
+### 4.12 The phone header covered most of the screen
+
+**Symptom.** On a phone the header "did not disappear when scrolling" and
+could cover about 80% of the screen; on the sign-in pages it floated over the
+form.
+
+**Cause.** The mobile menu opened *inside* a `sticky` header: search, every
+destination and four buttons, pinned to the top. "Your profile",
+"Notifications" and "Post a request" navigated without closing it, so the
+next page opened already buried under it. Separately, the full navigation
+switched on at 768px but, signed in as a client, ran to 904px: tablets
+scrolled sideways and search was squeezed to 50px. Measured, not estimated.
+
+**Fix.** The menu closes on any navigation, on Escape and on an outside tap,
+and is capped at the screen height. Search moved out of the menu into its own
+button. Below 1024px the bar slides away while reading down and returns on
+the first scroll up. The full navigation now starts at 1024px, with inline
+search from 1280px. Sign-in and account pages have an unpinned header.
+
+Following a link also used to keep the previous page's scroll offset, so the
+next page opened partway down, and with the sliding bar it could open with no
+header in view. New pages now start at the top (`Shell.tsx`); back and forward
+are left to the browser.
+
+### 4.13 Smaller ones
 
 - **Sign-in dropped users on the home page.** Both auth pages redirected an
   already-authenticated visitor to `/` *and* navigated imperatively after the
@@ -368,6 +435,13 @@ notifications, and contact links with platform logos.
 - **Logos are monochrome.** Official brand colours would put a row of clashing
   palettes across a profile and drag in trademark rules about exact
   reproduction.
+- **"Keep me logged in" is off by default.** On a borrowed or shared phone the
+  safe outcome has to be the one that happens when nobody reads the box.
+  Unticked, both cookies are session cookies and the server forgets the
+  session after 12 idle hours; ticked, 30 days. The choice is stored on the
+  refresh token (`refresh_tokens.persistent`) and inherited on every rotation,
+  so a refresh can never turn a short session into a long one. The desktop
+  build always remembers and does not show the box.
 - **Requests are in the feed sidebar, not the stream.** Mixing them in would
   invite people to react to a request the way they react to a photograph.
 
@@ -536,6 +610,12 @@ party was part of.
 
 Ordered by what I would do next.
 
+0. **In-app payments are assessed, not built.** `docs/PAYMENTS.md` explains why
+   Craftbid must not collect and remit money itself (BSP merchant acquisition
+   licensing, ₱5M minimum capital) and lays out a licensed-provider design,
+   the answers to the client's questions, and the business prerequisites.
+   **The client's social preview image** is also still to be supplied; the
+   text metadata is live in `apps/web/index.html`.
 1. **The desktop app has never been launched.** Windows and both macOS
    installers built and are in a draft release; the Linux fix needs a new tag
    (`git tag v0.1.1 && git push origin v0.1.1`). Nobody has installed or run

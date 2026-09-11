@@ -4,6 +4,8 @@ import type { UserRole } from "@craftbid/shared";
 import { LIMITS } from "@craftbid/shared";
 import { ApiError } from "../lib/api.js";
 import { useAuth } from "../lib/auth.js";
+import { BEARER_MODE } from "../lib/session.js";
+import { RememberMe } from "../components/RememberMe.js";
 import { cx } from "../lib/cx.js";
 import { Page } from "../components/layout/Shell.js";
 import { Button } from "../components/ui/Button.js";
@@ -37,6 +39,7 @@ export function RegisterPage() {
     email: "",
     password: "",
   });
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -61,7 +64,7 @@ export function RegisterPage() {
     setSubmitting(true);
     try {
       // The redirect above takes over as soon as the session lands.
-      await register({ ...form, role });
+      await register({ ...form, role, remember });
     } catch (caught) {
       setError(caught);
     } finally {
@@ -185,6 +188,8 @@ export function RegisterPage() {
             />
           )}
         </Field>
+
+        {!BEARER_MODE && <RememberMe checked={remember} onChange={setRemember} />}
 
         <Button type="submit" size="lg" loading={submitting} className="w-full">
           Create account

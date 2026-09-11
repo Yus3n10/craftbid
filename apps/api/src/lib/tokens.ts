@@ -75,9 +75,20 @@ export function hashRefreshToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-export function refreshTokenExpiry(): Date {
+/**
+ * When a refresh token stops working, measured from now.
+ *
+ * Every refresh rotates the token and calls this again, so both lifetimes
+ * slide: a remembered session lasts while it is used at least once a month,
+ * and an unremembered one while it is used at least every twelve hours.
+ */
+export function refreshTokenExpiry(persistent: boolean): Date {
   const expiry = new Date();
-  expiry.setDate(expiry.getDate() + config.auth.refreshTokenTtlDays);
+  if (persistent) {
+    expiry.setDate(expiry.getDate() + config.auth.refreshTokenTtlDays);
+  } else {
+    expiry.setHours(expiry.getHours() + config.auth.sessionRefreshTtlHours);
+  }
   return expiry;
 }
 
@@ -86,7 +97,7 @@ export function refreshTokenExpiry(): Date {
  * the user signed in. Secure is off in development because localhost is plain
  * http and the browser would otherwise silently drop the cookie.
  */
-export function cookieOptions(maxAgeSeconds: number) {
+export function cookieOptions(maxAgeSeconds?: number) {
   return {
     httpOnly: true,
     secure: config.isProduction,
@@ -104,7 +115,13 @@ export function cookieOptions(maxAgeSeconds: number) {
      */
     sameSite: config.isProduction ? ("none" as const) : ("lax" as const),
     path: "/",
-    maxAge: maxAgeSeconds,
+    /**
+     * Absent unless "Keep me logged in" was ticked. A cookie with neither
+     * Max-Age nor Expires is a session cookie, which the browser discards
+     * when it closes; that is the whole difference between the two choices
+     * on the client's side of the wire.
+     */
+    ...(maxAgeSeconds === undefined ? {} : { maxAge: maxAgeSeconds }),
   };
 }
 

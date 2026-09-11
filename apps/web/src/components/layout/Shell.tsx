@@ -1,4 +1,5 @@
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, Outlet, useLocation, useNavigationType } from "react-router-dom";
 import { BRAND } from "@craftbid/shared";
 import { Header } from "./Header.js";
 import { Logo } from "./Logo.js";
@@ -6,6 +7,20 @@ import { ErrorBoundary } from "../ErrorBoundary.js";
 
 export function Shell() {
   const { pathname } = useLocation();
+  const navigationType = useNavigationType();
+
+  /**
+   * A new page starts at its top, as it would after a full page load.
+   *
+   * Without this, following a link kept the previous page's scroll offset, so
+   * the next page opened partway down, and with a header that slides away on
+   * a phone it could open with the header already out of view. Back and
+   * forward (POP) are left to the browser. Query-string changes, such as
+   * filtering requests, keep the pathname and so keep their place.
+   */
+  useEffect(() => {
+    if (navigationType !== "POP") window.scrollTo(0, 0);
+  }, [pathname, navigationType]);
 
   return (
     <div className="flex min-h-dvh flex-col">

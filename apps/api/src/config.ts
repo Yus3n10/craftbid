@@ -43,6 +43,11 @@ const envSchema = z
     JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
     ACCESS_TOKEN_TTL: z.string().default("15m"),
     REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).default(30),
+    // How long a session without "Keep me logged in" survives without use.
+    // Its cookies already end with the browser; this bounds the browsers that
+    // restore session cookies on relaunch, and every mobile browser that is
+    // never really closed.
+    SESSION_REFRESH_TTL_HOURS: z.coerce.number().int().min(1).max(72).default(12),
 
     CORS_ORIGINS: z.string().default("http://localhost:5173"),
 
@@ -143,6 +148,7 @@ export const config = {
     jwtSecret: new TextEncoder().encode(env.JWT_SECRET),
     accessTokenTtl: env.ACCESS_TOKEN_TTL,
     refreshTokenTtlDays: env.REFRESH_TOKEN_TTL_DAYS,
+    sessionRefreshTtlHours: env.SESSION_REFRESH_TTL_HOURS,
   },
   corsOrigins: env.CORS_ORIGINS.split(",")
     .map((origin) => origin.trim())

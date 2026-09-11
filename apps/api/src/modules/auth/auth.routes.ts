@@ -29,16 +29,27 @@ const optionalRefreshTokenBody = z.preprocess(
   z.object({ refreshToken: z.string().optional() }),
 );
 
+/**
+ * Sets both session cookies, as persistent or session cookies depending on
+ * whether "Keep me logged in" was ticked when the session began.
+ *
+ * Both follow the same choice. A persistent access cookie on an unremembered
+ * session would keep someone signed in for up to fifteen minutes after they
+ * had closed the browser on a shared phone, which is exactly the case the
+ * unticked box exists for.
+ */
 function setSession(reply: FastifyReply, tokens: service.SessionTokens): void {
   reply.setCookie(
     ACCESS_COOKIE,
     tokens.accessToken,
-    cookieOptions(parseDurationSeconds(config.auth.accessTokenTtl)),
+    cookieOptions(
+      tokens.persistent ? parseDurationSeconds(config.auth.accessTokenTtl) : undefined,
+    ),
   );
   reply.setCookie(
     REFRESH_COOKIE,
     tokens.refreshToken,
-    cookieOptions(config.auth.refreshTokenTtlDays * 86_400),
+    cookieOptions(tokens.persistent ? config.auth.refreshTokenTtlDays * 86_400 : undefined),
   );
 }
 

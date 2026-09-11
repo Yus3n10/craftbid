@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "test:e2e": "playwright test",
-    "test:resilience": "vite build && playwright test -c playwright.resilience.config.ts"
+    "test:resilience": "vite build && playwright test -c playwright.resilience.config.ts",
+    "test:worker": "node --experimental-strip-types --no-warnings --test --test-reporter=tap worker/api-proxy.test.ts"
   },
   "dependencies": {
     "@craftbid/shared": "workspace:*",

@@ -57,6 +57,9 @@ coverage/
 test-results/
 playwright-report/
 
+# Local state from `wrangler dev` (simulated storage, temp bundles).
+.wrangler/
+
 # === Logs ===
 *.log
 npm-debug.log*

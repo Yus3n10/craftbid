@@ -89,6 +89,13 @@ pointed at the cloud database by accident.
 
 > Do **not** seed production. The seed is demo data with a shared password.
 
+> **Run migrations before the code that needs them deploys.** Pushing does not
+> run them. `009-remember-me.sql` is the current example: the API that reads
+> `refresh_tokens.persistent` fails every sign-in with ORA-00904 if it reaches
+> Render before the column exists. Migrate, confirm with `migrate:status`, then
+> push. The migration is additive and defaults existing sessions to persistent,
+> so running it early is harmless to the code already deployed.
+
 ---
 
 ## 2. Images
@@ -145,7 +152,8 @@ Environment variables are listed in `render.yaml`. The ones that catch people
 out:
 
 - `CORS_ORIGINS` must be the exact deployed web origin with no trailing slash.
-  Cookies are sent cross-origin and will be dropped silently if it is wrong.
+  The Worker forwards the browser's `Origin`, and the API's CSRF check rejects
+  every cookie-authenticated write (sign-in included) from an unlisted origin.
 - `STORAGE_DRIVER=imagekit`. The config **refuses to boot** with
   `STORAGE_DRIVER=local` in production, because Render's disk is wiped on every
   deploy and every uploaded image would vanish.
@@ -157,11 +165,43 @@ out:
 
 Cloudflare now steers new projects into **Workers Builds**, which runs a deploy
 command rather than just publishing a directory. `apps/web/wrangler.jsonc`
-configures the site as an assets-only Worker for that flow:
+configures the site as a Worker with static assets for that flow; the script
+only answers `/api/*` and the cron trigger:
 
 - **Build command:** `npm install -g pnpm@10.34.5 && pnpm install --frozen-lockfile && pnpm --filter @craftbid/shared build && pnpm --filter @craftbid/web build`
 - **Deploy command:** `npx wrangler deploy -c apps/web/wrangler.jsonc`
-- **Environment variable:** `VITE_API_URL` = your Render URL, no trailing slash
+- **API origin:** `vars.API_ORIGIN` in `apps/web/wrangler.jsonc` = your Render URL,
+  no trailing slash. `VITE_API_URL` is no longer read by this build (see below).
+
+### The API is served at /api on the site's own origin
+
+The browser never calls Render directly. The production web build calls
+`/api/...`, and the Worker (`apps/web/worker/index.ts`) forwards those requests
+to `API_ORIGIN`, passing the API's `Set-Cookie` headers straight back.
+
+This is not optional plumbing. Called cross-site, the session cookies were
+third-party cookies, and WebKit refuses those outright. WebKit is every
+browser on an iPhone, including Messenger's in-app browser: sign-in answered
+200, nothing was stored, and the next request that needed the session was a
+401. Through `/api` the same cookies are first-party. Verified on WebKit, see
+HANDOVER.md 4.11.
+
+Three settings make it work, and removing any one breaks sign-in on iPhones:
+
+- `assets.run_worker_first: ["/api/*"]` in `wrangler.jsonc`. Without it, the
+  single-page-application fallback answers `/api/...` with `index.html`
+  before the Worker ever runs.
+- `CORS_ORIGINS` on Render must still include the web origin. The Worker
+  forwards the browser's `Origin` header, and the API's CSRF check rejects any
+  cookie-authenticated write whose Origin is not listed.
+- The API keys rate limits on `CF-Connecting-IP`, which Cloudflare sets to the
+  visitor's address on a Worker's request to a host outside Cloudflare.
+  Without that, every visitor would share Cloudflare's address and ten failed
+  sign-ins anywhere would lock everyone out.
+
+**Cost to watch:** requests that run the Worker count toward the Workers free
+plan's daily request allowance. Static assets do not; `/api/*` calls do.
+Check the Workers dashboard's request graph after launch.
 
 The `-c` matters. A bare `npx wrangler deploy` from the repository root fails
 with *"has been run in the root of a workspace instead of targeting a specific
@@ -179,7 +219,8 @@ If you have a Pages project instead, there is no deploy command; set:
 - **Environment variable:** `VITE_API_URL` = your Render URL, no trailing slash
 
 `VITE_API_URL` is baked in at build time, so changing it needs a rebuild, not
-just a restart.
+just a restart. It is used by the desktop build and local development only;
+the production web build always calls `/api` on its own origin.
 
 The app is a single-page application, so Pages needs to serve `index.html` for
 unknown paths. Add `apps/web/public/_redirects` containing:

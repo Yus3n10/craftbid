@@ -2,7 +2,7 @@ import { createContext, useContext, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { LoginInput, MeDto, RegisterInput } from "@craftbid/shared";
 import { ApiError, api } from "./api.js";
-import { clearTokens, getRefreshToken, storeTokens } from "./session.js";
+import { BEARER_MODE, clearTokens, getRefreshToken, storeTokens } from "./session.js";
 
 /** The shape both /auth/login and /auth/register return. */
 interface SessionResponse {
@@ -40,24 +40,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     staleTime: 60_000,
   });
 
-  // storeTokens is a no-op in the web build, where the session lives in
-  // httpOnly cookies the client cannot read.
-  const loginMutation = useMutation({
-    mutationFn: (input: LoginInput) =>
-      api.post<SessionResponse>("/auth/login", input),
-    onSuccess: (result) => {
-      storeTokens(result);
+  /**
+   * Becomes signed in only once the browser has proved it kept the session.
+   *
+   * This used to trust the user in the sign-in response. That response is
+   * produced whether or not the browser went on to store the cookies that came
+   * with it, so a browser that refused them showed a signed-in header and
+   * menu, and the first page that needed the session answered 401: "My bids"
+   * told someone who had just signed in that they needed to sign in. Asking
+   * /auth/me, which only answers with the session, turns that silent false
+   * state into a message at the moment it can still be acted on.
+   *
+   * Only a 401 means the session was not kept. Any other failure here (a
+   * timeout, the API waking up) says nothing about the cookies, so the
+   * response's own user is used rather than failing a sign-in that worked.
+   *
+   * storeTokens is a no-op for tokens in the web build, where the session
+   * lives in httpOnly cookies the client cannot read.
+   */
+  async function establish(result: SessionResponse): Promise<MeDto> {
+    storeTokens(result);
+    try {
+      const me = await api.get<MeDto>("/auth/me");
+      queryClient.setQueryData(["me"], me);
+      return me;
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        clearTokens();
+        throw new ApiError(401, {
+          error: {
+            code: "session_not_kept",
+            message:
+              "Your details were right, but this browser did not keep you signed in. Allow cookies for this site, or open it in your phone's browser, then try again.",
+          },
+        });
+      }
       queryClient.setQueryData(["me"], result.user);
-    },
+      return result.user;
+    }
+  }
+
+  // The desktop build keeps its tokens in its own storage and has no
+  // browser session to end, so it always asks for the lasting kind.
+  const withRemember = <T extends { remember?: boolean }>(input: T): T =>
+    BEARER_MODE ? { ...input, remember: true } : input;
+
+  const loginMutation = useMutation({
+    mutationFn: async (input: LoginInput) =>
+      establish(await api.post<SessionResponse>("/auth/login", withRemember(input))),
   });
 
   const registerMutation = useMutation({
-    mutationFn: (input: RegisterInput) =>
-      api.post<SessionResponse>("/auth/register", input),
-    onSuccess: (result) => {
-      storeTokens(result);
-      queryClient.setQueryData(["me"], result.user);
-    },
+    mutationFn: async (input: RegisterInput) =>
+      establish(await api.post<SessionResponse>("/auth/register", withRemember(input))),
   });
 
   const logoutMutation = useMutation({
@@ -79,8 +114,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value: AuthValue = {
     user: data ?? null,
     isLoading,
-    login: async (input) => (await loginMutation.mutateAsync(input)).user,
-    register: async (input) => (await registerMutation.mutateAsync(input)).user,
+    login: (input) => loginMutation.mutateAsync(input),
+    register: (input) => registerMutation.mutateAsync(input),
     logout: async () => {
       await logoutMutation.mutateAsync();
     },

@@ -1,11 +1,12 @@
 import { mkdir } from "node:fs/promises";
+import { isIP } from "node:net";
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import multipart from "@fastify/multipart";
 import rateLimit from "@fastify/rate-limit";
 import fastifyStatic from "@fastify/static";
-import Fastify, { type FastifyInstance } from "fastify";
+import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import {
   serializerCompiler,
   validatorCompiler,
@@ -42,6 +43,29 @@ export interface BuildAppOptions {
    * covered by rate-limit.test.ts, which builds an app with this forced on.
    */
   enableRateLimit?: boolean;
+}
+
+/**
+ * Who a request is from, for rate limiting.
+ *
+ * The web app reaches this API through its own Cloudflare Worker, so the
+ * connection Render sees comes from Cloudflare, and keying limits on it would
+ * put every user in one bucket: ten failed sign-ins anywhere would lock
+ * everyone out. Cloudflare documents that a Worker's request to a host outside
+ * Cloudflare carries the visitor's address in CF-Connecting-IP, and sets that
+ * header itself, so a visitor cannot choose it by going through the Worker.
+ *
+ * Someone calling Render directly can send any CF-Connecting-IP they like, but
+ * they could already send any X-Forwarded-For they liked, which is what
+ * trustProxy keyed on before, so this trusts nothing new. Anything that is not
+ * a well-formed address falls back to the connection.
+ */
+function clientAddress(request: FastifyRequest): string {
+  const forwarded = request.headers["cf-connecting-ip"];
+  if (typeof forwarded === "string" && isIP(forwarded.trim()) !== 0) {
+    return forwarded.trim();
+  }
+  return request.ip;
 }
 
 export async function buildApp(
@@ -144,6 +168,7 @@ export async function buildApp(
       global: true,
       max: 300,
       timeWindow: "1 minute",
+      keyGenerator: clientAddress,
     });
   }
 

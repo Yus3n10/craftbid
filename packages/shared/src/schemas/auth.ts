@@ -33,6 +33,13 @@ export const passwordSchema = z
   .min(LIMITS.password.min, `Use at least ${LIMITS.password.min} characters.`)
   .max(LIMITS.password.max);
 
+/**
+ * "Keep me logged in". Absent means no, so the default is the session that
+ * ends with the browser, and a client that never sends the field (an older
+ * build, a script) gets the safer behaviour rather than a 30-day one.
+ */
+export const rememberSchema = z.boolean().optional();
+
 export const registerSchema = z.object({
   email: emailSchema,
   username: usernameSchema,
@@ -43,11 +50,13 @@ export const registerSchema = z.object({
     .min(LIMITS.displayName.min)
     .max(LIMITS.displayName.max),
   role: z.enum(USER_ROLES),
+  remember: rememberSchema,
 });
 
 export const loginSchema = z.object({
   email: emailSchema,
   password: z.string().min(1),
+  remember: rememberSchema,
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;

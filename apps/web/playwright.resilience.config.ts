@@ -1,7 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
 /**
- * Resilience tests, kept apart from the marketplace suite.
+ * Browser tests that need no database and no API, kept apart from the
+ * marketplace suite: recovery from a stale build or a silent API, the header
+ * at phone, tablet and desktop widths, and what sign-in must prove before the
+ * app believes it.
  *
  * These run against a production build served by `vite preview`, because what
  * they are about only exists in one: hashed chunk filenames, a service worker,

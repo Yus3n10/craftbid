@@ -17,20 +17,28 @@ export interface SessionTokens {
   role: UserRole;
   accessToken: string;
   refreshToken: string;
+  /** Whether the cookies carrying these should outlive the browser. */
+  persistent: boolean;
 }
 
-async function issueTokens(userId: string, role: UserRole): Promise<SessionTokens> {
+async function issueTokens(
+  userId: string,
+  role: UserRole,
+  persistent: boolean,
+): Promise<SessionTokens> {
   const refreshToken = generateRefreshToken();
   await sessions.storeRefreshToken({
     userId,
     tokenHash: hashRefreshToken(refreshToken),
-    expiresAt: refreshTokenExpiry(),
+    expiresAt: refreshTokenExpiry(persistent),
+    persistent,
   });
   return {
     userId,
     role,
     accessToken: await signAccessToken({ sub: userId, role }),
     refreshToken,
+    persistent,
   };
 }
 
@@ -69,7 +77,7 @@ export async function register(input: RegisterInput): Promise<SessionTokens> {
     throw error;
   }
 
-  return issueTokens(userId, input.role);
+  return issueTokens(userId, input.role, input.remember === true);
 }
 
 export async function login(input: LoginInput): Promise<SessionTokens> {
@@ -91,7 +99,7 @@ export async function login(input: LoginInput): Promise<SessionTokens> {
     throw unauthorized("This account is not active.");
   }
 
-  return issueTokens(user.id, user.role);
+  return issueTokens(user.id, user.role, input.remember === true);
 }
 
 /**
@@ -113,7 +121,10 @@ export async function refresh(token: string | undefined): Promise<SessionTokens>
   }
 
   await sessions.revokeToken(record.id);
-  return issueTokens(user.id, user.role);
+  // The replacement inherits the original choice. Taking it from the request
+  // instead would let any refresh quietly turn a session that was meant to end
+  // with the browser into a month-long one.
+  return issueTokens(user.id, user.role, record.persistent);
 }
 
 export async function logout(token: string | undefined): Promise<void> {

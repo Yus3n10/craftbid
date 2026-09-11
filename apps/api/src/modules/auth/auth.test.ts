@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { db } from "../../db/query.js";
+import { hashRefreshToken } from "../../lib/tokens.js";
 import {
   authHeaders,
   getTestApp,
@@ -301,5 +303,191 @@ describe("authentication", () => {
       payload: { refreshToken },
     });
     expect(afterLogout.statusCode).toBe(401);
+  });
+});
+
+/**
+ * "Keep me logged in".
+ *
+ * The only thing the browser can be told is whether a cookie outlives it, and
+ * the only thing the server can enforce is how long the token inside it keeps
+ * working. These tests pin both, for each choice, and the one path that could
+ * quietly change a session's kind after it began: refresh.
+ */
+describe("keep me logged in", () => {
+  beforeEach(resetData);
+
+  const password = "a sufficiently long password";
+
+  /** The Set-Cookie header for one cookie, lower-cased for attribute checks. */
+  function cookie(headers: Record<string, unknown>, name: string): string {
+    const all = headers["set-cookie"] as string[] | string | undefined;
+    const list = Array.isArray(all) ? all : all ? [all] : [];
+    const found = list.find((value) => value.startsWith(`${name}=`));
+    expect(found, `${name} must be set`).toBeDefined();
+    return found!.toLowerCase();
+  }
+
+  function isSessionCookie(header: string): boolean {
+    return !header.includes("max-age=") && !header.includes("expires=");
+  }
+
+  function maxAge(header: string): number {
+    const match = /max-age=(\d+)/.exec(header);
+    expect(match, `expected a Max-Age in: ${header}`).not.toBeNull();
+    return Number(match![1]);
+  }
+
+  /** Hours from now until the stored refresh token stops working. */
+  async function hoursLeft(refreshToken: string): Promise<number> {
+    const row = await db.one<{ expiresAt: Date }>(
+      `SELECT expires_at FROM refresh_tokens WHERE token_hash = :hash`,
+      { hash: hashRefreshToken(refreshToken) },
+    );
+    expect(row, "the refresh token must be stored").not.toBeNull();
+    return (row!.expiresAt.getTime() - Date.now()) / 3_600_000;
+  }
+
+  async function signIn(email: string, remember?: boolean) {
+    const app = await getTestApp();
+    await registerUser("artist", { email, username: email.split("@")[0]! });
+    return app.inject({
+      method: "POST",
+      url: "/auth/login",
+      payload: remember === undefined ? { email, password } : { email, password, remember },
+    });
+  }
+
+  it("gives an unticked sign-in cookies that end with the browser", async () => {
+    const response = await signIn("brief@example.com", false);
+    expect(response.statusCode).toBe(200);
+
+    for (const name of ["craftbid_at", "craftbid_rt"]) {
+      const header = cookie(response.headers, name);
+      expect(isSessionCookie(header), `${name} must be a session cookie: ${header}`).toBe(true);
+      // Still the same protections, just not the lifetime.
+      expect(header).toContain("httponly");
+      expect(header).toContain("path=/");
+    }
+
+    // And the server stops honouring it after the idle window, for the
+    // browsers that restore session cookies on relaunch.
+    const hours = await hoursLeft(response.json().refreshToken);
+    expect(hours).toBeGreaterThan(11);
+    expect(hours).toBeLessThanOrEqual(12);
+  });
+
+  it("treats a sign-in that does not mention it as unticked", async () => {
+    // An older build or a script: the safer session, never the long one.
+    const response = await signIn("older@example.com");
+    expect(isSessionCookie(cookie(response.headers, "craftbid_rt"))).toBe(true);
+  });
+
+  it("gives a ticked sign-in cookies that survive a restart, for a bounded time", async () => {
+    const response = await signIn("stays@example.com", true);
+    expect(response.statusCode).toBe(200);
+
+    const refresh = cookie(response.headers, "craftbid_rt");
+    expect(maxAge(refresh)).toBe(30 * 86_400);
+    expect(refresh).toContain("httponly");
+
+    // The access cookie lives exactly as long as the token inside it.
+    expect(maxAge(cookie(response.headers, "craftbid_at"))).toBe(15 * 60);
+
+    const hours = await hoursLeft(response.json().refreshToken);
+    expect(hours).toBeGreaterThan(30 * 24 - 1);
+    expect(hours).toBeLessThanOrEqual(30 * 24);
+  });
+
+  it("offers the same choice when creating an account", async () => {
+    const app = await getTestApp();
+    const response = await app.inject({
+      method: "POST",
+      url: "/auth/register",
+      payload: {
+        email: "newcomer@example.com",
+        username: "newcomer",
+        password,
+        displayName: "Newcomer",
+        role: "client",
+        remember: true,
+      },
+    });
+    expect(response.statusCode).toBe(201);
+    expect(maxAge(cookie(response.headers, "craftbid_rt"))).toBe(30 * 86_400);
+  });
+
+  it("keeps a session's kind across refresh, whatever the refresh asks for", async () => {
+    const app = await getTestApp();
+
+    const remembered = await signIn("kept@example.com", true);
+    const renewedRemembered = await app.inject({
+      method: "POST",
+      url: "/auth/refresh",
+      payload: { refreshToken: remembered.json().refreshToken },
+    });
+    expect(renewedRemembered.statusCode).toBe(200);
+    expect(maxAge(cookie(renewedRemembered.headers, "craftbid_rt"))).toBe(30 * 86_400);
+
+    // The attack this closes: a refresh that could upgrade itself would turn
+    // a session meant for a shared phone into a month-long one.
+    const brief = await signIn("notkept@example.com", false);
+    const renewedBrief = await app.inject({
+      method: "POST",
+      url: "/auth/refresh",
+      payload: { refreshToken: brief.json().refreshToken, remember: true },
+    });
+    expect(renewedBrief.statusCode).toBe(200);
+    expect(isSessionCookie(cookie(renewedBrief.headers, "craftbid_rt"))).toBe(true);
+    expect(await hoursLeft(renewedBrief.json().refreshToken)).toBeLessThanOrEqual(12);
+  });
+
+  it("signs out a remembered session completely", async () => {
+    const app = await getTestApp();
+    const remembered = await signIn("leaving@example.com", true);
+    const cookies = remembered.headers["set-cookie"] as string[];
+
+    const logout = await app.inject({
+      method: "POST",
+      url: "/auth/logout",
+      headers: { cookie: cookies.map((c) => c.split(";")[0]).join("; ") },
+    });
+    expect(logout.statusCode).toBe(204);
+
+    // Both cookies are overwritten with an expired, empty value. A persistent
+    // cookie is the one that would otherwise still be there next week.
+    for (const name of ["craftbid_at", "craftbid_rt"]) {
+      const header = cookie(logout.headers, name);
+      expect(header).toMatch(new RegExp(`^${name}=;`));
+      const expired = header.includes("max-age=0") || /expires=thu, 01 jan 1970/.test(header);
+      expect(expired, `${name} must be expired on sign-out: ${header}`).toBe(true);
+    }
+
+    // And the token is dead server-side, so a copy of the cookie is useless.
+    const replay = await app.inject({
+      method: "POST",
+      url: "/auth/refresh",
+      payload: { refreshToken: remembered.json().refreshToken },
+    });
+    expect(replay.statusCode).toBe(401);
+  });
+
+  it("refuses a remembered session once its time is up", async () => {
+    const app = await getTestApp();
+    const remembered = await signIn("expired@example.com", true);
+    const refreshToken = remembered.json().refreshToken as string;
+
+    await db.run(
+      `UPDATE refresh_tokens SET expires_at = SYSTIMESTAMP - INTERVAL '1' MINUTE
+        WHERE token_hash = :hash`,
+      { hash: hashRefreshToken(refreshToken) },
+    );
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/auth/refresh",
+      payload: { refreshToken },
+    });
+    expect(response.statusCode).toBe(401);
   });
 });

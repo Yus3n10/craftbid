@@ -10,6 +10,26 @@ export default defineConfig(({ mode }) => {
   // One .env at the repo root serves every package, so point Vite at it
   // instead of keeping a second copy here.
   const env = loadEnv(mode, repoRoot, "VITE_");
+  const upstreamApi = env.VITE_API_URL ?? "http://localhost:4000";
+
+  /**
+   * Where the browser sends API calls.
+   *
+   * The production web build always uses /api on its own origin, which the
+   * site's Worker forwards to the API (worker/api-proxy.ts). That is what makes
+   * the session cookies first-party. Called cross-site, they were third-party
+   * cookies, and every iPhone browser refuses those, so signing in there
+   * produced a session the browser never kept. VITE_API_URL is deliberately
+   * not consulted for this build: pointed back at the API's own host, it would
+   * quietly reintroduce exactly that failure.
+   *
+   * The desktop build still calls the API directly. It is served from
+   * tauri://localhost with no Worker in front, and it carries bearer tokens
+   * rather than cookies, so there is nothing for a browser to refuse.
+   * Development calls the local API directly; localhost to localhost is
+   * same-site, so its cookies were never third-party.
+   */
+  const apiUrl = mode === "production" ? "/api" : upstreamApi;
 
   return {
     plugins: [
@@ -46,9 +66,20 @@ export default defineConfig(({ mode }) => {
     ],
     envDir: repoRoot,
     define: {
-      __API_URL__: JSON.stringify(env.VITE_API_URL ?? "http://localhost:4000"),
+      __API_URL__: JSON.stringify(apiUrl),
     },
     server: { port: 5173 },
+    // `vite preview` stands in for the Worker locally: it serves the
+    // production build, which calls /api, so /api has to go somewhere.
+    preview: {
+      proxy: {
+        "/api": {
+          target: upstreamApi,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api/, "") || "/",
+        },
+      },
+    },
     build: {
       outDir: "dist",
       sourcemap: true,
