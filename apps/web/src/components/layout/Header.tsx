@@ -12,7 +12,7 @@ import { SearchBox } from "../SearchBox.js";
 
 function navClass({ isActive }: { isActive: boolean }): string {
   return cx(
-    "whitespace-nowrap rounded-sm px-2.5 py-1.5 text-sm font-medium transition-colors",
+    "whitespace-nowrap rounded-sm px-2 py-1.5 xl:px-2.5 text-sm font-medium transition-colors",
     isActive ? "text-indigo" : "text-ink-soft hover:text-ink",
   );
 }
@@ -186,7 +186,7 @@ export function Header() {
         hidden && "max-lg:-translate-y-full",
       )}
     >
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4">
+      <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 xl:gap-4">
         <Link to="/" className="shrink-0" aria-label="Craftbid home">
           <Logo />
         </Link>
@@ -203,7 +203,7 @@ export function Header() {
           <SearchBox />
         </div>
 
-        <div className="ml-auto hidden items-center gap-2 lg:flex">
+        <div className="ml-auto hidden items-center gap-1 lg:flex xl:gap-2">
           <div className="xl:hidden">{searchToggle}</div>
 
           {user ? (

@@ -224,6 +224,23 @@ test.describe("across widths, signed in as a client", () => {
       );
       expect(overflow, "horizontal overflow in px").toBeLessThanOrEqual(0);
 
+      // Fitting is not enough. Text renders about 13px wider on the Linux CI
+      // runner than on Windows, so a header that fit with 2px to spare locally
+      // overflowed by 15px there (9px free by this measure locally). The narrowest
+      // full header must keep room.
+      if (width === 1024) {
+        await page.evaluate(() => document.fonts.ready);
+        const spare = await page.evaluate(() => {
+          const row = document.querySelector("header > div")!;
+          const style = getComputedStyle(row);
+          const shown = [...row.children].filter((child) => getComputedStyle(child).display !== "none");
+          const inner = row.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+          const used = shown.reduce((sum, child) => sum + child.scrollWidth, 0);
+          return inner - used - parseFloat(style.columnGap) * (shown.length - 1);
+        });
+        expect(spare, "free width in the header row, px").toBeGreaterThanOrEqual(32);
+      }
+
       if (width >= 1024) {
         await expect(
           page.getByRole("banner").getByRole("link", { name: "My requests" }),
