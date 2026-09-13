@@ -57,8 +57,8 @@ export function AuthPromptProvider({ children }: { children: ReactNode }) {
         {prompt && user && (
           <div className="space-y-4">
             <p>
-              To {prompt.action}, confirm that {user.email} is yours. Open the
-              link we emailed you, or send a new one.
+              To {prompt.action}, confirm that {user.email} is yours: send
+              yourself a link, then open it from your inbox.
             </p>
             <ResendLink />
           </div>

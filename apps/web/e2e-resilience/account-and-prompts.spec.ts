@@ -283,7 +283,7 @@ test.describe("email verification", () => {
     );
     await page.goto(`/verify-email?token=${"B".repeat(43)}`);
     await expect(page.getByRole("heading", { name: "This link has expired" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Send a new link" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Send a link" })).toBeVisible();
   });
 });
 

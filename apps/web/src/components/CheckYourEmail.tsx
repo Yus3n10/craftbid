@@ -74,7 +74,7 @@ export function ResendLink({ email: fixedEmail }: { email?: string }) {
           loading={sending}
           disabled={wait > 0 || (needsAddress && !email.includes("@"))}
         >
-          {wait > 0 ? `Send another link in ${wait}s` : "Send a new link"}
+          {wait > 0 ? `Send another link in ${wait}s` : "Send a link"}
         </Button>
         {sent && (
           <span className="text-sm text-sage" role="status">

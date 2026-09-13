@@ -25,15 +25,20 @@ export function AccountNotices() {
       <div className="border-b border-amber/30 bg-amber-wash" role="region" aria-label="Confirm your email">
         <div className="mx-auto max-w-6xl px-4 py-3 text-sm text-ink">
           <p>
+            {/* Worded for both kinds of unconfirmed account: a new one that was
+                emailed a link at sign-up, and one from before verification
+                existed, which never was. "We sent you a link" was untrue for
+                every one of the second. */}
             <strong>Confirm your email to post, bid, react, comment, save and share.</strong>{" "}
-            We sent a link to {user.email}.{" "}
-            {!resendOpen && (
+            {resendOpen ? (
+              <>We will email a confirmation link to {user.email}.</>
+            ) : (
               <button
                 type="button"
                 onClick={() => setResendOpen(true)}
                 className="font-medium text-indigo underline"
               >
-                Send a new link
+                Email a confirmation link to {user.email}
               </button>
             )}
           </p>
