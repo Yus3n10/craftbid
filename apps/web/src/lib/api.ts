@@ -251,3 +251,52 @@ export async function uploadImage(
     height: number;
   }>;
 }
+
+/**
+ * Uploads a receipt or a photo of the finished piece to a commission. The
+ * server decides which it is from who sends it, and stores it privately: the
+ * response carries an id, never a URL.
+ */
+export async function uploadCommissionFile(
+  commissionId: string,
+  file: File,
+): Promise<{ id: string; kind: "receipt" | "finished_photo"; width: number; height: number }> {
+  const form = new FormData();
+  form.append("file", file);
+
+  const accessToken = getAccessToken();
+  const response = await fetch(`${API_URL}/commissions/${commissionId}/files`, {
+    method: "POST",
+    credentials: "include",
+    ...(accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : {}),
+    body: form,
+  });
+
+  const text = await response.text();
+  if (!response.ok) {
+    throw new ApiError(response.status, text ? (JSON.parse(text) as ApiErrorDto) : null);
+  }
+  return JSON.parse(text) as { id: string; kind: "receipt" | "finished_photo"; width: number; height: number };
+}
+
+/**
+ * Loads a private commission file as an object URL for an <img>.
+ *
+ * A plain `src` pointing at the API would work in the browser, where the
+ * session is a cookie, but not in the desktop build, which authenticates with
+ * a header an image tag cannot send. Fetching the bytes and handing the image
+ * an in-memory URL works for both, and nothing shareable ever exists. The
+ * caller revokes the URL when the image goes away.
+ */
+export async function loadPrivateImage(commissionId: string, fileId: string): Promise<string> {
+  const accessToken = getAccessToken();
+  const response = await fetch(`${API_URL}/commissions/${commissionId}/files/${fileId}`, {
+    credentials: "include",
+    cache: "no-store",
+    ...(accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : {}),
+  });
+  if (!response.ok) {
+    throw new ApiError(response.status, null);
+  }
+  return URL.createObjectURL(await response.blob());
+}

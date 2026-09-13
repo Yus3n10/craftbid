@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { LIMITS, type CommissionDto } from "@craftbid/shared";
+import { LIMITS, formatPeso, type CommissionDto } from "@craftbid/shared";
 import { api } from "../lib/api.js";
 import { useAuth } from "../lib/auth.js";
 import { cx } from "../lib/cx.js";
@@ -18,6 +18,7 @@ import {
   UserChip,
 } from "../components/ui/Primitives.js";
 import { ErrorState, FormError, RowSkeleton } from "../components/ui/States.js";
+import { PaymentPanel } from "../components/commission/PaymentPanel.js";
 
 function ReviewForm({ commission }: { commission: CommissionDto }) {
   const queryClient = useQueryClient();
@@ -149,7 +150,10 @@ export function CommissionDetailPage() {
             </div>
           </Card>
 
-          {commission.status === "active" && (
+          {commission.paymentTracking && <PaymentPanel commission={commission} isClient={isClient} />}
+
+          {/* Commissions started before payment records keep their original step. */}
+          {!commission.paymentTracking && commission.status === "active" && (
             <Card className="p-5">
               <div className="pl-3">
                 <h2 className="font-display text-lg">
@@ -211,9 +215,29 @@ export function CommissionDetailPage() {
             <div className="pl-3">
               <span className="eyebrow block">Agreed price</span>
               <Money centavos={commission.agreedPriceCentavos} size="lg" className="mt-1 block" />
-              <p className="mt-2 text-sm text-ink-faint">
-                Craftbid does not handle payment. Settle directly with each other.
-              </p>
+              {commission.paymentTracking ? (
+                <dl className="mt-3 space-y-1 text-sm">
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-ink-faint">Down payment</dt>
+                    <dd className="tabular font-medium">
+                      {formatPeso(commission.paymentTracking.downPaymentCentavos)}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-ink-faint">Balance</dt>
+                    <dd className="tabular font-medium">
+                      {formatPeso(commission.paymentTracking.balanceCentavos)}
+                    </dd>
+                  </div>
+                  <p className="pt-1 text-ink-faint">
+                    Paid directly to the artist. Craftbid keeps the record.
+                  </p>
+                </dl>
+              ) : (
+                <p className="mt-2 text-sm text-ink-faint">
+                  Craftbid does not handle payment. Settle directly with each other.
+                </p>
+              )}
 
               <dl className="mt-5 space-y-2 border-t border-fiber pt-4 text-sm">
                 <div className="flex justify-between gap-3">

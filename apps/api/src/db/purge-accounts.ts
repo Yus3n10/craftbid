@@ -104,10 +104,17 @@ async function main(): Promise<void> {
     `SELECT object_key FROM images WHERE owner_id IN (${sql})`,
     binds,
   );
+  const theirCommissions = `SELECT id FROM commissions WHERE client_id IN (${sql}) OR artist_id IN (${sql})`;
+  // Receipts and finished-work photos live in private storage, under their
+  // commission rather than their uploader, so they are collected by commission.
+  const privateObjects = await db.many<{ objectKey: string }>(
+    `SELECT object_key FROM commission_files WHERE commission_id IN (${theirCommissions})`,
+    binds,
+  );
 
   if (!COMMIT) {
     console.log(
-      `\n${objects.length} stored image object(s) would also be removed.`,
+      `\n${objects.length} stored image object(s) and ${privateObjects.length} private commission file(s) would also be removed.`,
     );
     console.log("\nDry run. Re-run with --commit to delete.");
     return;
@@ -117,6 +124,18 @@ async function main(): Promise<void> {
     // Order matters: children before parents, and reviews before the
     // commissions they cite.
     const steps: [string, string][] = [
+      [
+        "commission_problems",
+        `DELETE FROM commission_problems WHERE commission_id IN (${theirCommissions})`,
+      ],
+      [
+        "commission_payments",
+        `DELETE FROM commission_payments WHERE commission_id IN (${theirCommissions})`,
+      ],
+      [
+        "commission_files",
+        `DELETE FROM commission_files WHERE commission_id IN (${theirCommissions})`,
+      ],
       [
         "reviews",
         `DELETE FROM reviews WHERE reviewer_id IN (${sql}) OR reviewee_id IN (${sql})`,
@@ -155,6 +174,17 @@ async function main(): Promise<void> {
     }
   }
   console.log(`  removed ${removed}/${objects.length} stored objects`);
+
+  let removedPrivate = 0;
+  for (const { objectKey } of privateObjects) {
+    try {
+      await storage.removePrivate(objectKey);
+      removedPrivate++;
+    } catch (error) {
+      console.log(`  could not remove ${objectKey}: ${(error as Error).message}`);
+    }
+  }
+  console.log(`  removed ${removedPrivate}/${privateObjects.length} private commission files`);
 
   console.log("\nDone.");
 }

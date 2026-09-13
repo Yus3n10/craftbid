@@ -21,6 +21,13 @@ const COPY: Record<NotificationType, string> = {
   review_received: "Someone left you a review.",
   post_reaction: "Someone reacted to your work.",
   post_comment: "Someone commented on your work.",
+  payment_submitted: "The client recorded a payment. Check that you received it.",
+  payment_confirmed: "A payment was confirmed as received.",
+  payment_rejected: "The artist says a payment did not arrive. Check the details.",
+  work_finished: "Your piece is finished. See the photos.",
+  commission_shipped: "Your piece is on its way.",
+  problem_reported: "A problem was reported on a commission.",
+  problem_closed: "A reported problem on a commission was closed.",
 };
 
 /**

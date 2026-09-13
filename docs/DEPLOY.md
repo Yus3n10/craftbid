@@ -90,11 +90,30 @@ pointed at the cloud database by accident.
 > Do **not** seed production. The seed is demo data with a shared password.
 
 > **Run migrations before the code that needs them deploys.** Pushing does not
-> run them. `009-remember-me.sql` is the current example: the API that reads
-> `refresh_tokens.persistent` fails every sign-in with ORA-00904 if it reaches
-> Render before the column exists. Migrate, confirm with `migrate:status`, then
-> push. The migration is additive and defaults existing sessions to persistent,
-> so running it early is harmless to the code already deployed.
+> run them. `010-payment-records.sql` is the current example: the API that
+> creates commissions writes the payment columns, so accepting a bid fails if
+> that code reaches Render first. Migrate, confirm with `migrate:status`, then
+> push. Both 009 and 010 are additive and leave existing rows as they were
+> (sessions stay persistent, existing commissions stay untracked), so running
+> them early is harmless to the code already deployed.
+
+### Reported problems on commissions
+
+The owner reviews and settles them from their own machine; there is no web
+screen. Against production:
+
+```bash
+ENV_FILE=.env.adb pnpm --filter @craftbid/api problems list
+ENV_FILE=.env.adb pnpm --filter @craftbid/api problems resolve <problemId> continue "note both people will see"
+ENV_FILE=.env.adb pnpm --filter @craftbid/api problems resolve <problemId> cancel "note both people will see"
+```
+
+`list` shows both parties' email addresses, which is why it is not served over
+HTTP. Nothing alerts the owner to a new report, so check it regularly.
+
+Receipts use ImageKit private files. No dashboard setting is needed: each
+upload is marked private and the API reads it back with a one-minute signed
+URL that never leaves the server.
 
 ---
 

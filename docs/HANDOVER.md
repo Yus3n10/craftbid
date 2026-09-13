@@ -374,7 +374,27 @@ next page opened partway down, and with the sliding bar it could open with no
 header in view. New pages now start at the top (`Shell.tsx`); back and forward
 are left to the browser.
 
-### 4.13 Smaller ones
+### 4.13 The receipt check that measured worse than useless
+
+**Design.** Payment records were first built with a perceptual hash of each
+receipt image, to warn an artist when a receipt looked like one already used
+on Craftbid, even saved again as a different file.
+
+**Found by measuring, before it shipped.** On receipt-like screenshots, the
+same receipt re-saved, recompressed or cropped differed from the original by
+15 to 20 bits of 256, while a genuinely different receipt differed by 13, and
+a different receipt to the same person for the same amount by 1. Receipts from
+one app share a layout, and a perceptual hash is built to ignore exactly the
+digits that tell them apart. It would have missed re-saved copies or accused
+honest receipts.
+
+**Kept instead.** The exact file hash (certain, catches lazy reuse), a
+reference number that can back only one live payment anywhere on Craftbid
+(what actually gives a recycled receipt away), and the receiving artist's
+confirmation, which is the proof. Do not add image similarity back without
+measuring it on real receipts.
+
+### 4.14 Smaller ones
 
 - **Sign-in dropped users on the home page.** Both auth pages redirected an
   already-authenticated visitor to `/` *and* navigated imperatively after the
@@ -446,6 +466,42 @@ notifications, and contact links with platform logos.
   invite people to react to a request the way they react to a photograph.
 
 ---
+
+### Payment records (Option 1, with the client's 50/50)
+
+Craftbid never receives or holds money. On every commission started after
+migration 010, the client pays the artist directly and Craftbid records it:
+
+1. **Down payment**, 50% of the agreed price, copied onto the commission when
+   it starts. The client sends it by GCash, Maya or bank transfer to the
+   details the artist added in Settings, and records the reference number, the
+   date and a receipt screenshot.
+2. **The artist confirms it arrived.** The person who received money is the
+   only one who can confirm it, because they can check their own history and a
+   screenshot can be edited. "It has not arrived" lets the client send the
+   details again.
+3. **The artist uploads photos of the finished piece.**
+4. **The balance**, chosen by the client before the down payment is
+   confirmed: transferred after seeing the photos (then the artist ships), cash
+   on delivery, or cash at a meet-up. The artist records the last two.
+5. **The client marks it received**, which is allowed only once the balance is
+   confirmed, and reviews open.
+
+Rules in the database: the split adds up to the price, one live payment of
+each kind, a reference number and a receipt file each back one live payment
+anywhere, one open problem per commission. Receipts and finished photos are
+private objects (ImageKit `isPrivateFile`) served only by
+`GET /commissions/:id/files/:fileId` to the two parties, never by URL.
+Payment details are shown only to the client of an active commission with that
+artist. A commission cannot simply be cancelled once a payment is on record.
+
+**Reported problems** pause the commission. The reporter can withdraw one.
+Craftbid has no staff accounts, so the owner settles them from the command
+line against production (see DEPLOY.md). Commissions from before migration 010
+keep the original flow.
+
+Code: `apps/api/src/modules/commission-payments/`, the panel in
+`apps/web/src/components/commission/`.
 
 ## 6. Performance
 
@@ -610,7 +666,14 @@ party was part of.
 
 Ordered by what I would do next.
 
-0. **In-app payments are assessed, not built.** `docs/PAYMENTS.md` explains why
+0. **Payment records are built; in-app payments are not.** Clients pay artists
+   directly and Craftbid records it (section 5). Not done yet: nothing alerts
+   the owner to a new problem report (run `problems list` regularly); no
+   reminders when someone does not respond, since there is no scheduler; no
+   automatic deletion of receipts after a retention period; and the privacy
+   notice and terms need a line on receipts, refunds and the down payment rule.
+   The paid "boost" features are on hold at the client's request.
+   **In-app payments are assessed, not built.** `docs/PAYMENTS.md` explains why
    Craftbid must not collect and remit money itself (BSP merchant acquisition
    licensing, ₱5M minimum capital) and lays out a licensed-provider design,
    the answers to the client's questions, and the business prerequisites.

@@ -18,6 +18,7 @@ import { PlatformLogo, platformLabel } from "../components/ui/PlatformLogos.js";
 import { Field, Select, TextArea, TextInput } from "../components/ui/Field.js";
 import { Card, ThreadRule } from "../components/ui/Primitives.js";
 import { FormError, PageHeading } from "../components/ui/States.js";
+import { PayoutAccountsForm } from "../components/commission/PayoutAccountsForm.js";
 import { ImageUploader, type UploadedImage } from "../components/ImageUploader.js";
 
 function Section({
@@ -323,6 +324,15 @@ export function SettingsPage() {
                 <span className="ml-3 text-sm text-sage">Craft details saved.</span>
               )}
             </form>
+          </Section>
+        )}
+
+        {user.role === "artist" && (
+          <Section
+            title="Where clients pay you"
+            description="Clients see these only after they choose you for a commission, never on your public profile. They pay you directly, and you confirm each payment when it arrives."
+          >
+            <PayoutAccountsForm />
           </Section>
         )}
 

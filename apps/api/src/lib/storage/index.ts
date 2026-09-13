@@ -17,6 +17,17 @@ export interface ObjectStorage {
   remove(key: string): Promise<void>;
   /** The public URL a browser should load this object from. */
   urlFor(key: string): string;
+  /**
+   * Stores an object that has no public URL at all.
+   *
+   * Receipts and photos of an unreleased commission carry names, phone
+   * numbers and amounts. They are only ever read back by the API, after it has
+   * checked the reader is one of the two parties, and streamed from there.
+   */
+  putPrivate(key: string, body: Buffer, contentType: string): Promise<void>;
+  /** Reads a private object back, or null if it does not exist. */
+  getPrivate(key: string): Promise<Buffer | null>;
+  removePrivate(key: string): Promise<void>;
 }
 
 let instance: ObjectStorage | undefined;

@@ -41,19 +41,25 @@ export interface ProcessedImage {
   height: number;
 }
 
+export interface NormalisedImage {
+  data: Buffer;
+  width: number;
+  height: number;
+}
+
 /**
- * Validates, normalises and stores one upload.
+ * Validates and normalises one uploaded image, without storing it.
  *
- * Everything is re-encoded to WebP rather than stored as received. That gives
+ * Everything is re-encoded to WebP rather than kept as received. That gives
  * three things at once: metadata including GPS EXIF is dropped, since a photo
  * of a handmade piece is usually taken at the maker's home; a malformed file
  * that merely looks like an image fails here rather than in a browser; and the
  * bytes shrink, which matters when the storage tier is free.
+ *
+ * Shared by public images and by private commission files, so a receipt gets
+ * exactly the same scrutiny as a portfolio photo.
  */
-export async function processUpload(
-  ownerId: string,
-  buffer: Buffer,
-): Promise<ProcessedImage> {
+export async function normaliseImage(buffer: Buffer): Promise<NormalisedImage> {
   if (buffer.length === 0) {
     throw badRequest("That file is empty.");
   }
@@ -99,13 +105,23 @@ export async function processUpload(
     .webp({ quality: 82 })
     .toBuffer({ resolveWithObject: true });
 
+  return { data: output.data, width: output.info.width, height: output.info.height };
+}
+
+/** Validates, normalises and stores one public upload. */
+export async function processUpload(
+  ownerId: string,
+  buffer: Buffer,
+): Promise<ProcessedImage> {
+  const image = await normaliseImage(buffer);
+
   const id = newId();
   // The key is derived server-side. A client-supplied filename never reaches
   // the storage path, so there is nothing to traverse with.
   const key = `${ownerId}/${id}.webp`;
 
   const storage = getStorage();
-  await storage.put(key, output.data, "image/webp");
+  await storage.put(key, image.data, "image/webp");
 
   try {
     await repo.insertImage({
@@ -113,9 +129,9 @@ export async function processUpload(
       ownerId,
       objectKey: key,
       contentType: "image/webp",
-      byteSize: output.data.byteLength,
-      width: output.info.width,
-      height: output.info.height,
+      byteSize: image.data.byteLength,
+      width: image.width,
+      height: image.height,
     });
   } catch (error) {
     // Do not leave bytes behind that no row points at.
@@ -126,7 +142,7 @@ export async function processUpload(
   return {
     id,
     url: storage.urlFor(key),
-    width: output.info.width,
-    height: output.info.height,
+    width: image.width,
+    height: image.height,
   };
 }

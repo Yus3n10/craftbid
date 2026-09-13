@@ -24,6 +24,7 @@ import { imageRoutes } from "./modules/images/images.routes.js";
 import { postingRoutes } from "./modules/postings/postings.routes.js";
 import { applicationRoutes } from "./modules/applications/applications.routes.js";
 import { commissionRoutes } from "./modules/commissions/commissions.routes.js";
+import { commissionPaymentRoutes } from "./modules/commission-payments/commission-payments.routes.js";
 import { postRoutes } from "./modules/posts/posts.routes.js";
 import { socialRoutes } from "./modules/social/social.routes.js";
 import { searchRoutes } from "./modules/search.routes.js";
@@ -84,6 +85,9 @@ export async function buildApp(
             "req.body.password",
             "req.body.currentPassword",
             "req.body.newPassword",
+            // Payment records: wallet and bank numbers, and what a receipt says.
+            "req.body.accounts",
+            "req.body.referenceNumber",
           ],
         },
     trustProxy: true,
@@ -341,6 +345,7 @@ export async function buildApp(
   await app.register(postingRoutes);
   await app.register(applicationRoutes);
   await app.register(commissionRoutes);
+  await app.register(commissionPaymentRoutes);
   await app.register(postRoutes);
   await app.register(socialRoutes);
   await app.register(searchRoutes);

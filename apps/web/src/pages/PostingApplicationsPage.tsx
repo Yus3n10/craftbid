@@ -202,9 +202,9 @@ export function PostingApplicationsPage() {
               You chose {accepted.artist.displayName}
             </h2>
             <p className="mt-1 text-sm text-ink-soft">
-              Agreed at {formatPeso(accepted.proposedPriceCentavos)}. Arrange the
-              details directly, then mark the commission complete when the piece
-              arrives.
+              Agreed at {formatPeso(accepted.proposedPriceCentavos)}. Open the
+              commission to send the down payment and follow each step until the
+              piece arrives.
             </p>
             {posting.data?.commissionId && (
               <div className="mt-3">

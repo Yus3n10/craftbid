@@ -58,8 +58,71 @@ export const NOTIFICATION_TYPES = [
   "review_received",
   "post_reaction",
   "post_comment",
+  "payment_submitted",
+  "payment_confirmed",
+  "payment_rejected",
+  "work_finished",
+  "commission_shipped",
+  "problem_reported",
+  "problem_closed",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+
+/**
+ * Payment records.
+ *
+ * Craftbid never receives or holds this money. The client pays the artist
+ * directly, and Craftbid keeps the record both sides agreed to: a share up
+ * front to start the work, and the rest before the piece is handed over. The
+ * person who received a payment is the one who confirms it, because they can
+ * check their own wallet or bank history, and a screenshot can be faked.
+ */
+export const DOWN_PAYMENT_PERCENT = 50;
+
+/** The two payments on a tracked commission. */
+export const PAYMENT_KINDS = ["down", "balance"] as const;
+export type PaymentKind = (typeof PAYMENT_KINDS)[number];
+
+/** Sent remotely, so the client uploads a receipt and a reference number. */
+export const TRANSFER_METHODS = ["gcash", "maya", "bank"] as const;
+export type TransferMethod = (typeof TRANSFER_METHODS)[number];
+
+/** Handed over in person or through the courier, so the artist records it. */
+export const IN_PERSON_METHODS = ["cod", "cash"] as const;
+export type InPersonMethod = (typeof IN_PERSON_METHODS)[number];
+
+export const PAYMENT_METHODS = [...TRANSFER_METHODS, ...IN_PERSON_METHODS] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+export const PAYMENT_STATUSES = ["submitted", "confirmed", "rejected"] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+
+/**
+ * How the balance is settled.
+ *
+ * "transfer": the artist shows photos of the finished piece, the client pays,
+ * then the artist ships. "cod": the courier collects the balance on delivery.
+ * "meetup": cash when they meet. None of them asks the artist to ship before
+ * the balance is secured, which is the risk that pays for everything else.
+ */
+export const BALANCE_METHODS = ["transfer", "cod", "meetup"] as const;
+export type BalanceMethod = (typeof BALANCE_METHODS)[number];
+
+export const PROBLEM_REASONS = [
+  "payment_not_received",
+  "work_not_delivered",
+  "not_as_agreed",
+  "stopped_responding",
+  "other",
+] as const;
+export type ProblemReason = (typeof PROBLEM_REASONS)[number];
+
+export const PROBLEM_STATUSES = ["open", "withdrawn", "resolved"] as const;
+export type ProblemStatus = (typeof PROBLEM_STATUSES)[number];
+
+/** Private files attached to a commission. Never served by public URL. */
+export const COMMISSION_FILE_KINDS = ["receipt", "finished_photo"] as const;
+export type CommissionFileKind = (typeof COMMISSION_FILE_KINDS)[number];
 
 /** Platforms an artist may link for off-platform contact. */
 /**
@@ -243,6 +306,13 @@ export const LIMITS = {
   postingImages: { min: 0, max: 5 },
   artistPostImages: { min: 1, max: 5 },
   applicationSamples: { max: 6 },
+  finishedPhotos: { min: 1, max: 5 },
+  problemDetails: { min: 10, max: 2000 },
+  referenceNumber: { min: 6, max: 40 },
+  payoutAccountName: { min: 2, max: 80 },
+  bankName: { min: 2, max: 80 },
+  courier: { min: 2, max: 60 },
+  trackingNumber: { max: 60 },
 } as const;
 
 /** Upload rules. Enforced server-side against real file bytes, not headers. */

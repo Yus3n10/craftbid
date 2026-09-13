@@ -8,11 +8,18 @@
 
 import type {
   ApplicationStatus,
+  BalanceMethod,
   CommissionStatus,
   LinkPlatform,
   NotificationType,
+  PaymentKind,
+  PaymentMethod,
+  PaymentStatus,
   PostingStatus,
+  ProblemReason,
+  ProblemStatus,
   ReactionKind,
+  TransferMethod,
   UserRole,
 } from "./constants.js";
 
@@ -173,6 +180,76 @@ export interface CommissionDto {
   /** Whether the requesting user still owes a review on this commission. */
   canReview: boolean;
   reviews: ReviewDto[];
+  /**
+   * Present on commissions started after payment records were introduced.
+   * Older commissions have none and keep the original flow.
+   */
+  paymentTracking?: PaymentTrackingDto;
+}
+
+export interface PayoutAccountDto {
+  method: TransferMethod;
+  accountName: string;
+  accountNumber: string;
+  bankName?: string;
+}
+
+export interface CommissionPaymentDto {
+  id: string;
+  kind: PaymentKind;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  amountCentavos: number;
+  /** Transfers only. */
+  referenceNumber?: string;
+  paidOn?: string;
+  receiptFileId?: string;
+  /** The account the client says they paid, as it was at that moment. */
+  paidTo?: PayoutAccountDto;
+  recordedBy: "client" | "artist";
+  submittedAt: string;
+  decidedAt?: string;
+}
+
+export interface CommissionProblemDto {
+  id: string;
+  reason: ProblemReason;
+  details: string;
+  status: ProblemStatus;
+  openedBy: "client" | "artist";
+  openedByViewer: boolean;
+  resolution?: string;
+  createdAt: string;
+  closedAt?: string;
+}
+
+/**
+ * Where a tracked commission stands, from the two payments and the work.
+ * Computed on the server so the client and the API cannot disagree about what
+ * is allowed next.
+ */
+export type PaymentStage =
+  | "awaiting_down_payment"
+  | "down_payment_submitted"
+  | "in_progress"
+  | "awaiting_balance"
+  | "balance_submitted"
+  | "ready_to_complete";
+
+export interface PaymentTrackingDto {
+  downPaymentCentavos: number;
+  balanceCentavos: number;
+  balanceMethod: BalanceMethod;
+  stage: PaymentStage;
+  /** Newest first, rejected ones included, so the history is visible. */
+  payments: CommissionPaymentDto[];
+  finishedAt?: string;
+  finishedPhotoIds: string[];
+  shipping?: { courier: string; trackingNumber?: string; shippedAt: string };
+  openProblem?: CommissionProblemDto;
+  problems: CommissionProblemDto[];
+  /** The artist's current payment details. */
+  payTo: PayoutAccountDto[];
 }
 
 export interface ReviewDto {

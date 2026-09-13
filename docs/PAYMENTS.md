@@ -20,6 +20,21 @@ below is marked as one of:
 
 ---
 
+## 0. What is live now: payment records
+
+The client chose Option 1 with a 50% down payment. That is built, and it
+moves no money: the client pays the artist directly by GCash, Maya, bank
+transfer, cash on delivery or meet-up, and Craftbid records each payment,
+confirmed by the artist who received it. None of the licensing in section 3
+applies, because Craftbid never receives, holds or remits funds. See
+HANDOVER.md section 5 for how it works and 4.13 for why receipts are checked by
+reference number and file hash rather than image similarity.
+
+What it does not give, and cannot: buyer protection. If an artist confirms a
+down payment and never delivers, Craftbid can pause the commission, record
+the problem and act on the account, but it cannot return the money. That
+remains the reason for the provider model below.
+
 ## 1. The short answer
 
 | | |

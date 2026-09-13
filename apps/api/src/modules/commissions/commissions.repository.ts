@@ -250,13 +250,20 @@ export async function insertCommission(
     clientId: string;
     artistId: string;
     agreedPriceCentavos: number;
+    /**
+     * The down payment split, copied onto the commission when it starts. Absent
+     * only for seeded history that predates payment records.
+     */
+    payment?: { downPaymentCentavos: number; balanceCentavos: number };
   },
   tx: Queryable,
 ): Promise<void> {
   await tx.run(
     `INSERT INTO commissions
-       (id, posting_id, application_id, client_id, artist_id, agreed_price_centavos)
-     VALUES (:id, :postingId, :applicationId, :clientId, :artistId, :price)`,
+       (id, posting_id, application_id, client_id, artist_id, agreed_price_centavos,
+        payment_tracking, down_payment_centavos, balance_centavos, balance_method)
+     VALUES (:id, :postingId, :applicationId, :clientId, :artistId, :price,
+             :tracking, :down, :balance, :balanceMethod)`,
     {
       id: uuidToBuf(input.id),
       postingId: uuidToBuf(input.postingId),
@@ -264,6 +271,12 @@ export async function insertCommission(
       clientId: uuidToBuf(input.clientId),
       artistId: uuidToBuf(input.artistId),
       price: input.agreedPriceCentavos,
+      tracking: input.payment ? 1 : 0,
+      down: input.payment?.downPaymentCentavos ?? null,
+      balance: input.payment?.balanceCentavos ?? null,
+      // Photos, then payment, then shipping: the option that never asks the
+      // artist to send a finished piece before the balance is secured.
+      balanceMethod: input.payment ? "transfer" : null,
     },
   );
 }

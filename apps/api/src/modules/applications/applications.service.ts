@@ -4,7 +4,11 @@ import type {
   CreateApplicationInput,
   Paginated,
 } from "@craftbid/shared";
-import { formatPeso } from "@craftbid/shared";
+import {
+  formatPeso,
+  DOWN_PAYMENT_PERCENT,
+  splitDownPayment,
+} from "@craftbid/shared";
 import { bufToUuid, newId, uuidToBuf } from "../../db/ids.js";
 import { DbError, withTransaction } from "../../db/query.js";
 import { badRequest, conflict, forbidden, notFound } from "../../lib/errors.js";
@@ -150,6 +154,7 @@ export async function accept(
           clientId,
           artistId: context.artistId,
           agreedPriceCentavos: context.proposedPriceCentavos,
+          payment: splitDownPayment(context.proposedPriceCentavos, DOWN_PAYMENT_PERCENT),
         },
         tx,
       );

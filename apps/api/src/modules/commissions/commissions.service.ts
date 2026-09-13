@@ -11,6 +11,7 @@ import { badRequest, conflict, notFound } from "../../lib/errors.js";
 import * as notifications from "../notifications/notifications.repository.js";
 import * as postingsRepo from "../postings/postings.repository.js";
 import * as reviewsRepo from "../reviews/reviews.repository.js";
+import * as payments from "../commission-payments/commission-payments.service.js";
 import * as repo from "./commissions.repository.js";
 
 /**
@@ -33,7 +34,8 @@ export async function getCommission(
   await loadParticipant(commissionId, userId);
   const commission = await repo.findById(commissionId, userId);
   if (!commission) throw notFound("That commission does not exist.");
-  return commission;
+  const paymentTracking = await payments.buildTracking(commissionId, userId);
+  return paymentTracking ? { ...commission, paymentTracking } : commission;
 }
 
 export async function listMine(
@@ -65,6 +67,8 @@ export async function complete(
   }
 
   await withTransaction(async (tx) => {
+    // A tracked commission completes only once the balance is confirmed.
+    await payments.assertCanComplete(commissionId, tx);
     await repo.complete(commissionId, tx);
     await postingsRepo.setStatus(context.postingId, "completed", tx);
     await notifications.notify(
@@ -96,6 +100,8 @@ export async function cancel(
   }
 
   await withTransaction(async (tx) => {
+    // Once a payment is on record, calling it off is a problem to report.
+    await payments.assertCanCancel(commissionId, tx);
     await repo.cancel(commissionId, tx);
     await postingsRepo.setStatus(context.postingId, "cancelled", tx);
     await notifications.notify(

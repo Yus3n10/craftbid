@@ -14,7 +14,8 @@
     "typecheck": "tsc -p tsconfig.typecheck.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "purge:accounts": "tsx src/db/purge-accounts.ts"
+    "purge:accounts": "tsx src/db/purge-accounts.ts",
+    "problems": "tsx src/modules/commission-payments/problems-cli.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",

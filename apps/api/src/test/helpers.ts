@@ -20,6 +20,11 @@ import { setStorage, type ObjectStorage } from "../lib/storage/index.js";
  * never be asserted.
  */
 const storedObjects = new Map<string, { body: Buffer; contentType: string }>();
+/**
+ * Kept apart from the public map on purpose, so a test can prove a receipt
+ * went to private storage and never to anywhere with a URL.
+ */
+const privateObjects = new Map<string, { body: Buffer; contentType: string }>();
 
 const memoryStorage: ObjectStorage = {
   name: "memory",
@@ -30,6 +35,15 @@ const memoryStorage: ObjectStorage = {
     storedObjects.delete(key);
   },
   urlFor: (key) => `https://test.local/${key}`,
+  async putPrivate(key, body, contentType) {
+    privateObjects.set(key, { body, contentType });
+  },
+  async getPrivate(key) {
+    return privateObjects.get(key)?.body ?? null;
+  },
+  async removePrivate(key) {
+    privateObjects.delete(key);
+  },
 };
 
 /** What was actually written for a key, for tests that assert on the bytes. */
@@ -37,6 +51,12 @@ export function storedObject(
   key: string,
 ): { body: Buffer; contentType: string } | undefined {
   return storedObjects.get(key);
+}
+
+export function storedPrivateObject(
+  key: string,
+): { body: Buffer; contentType: string } | undefined {
+  return privateObjects.get(key);
 }
 
 let app: FastifyInstance | undefined;
@@ -63,6 +83,10 @@ export async function closeTestApp(): Promise<void> {
  */
 export async function resetData(): Promise<void> {
   const statements = [
+    `DELETE FROM commission_problems`,
+    `DELETE FROM commission_payments`,
+    `DELETE FROM commission_files`,
+    `DELETE FROM payout_accounts`,
     `DELETE FROM reviews`,
     `DELETE FROM application_samples`,
     `DELETE FROM commissions`,
@@ -222,11 +246,82 @@ export async function createArtistPost(artist: Session, caption = "Bridal bouque
   return response.json() as { id: string };
 }
 
-/** Runs a posting all the way to a completed commission. */
-export async function completeCommission(client: Session, artist: Session) {
+/**
+ * A distinct test image. Each seed draws different stripes, so two seeds give
+ * different bytes and different difference hashes, the way two real receipts
+ * would, while one seed always gives the same picture.
+ */
+export async function testImage(seed: number, format: "png" | "jpeg" = "png"): Promise<Buffer> {
+  const { default: sharp } = await import("sharp");
+  const width = 320;
+  const height = 320;
+  const pixels = Buffer.alloc(width * height * 3);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const band = Math.floor((x * (seed + 3) + y * ((seed % 5) + 1)) / 17) % 2;
+      const offset = (y * width + x) * 3;
+      pixels[offset] = band ? 230 : (seed * 37) % 200;
+      pixels[offset + 1] = band ? 225 : (seed * 53) % 200;
+      pixels[offset + 2] = band ? 215 : (seed * 71) % 200;
+    }
+  }
+  const image = sharp(pixels, { raw: { width, height, channels: 3 } });
+  return format === "png" ? image.png().toBuffer() : image.jpeg({ quality: 95 }).toBuffer();
+}
+
+/** Builds a multipart body by hand; inject takes a Buffer, not a FormData. */
+export function multipartFile(file: Buffer): { payload: Buffer; headers: Record<string, string> } {
+  const boundary = "----craftbidtest";
+  const head = Buffer.from(
+    `--${boundary}\r\n` +
+      `Content-Disposition: form-data; name="file"; filename="upload.png"\r\n` +
+      `Content-Type: image/png\r\n\r\n`,
+  );
+  const tail = Buffer.from(`\r\n--${boundary}--\r\n`);
+  return {
+    payload: Buffer.concat([head, file, tail]),
+    headers: { "content-type": `multipart/form-data; boundary=${boundary}` },
+  };
+}
+
+export async function uploadCommissionFile(
+  session: Session,
+  commissionId: string,
+  file: Buffer,
+): Promise<LightMyRequestResponse> {
+  const instance = await getTestApp();
+  const body = multipartFile(file);
+  return instance.inject({
+    method: "POST",
+    url: `/commissions/${commissionId}/files`,
+    headers: { ...authHeaders(session), ...body.headers },
+    payload: body.payload,
+  });
+}
+
+/** Gives an artist a GCash account clients can pay. */
+export async function addGcash(artist: Session, number = "09171234567"): Promise<void> {
+  const instance = await getTestApp();
+  const response = await instance.inject({
+    method: "PUT",
+    url: "/me/payout-accounts",
+    headers: authHeaders(artist),
+    payload: { accounts: [{ method: "gcash", accountName: "Nena Hooks", accountNumber: number }] },
+  });
+  if (response.statusCode !== 200) {
+    throw new Error(`addGcash failed: ${response.statusCode} ${response.body}`);
+  }
+}
+
+/** Posts a request, bids, accepts, and returns the new commission's id. */
+export async function startCommission(
+  client: Session,
+  artist: Session,
+  priceCentavos = 200_000,
+): Promise<string> {
   const instance = await getTestApp();
   const posting = await createPosting(client);
-  const application = await applyToPosting(artist, posting.id, 200_000);
+  const application = await applyToPosting(artist, posting.id, priceCentavos);
   const applicationId = (application.json() as { id: string }).id;
 
   await instance.inject({
@@ -240,13 +335,162 @@ export async function completeCommission(client: Session, artist: Session) {
     url: `/postings/${posting.id}`,
     headers: authHeaders(client),
   });
-  const commissionId = (postingAfter.json() as { commissionId: string }).commissionId;
+  return (postingAfter.json() as { commissionId: string }).commissionId;
+}
 
-  await instance.inject({
+let receiptSeed = 1000;
+let referenceSeed = 100_000_000;
+
+/** A seed for a picture no other helper call has drawn. */
+export function freshImageSeed(): number {
+  receiptSeed += 1;
+  return receiptSeed;
+}
+
+/**
+ * The client records a GCash transfer for the amount due, with a fresh
+ * receipt and reference number unless the test supplies its own.
+ */
+export async function submitGcashPayment(
+  client: Session,
+  commissionId: string,
+  kind: "down" | "balance",
+  overrides: Partial<{
+    amountCentavos: number;
+    referenceNumber: string;
+    paidOn: string;
+    receiptFileId: string;
+    receipt: Buffer;
+  }> = {},
+): Promise<LightMyRequestResponse> {
+  const instance = await getTestApp();
+  let receiptFileId = overrides.receiptFileId;
+  if (!receiptFileId) {
+    const upload = await uploadCommissionFile(
+      client,
+      commissionId,
+      overrides.receipt ?? (await testImage(freshImageSeed())),
+    );
+    if (upload.statusCode !== 201) {
+      throw new Error(`receipt upload failed: ${upload.statusCode} ${upload.body}`);
+    }
+    receiptFileId = (upload.json() as { id: string }).id;
+  }
+
+  let amountCentavos = overrides.amountCentavos;
+  if (amountCentavos === undefined) {
+    const commission = await instance.inject({
+      method: "GET",
+      url: `/commissions/${commissionId}`,
+      headers: authHeaders(client),
+    });
+    const tracking = (commission.json() as {
+      paymentTracking: { downPaymentCentavos: number; balanceCentavos: number };
+    }).paymentTracking;
+    amountCentavos = kind === "down" ? tracking.downPaymentCentavos : tracking.balanceCentavos;
+  }
+
+  referenceSeed += 1;
+  return instance.inject({
     method: "POST",
-    url: `/commissions/${commissionId}/complete`,
+    url: `/commissions/${commissionId}/payments`,
+    headers: authHeaders(client),
+    payload: {
+      kind,
+      method: "gcash",
+      amountCentavos,
+      referenceNumber: overrides.referenceNumber ?? String(referenceSeed),
+      paidOn: overrides.paidOn ?? new Date().toISOString().slice(0, 10),
+      receiptFileId,
+    },
+  });
+}
+
+/** The id of the newest payment of a kind, as either party sees it. */
+export async function latestPaymentId(
+  session: Session,
+  commissionId: string,
+  kind: "down" | "balance",
+): Promise<string> {
+  const instance = await getTestApp();
+  const response = await instance.inject({
+    method: "GET",
+    url: `/commissions/${commissionId}`,
+    headers: authHeaders(session),
+  });
+  const payments = (response.json() as {
+    paymentTracking: { payments: { id: string; kind: string }[] };
+  }).paymentTracking.payments;
+  const found = payments.find((payment) => payment.kind === kind);
+  if (!found) throw new Error(`no ${kind} payment on ${commissionId}`);
+  return found.id;
+}
+
+function expectStatus(response: LightMyRequestResponse, status: number, step: string): void {
+  if (response.statusCode !== status) {
+    throw new Error(`${step} failed: ${response.statusCode} ${response.body}`);
+  }
+}
+
+/** The artist confirms the newest payment of a kind. */
+export async function confirmPayment(
+  artist: Session,
+  commissionId: string,
+  kind: "down" | "balance",
+): Promise<LightMyRequestResponse> {
+  const instance = await getTestApp();
+  return instance.inject({
+    method: "POST",
+    url: `/commissions/${commissionId}/payments/${await latestPaymentId(artist, commissionId, kind)}/confirm`,
+    headers: authHeaders(artist),
+  });
+}
+
+/** The artist uploads one photo and marks the piece finished. */
+export async function finishWork(artist: Session, commissionId: string): Promise<LightMyRequestResponse> {
+  const instance = await getTestApp();
+  const photo = await uploadCommissionFile(artist, commissionId, await testImage(freshImageSeed()));
+  expectStatus(photo, 201, "finished photo");
+  return instance.inject({
+    method: "POST",
+    url: `/commissions/${commissionId}/finished`,
+    headers: authHeaders(artist),
+    payload: { photoFileIds: [(photo.json() as { id: string }).id] },
+  });
+}
+
+/**
+ * Runs a posting all the way to a completed commission, through the payment
+ * records a real pair would go through: down payment confirmed, finished photos,
+ * balance confirmed, then the client completes.
+ */
+export async function completeCommission(
+  client: Session,
+  artist: Session,
+): Promise<{ postingId: string; commissionId: string }> {
+  const instance = await getTestApp();
+  await addGcash(artist);
+  const commissionId = await startCommission(client, artist);
+
+  expectStatus(await submitGcashPayment(client, commissionId, "down"), 201, "down payment");
+  expectStatus(await confirmPayment(artist, commissionId, "down"), 204, "confirm down payment");
+  expectStatus(await finishWork(artist, commissionId), 204, "mark finished");
+  expectStatus(await submitGcashPayment(client, commissionId, "balance"), 201, "balance");
+  expectStatus(await confirmPayment(artist, commissionId, "balance"), 204, "confirm balance");
+  expectStatus(
+    await instance.inject({
+      method: "POST",
+      url: `/commissions/${commissionId}/complete`,
+      headers: authHeaders(client),
+    }),
+    200,
+    "complete",
+  );
+
+  const detail = await instance.inject({
+    method: "GET",
+    url: `/commissions/${commissionId}`,
     headers: authHeaders(client),
   });
-
-  return { postingId: posting.id, applicationId, commissionId };
+  return { postingId: (detail.json() as { posting: { id: string } }).posting.id, commissionId };
 }
