@@ -12,7 +12,7 @@ import { SearchBox } from "../SearchBox.js";
 
 function navClass({ isActive }: { isActive: boolean }): string {
   return cx(
-    "rounded-sm px-2.5 py-1.5 text-sm font-medium transition-colors",
+    "whitespace-nowrap rounded-sm px-2.5 py-1.5 text-sm font-medium transition-colors",
     isActive ? "text-indigo" : "text-ink-soft hover:text-ink",
   );
 }
@@ -43,6 +43,17 @@ function SearchIcon() {
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
       <circle cx="9" cy="9" r="5.5" stroke="currentColor" strokeWidth="1.5" />
       <path d="M13.2 13.2 17 17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function SettingsIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      {/* A cog: eight teeth as a dashed ring (2 x pi x 6.9 / 8 = 5.42 per tooth) around a body and a hub. */}
+      <circle cx="10" cy="10" r="6.9" stroke="currentColor" strokeWidth="2.4" strokeDasharray="2.3 3.12" />
+      <circle cx="10" cy="10" r="5.1" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="10" cy="10" r="1.9" stroke="currentColor" strokeWidth="1.5" />
     </svg>
   );
 }
@@ -209,6 +220,13 @@ export function Header() {
                 <UnreadDot />
               </Link>
 
+              {/* Settings was reachable only through "Edit profile" on the
+                  profile page, and it is where artists add the details
+                  clients pay them with. */}
+              <Link to="/settings" className={ICON_BUTTON} aria-label="Settings" title="Settings">
+                <SettingsIcon />
+              </Link>
+
               {user.role === "client" && (
                 <ButtonLink to="/postings/new" size="sm">
                   Post a request
@@ -311,6 +329,9 @@ export function Header() {
                   </ButtonLink>
                   <ButtonLink to="/notifications" variant="ghost" size="sm">
                     Notifications
+                  </ButtonLink>
+                  <ButtonLink to="/settings" variant="ghost" size="sm">
+                    Settings
                   </ButtonLink>
                   <Button variant="ghost" size="sm" onClick={handleLogout}>
                     Sign out

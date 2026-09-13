@@ -4,6 +4,7 @@ import { BRAND } from "@craftbid/shared";
 import { Header } from "./Header.js";
 import { Logo } from "./Logo.js";
 import { ErrorBoundary } from "../ErrorBoundary.js";
+import { reloadIfUpdateWaiting } from "../../lib/appUpdates.js";
 
 export function Shell() {
   const { pathname } = useLocation();
@@ -21,6 +22,12 @@ export function Shell() {
   useEffect(() => {
     if (navigationType !== "POP") window.scrollTo(0, 0);
   }, [pathname, navigationType]);
+
+  // A deploy that arrived after someone started using the page is loaded
+  // here, when they leave it anyway. See lib/appUpdates.ts.
+  useEffect(() => {
+    reloadIfUpdateWaiting();
+  }, [pathname]);
 
   return (
     <div className="flex min-h-dvh flex-col">

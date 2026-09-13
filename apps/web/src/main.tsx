@@ -5,6 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./lib/auth.js";
 import { ErrorBoundary } from "./components/ErrorBoundary.js";
 import { App } from "./App.js";
+import { watchForAppUpdates } from "./lib/appUpdates.js";
 import "./index.css";
 
 const queryClient = new QueryClient({
@@ -27,6 +28,8 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+watchForAppUpdates();
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Missing #root element");

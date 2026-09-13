@@ -52,6 +52,7 @@ async function stubApi(page: Page, me: () => User | null) {
       return route.fulfill(user ? json(user) : SIGNED_OUT);
     }
     if (path === "/auth/refresh") return route.fulfill(SIGNED_OUT);
+    if (path === "/me/payout-accounts") return route.fulfill(json([]));
     if (path === "/notifications") return route.fulfill(json({ ...JSON.parse(EMPTY_PAGE.body), unread: 0 }));
     if (/^\/(feed|posts|postings|applications\/mine|commissions)$/.test(path)) {
       return route.fulfill(EMPTY_PAGE);
@@ -232,6 +233,27 @@ test.describe("across widths, signed in as a client", () => {
       }
     });
   }
+
+  /**
+   * Settings used to be reachable only through "Edit profile" on the profile
+   * page, and it is where an artist adds the details clients pay them with.
+   */
+  test("Settings is one step from the header, on a phone and on a desktop", async ({ page }) => {
+    await stubApi(page, () => ARTIST);
+
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto("/postings");
+    await page.getByRole("button", { name: "Menu" }).click();
+    await page.locator("#mobile-nav").getByRole("link", { name: "Settings" }).click();
+    await expect(page).toHaveURL(/\/settings$/);
+    await expect(page.getByRole("heading", { name: "Where clients pay you" })).toBeVisible();
+
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await page.goto("/postings");
+    await page.getByRole("banner").getByRole("link", { name: "Settings" }).click();
+    await expect(page).toHaveURL(/\/settings$/);
+    await expect(page.getByRole("heading", { name: "Where clients pay you" })).toBeVisible();
+  });
 
   test("desktop: the header stays in place while scrolling", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
