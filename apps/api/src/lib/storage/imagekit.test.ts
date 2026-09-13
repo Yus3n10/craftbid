@@ -66,7 +66,8 @@ describe("ImageKit private files", () => {
 
     expect(body?.toString()).toBe("receipt-bytes");
     const url = new URL(requested[0]!);
-    expect(url.pathname).toBe("/craftbid/commissions/c1/f1.webp");
+    // The stored original, not ImageKit's re-encoded delivery.
+    expect(url.pathname).toBe("/craftbid/tr:orig-true/commissions/c1/f1.webp");
     const expires = Number(url.searchParams.get("ik-t"));
     // Good for about a minute, and never longer: the URL is only for the API.
     expect(expires - before).toBeGreaterThanOrEqual(59);
@@ -74,5 +75,25 @@ describe("ImageKit private files", () => {
     expect(url.searchParams.get("ik-s")).toMatch(/^[0-9a-f]{40}$/);
 
     expect(await storage.getPrivate("commissions/c1/missing.webp")).toBeNull();
+  });
+
+  it("signs the original-file request over the transformation and the key together", async () => {
+    const requested: string[] = [];
+    const fakeFetch = (async (url: string) => {
+      requested.push(url);
+      return new Response(Buffer.from("receipt-bytes"), { status: 200 });
+    }) as typeof fetch;
+    const realNow = Date.now;
+    Date.now = () => 1_699_999_940_000;
+    try {
+      await createImageKitStorage(fakeFetch, credentials).getPrivate("commissions/c1/f1.webp");
+    } finally {
+      Date.now = realNow;
+    }
+    // Python: hmac.new(b"private_key_test", b"tr:orig-true/commissions/c1/f1.webp1700000000", sha1)
+    expect(requested[0]).toBe(
+      "https://ik.imagekit.io/craftbid/tr:orig-true/commissions/c1/f1.webp" +
+        "?ik-t=1700000000&ik-s=620f29d63e465113a11c0c08ae696d341df871dd",
+    );
   });
 });

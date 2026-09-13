@@ -92,8 +92,11 @@ export function createImageKitStorage(
     async getPrivate(key) {
       // The signed URL lives for a minute and never leaves this process: the
       // API reads the bytes and streams them to a checked participant.
+      // `orig-true` asks for the stored file itself. Without it ImageKit
+      // re-encodes on delivery (measured in production: a JPEG came back for
+      // a WebP key), and a receipt must reach the artist as it was uploaded.
       const expires = Math.floor(Date.now() / 1000) + 60;
-      const response = await fetchImpl(signedUrl(base, key, privateKey, expires));
+      const response = await fetchImpl(signedUrl(base, `tr:orig-true/${key}`, privateKey, expires));
       if (response.status === 404) return null;
       if (!response.ok) {
         throw new Error(`ImageKit private read failed (${response.status})`);
