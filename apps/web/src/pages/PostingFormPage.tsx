@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useUnsavedChanges, useUnsavedChangesState } from "../lib/unsavedChanges.js";
 import {
   CRAFT_CATEGORIES,
   LIMITS,
@@ -47,6 +48,23 @@ export function PostingFormPage() {
     setImages(posting.images.map((image) => ({ id: image.id, url: image.url })));
   }, [existing.data]);
 
+  // Anything typed that is not yet posted. Editing compares with what was
+  // loaded; a new request counts anything filled in at all.
+  const snapshot = JSON.stringify([title, description, categorySlug, minBudget, requirements, deadline, images.map((image) => image.id)]);
+  const loaded = existing.data
+    ? JSON.stringify([
+        existing.data.title,
+        existing.data.description,
+        existing.data.category.slug,
+        existing.data.minBudgetCentavos,
+        existing.data.requirements ?? "",
+        existing.data.deadline ? existing.data.deadline.slice(0, 10) : "",
+        existing.data.images.map((image) => image.id),
+      ])
+    : JSON.stringify(["", "", "crochet", "", "", "", []]);
+  useUnsavedChanges((!editing || Boolean(existing.data)) && snapshot !== loaded);
+  const { leaveWithoutPrompt } = useUnsavedChangesState();
+
   const mutation = useMutation({
     mutationFn: () => {
       const payload = {
@@ -65,6 +83,7 @@ export function PostingFormPage() {
     onSuccess: (posting) => {
       void queryClient.invalidateQueries({ queryKey: ["postings"] });
       void queryClient.invalidateQueries({ queryKey: ["posting", posting.id] });
+      leaveWithoutPrompt();
       navigate(`/postings/${posting.id}`);
     },
   });

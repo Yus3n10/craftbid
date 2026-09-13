@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useUnsavedChanges } from "../lib/unsavedChanges.js";
 import { LIMITS, formatPeso, type CommissionDto } from "@craftbid/shared";
 import { api } from "../lib/api.js";
 import { useAuth } from "../lib/auth.js";
@@ -24,6 +25,7 @@ function ReviewForm({ commission }: { commission: CommissionDto }) {
   const queryClient = useQueryClient();
   const [rating, setRating] = useState(0);
   const [body, setBody] = useState("");
+  useUnsavedChanges(rating > 0 || body.trim() !== "");
 
   const mutation = useMutation({
     mutationFn: () =>

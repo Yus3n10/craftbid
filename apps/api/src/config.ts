@@ -61,6 +61,14 @@ const envSchema = z
     IMAGEKIT_PUBLIC_KEY: z.string().trim().optional(),
     IMAGEKIT_PRIVATE_KEY: z.string().trim().optional(),
     IMAGEKIT_URL_ENDPOINT: z.string().trim().optional(),
+
+    // Email. `none` switches email verification off; see lib/mail.
+    MAIL_DRIVER: z.enum(["none", "log", "outbox", "brevo"]).default("none"),
+    BREVO_API_KEY: z.string().trim().optional(),
+    MAIL_FROM_EMAIL: z.string().trim().email().optional(),
+    MAIL_FROM_NAME: z.string().trim().default("Craftbid"),
+    // Where links in emails point: the web app, not this API.
+    PUBLIC_WEB_URL: z.string().trim().url().default("http://localhost:5173"),
   })
   .superRefine((env, ctx) => {
     if (env.STORAGE_DRIVER === "imagekit") {
@@ -102,6 +110,29 @@ const envSchema = z
         path: ["STORAGE_DRIVER"],
         message:
           "STORAGE_DRIVER=local cannot be used in production: hosts like Render have ephemeral disks and uploads would be lost on restart.",
+      });
+    }
+
+    if (env.MAIL_DRIVER === "brevo") {
+      for (const key of ["BREVO_API_KEY", "MAIL_FROM_EMAIL"] as const) {
+        if (!env[key]) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [key],
+            message: `${key} is required when MAIL_DRIVER=brevo`,
+          });
+        }
+      }
+    }
+
+    // Both would put working verification links somewhere other than the
+    // person's inbox: the log driver into the host's logs, the outbox driver
+    // onto its disk.
+    if (isProduction && (env.MAIL_DRIVER === "log" || env.MAIL_DRIVER === "outbox")) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["MAIL_DRIVER"],
+        message: `MAIL_DRIVER=${env.MAIL_DRIVER} writes sign-in links outside the recipient's inbox and cannot be used in production. Use brevo, or none to leave verification off.`,
       });
     }
 
@@ -153,6 +184,15 @@ export const config = {
   corsOrigins: env.CORS_ORIGINS.split(",")
     .map((origin) => origin.trim())
     .filter(Boolean),
+  mail: {
+    driver: env.MAIL_DRIVER,
+    brevo: {
+      apiKey: env.BREVO_API_KEY,
+      fromEmail: env.MAIL_FROM_EMAIL,
+      fromName: env.MAIL_FROM_NAME,
+    },
+    publicWebUrl: env.PUBLIC_WEB_URL.replace(/\/$/, ""),
+  },
   storage: {
     driver: env.STORAGE_DRIVER,
     localDir: env.STORAGE_LOCAL_DIR,

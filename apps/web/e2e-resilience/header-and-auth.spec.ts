@@ -21,6 +21,7 @@ const CLIENT = {
   completedCommissions: 0,
   links: [],
   email: "maya@example.com",
+  emailVerified: true,
 } as const;
 
 const ARTIST = {
@@ -225,10 +226,9 @@ test.describe("across widths, signed in as a client", () => {
       expect(overflow, "horizontal overflow in px").toBeLessThanOrEqual(0);
 
       // Fitting is not enough. The same header row measures about 40px wider
-      // on the Linux CI runner than on Windows: adding Settings left 9px free
-      // by this measure locally and overflowed by 15px in CI. After tightening,
-      // 53px locally and 13px in CI. So this passing on Windows says little;
-      // CI is the run that guards the narrowest full header.
+      // on the Linux CI runner than on Windows, so a header that fit here with
+      // 9px to spare overflowed by 15px in CI. Since Sign out moved into the
+      // account menu there are 142px free here, so 32 leaves CI clear room.
       if (width === 1024) {
         await page.evaluate(() => document.fonts.ready);
         const spare = await page.evaluate(() => {
@@ -239,7 +239,7 @@ test.describe("across widths, signed in as a client", () => {
           const used = shown.reduce((sum, child) => sum + child.scrollWidth, 0);
           return inner - used - parseFloat(style.columnGap) * (shown.length - 1);
         });
-        expect(spare, "free width in the header row, px").toBeGreaterThanOrEqual(8);
+        expect(spare, "free width in the header row, px").toBeGreaterThanOrEqual(32);
       }
 
       if (width >= 1024) {
@@ -262,13 +262,14 @@ test.describe("across widths, signed in as a client", () => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto("/postings");
     await page.getByRole("button", { name: "Menu" }).click();
-    await page.locator("#mobile-nav").getByRole("link", { name: "Settings" }).click();
+    await page.locator("#mobile-nav").getByRole("link", { name: "Edit profile and settings" }).click();
     await expect(page).toHaveURL(/\/settings$/);
     await expect(page.getByRole("heading", { name: "Where clients pay you" })).toBeVisible();
 
     await page.setViewportSize({ width: 1024, height: 800 });
     await page.goto("/postings");
-    await page.getByRole("banner").getByRole("link", { name: "Settings" }).click();
+    await page.getByRole("button", { name: "Account and settings" }).click();
+    await page.getByRole("banner").getByRole("link", { name: "Edit profile and settings" }).click();
     await expect(page).toHaveURL(/\/settings$/);
     await expect(page.getByRole("heading", { name: "Where clients pay you" })).toBeVisible();
   });

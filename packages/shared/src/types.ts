@@ -84,6 +84,18 @@ export interface PublicProfileDto extends UserSummaryDto {
 /** The authenticated user's own record. The only shape carrying an email. */
 export interface MeDto extends PublicProfileDto {
   email: string;
+  /**
+   * False only while email verification is switched on and this address has
+   * not been proved. Unverified accounts can sign in and browse, and are
+   * refused posting, bidding and the social actions until they verify.
+   */
+  emailVerified: boolean;
+}
+
+/** What /auth/register answers when the account must verify first. */
+export interface VerificationSentDto {
+  status: "verification_sent";
+  email: string;
 }
 
 export interface PostingDto {
@@ -134,6 +146,48 @@ export interface ArtistPostDto extends ArtistPostSummaryDto {
   commentCount: number;
   /** Whether the signed-in viewer saved this. Absent when signed out. */
   saved?: boolean;
+  /** How many people shared this post to their profile. */
+  shareCount: number;
+  /** Whether the signed-in viewer shared it. Absent when signed out. */
+  shared?: boolean;
+}
+
+/**
+ * Someone sharing a post to their profile. The post keeps its own artist, so
+ * a share can never present the work as the sharer's.
+ */
+export interface ShareDto {
+  id: string;
+  user: UserSummaryDto;
+  caption?: string;
+  createdAt: string;
+}
+
+/**
+ * One card in the feed or on a profile's shared list: a post, and when it is
+ * there because somebody shared it, who and what they said.
+ */
+export interface FeedItemDto extends ArtistPostDto {
+  share?: ShareDto;
+}
+
+export const ACTIVITY_KINDS = ["reaction", "comment", "save", "share"] as const;
+export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
+
+/**
+ * One line of someone's own activity history: what they did, to which post,
+ * and when. Visible only to that person.
+ */
+export interface ActivityItemDto {
+  kind: ActivityKind;
+  at: string;
+  post: ArtistPostSummaryDto & { artist: UserSummaryDto };
+  /** The reaction chosen, for kind "reaction". */
+  reaction?: ReactionKind;
+  /** For kind "comment": the comment, so it can be read and removed. */
+  comment?: { id: string; body: string };
+  /** For kind "share": what they wrote with it. */
+  caption?: string;
 }
 
 /**

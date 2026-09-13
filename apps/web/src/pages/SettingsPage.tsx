@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useUnsavedChanges } from "../lib/unsavedChanges.js";
 import {
   CRAFT_CATEGORIES,
   LIMITS,
@@ -68,6 +69,24 @@ export function SettingsPage() {
 
   const [links, setLinks] = useState<{ platform: LinkPlatform; url: string }[]>(
     user?.links.map((link) => ({ platform: link.platform, url: link.url })) ?? [],
+  );
+
+  // Each section compares with the saved account, which is replaced on every
+  // save, so a saved section stops counting as unsaved on its own.
+  useUnsavedChanges(
+    Boolean(user) &&
+      (JSON.stringify([displayName, bio, region, city, avatar[0]?.id ?? null, cover[0]?.id ?? null]) !==
+        JSON.stringify([user!.displayName, user!.bio ?? "", user!.region ?? "", user!.city ?? "", user!.avatar?.id ?? null, user!.cover?.id ?? null]) ||
+        (user!.role === "artist" &&
+          JSON.stringify([headline, accepting, [...categories].sort(), skills]) !==
+            JSON.stringify([
+              user!.artist?.headline ?? "",
+              user!.artist?.acceptingCommissions ?? true,
+              (user!.artist?.categories.map((category) => category.slug) ?? []).sort(),
+              (user!.artist?.skills ?? []).join(", "),
+            ])) ||
+        JSON.stringify(links.filter((link) => link.url.trim())) !==
+          JSON.stringify(user!.links.map((link) => ({ platform: link.platform, url: link.url })))),
   );
 
   const onSaved = (updated: MeDto) => {

@@ -2,6 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import type {
   ArtistPostDto,
+  FeedItemDto,
   ExternalLinkDto,
   Paginated,
   PublicProfileDto,
@@ -22,6 +23,7 @@ import {
   RowSkeleton,
 } from "../components/ui/States.js";
 import { PostCard } from "../components/PostCard.js";
+import { FeedPost } from "../components/FeedPost.js";
 
 
 function LinkList({ links }: { links: ExternalLinkDto[] }) {
@@ -163,6 +165,36 @@ function Portfolio({ username }: { username: string }) {
   );
 }
 
+/**
+ * Posts this person shared to their profile, each still credited to its
+ * artist. Hidden entirely when there are none, so a new profile does not open
+ * on an empty section.
+ */
+function SharedPosts({ username, isSelf }: { username: string; isSelf: boolean }) {
+  const { data } = useQuery({
+    queryKey: ["shares", username],
+    queryFn: () => api.get<Paginated<FeedItemDto>>(`/users/${username}/shares?limit=10`),
+  });
+
+  if (!data || data.items.length === 0) return null;
+
+  return (
+    <section>
+      <div className="mb-4 flex items-baseline justify-between gap-4">
+        <h2 className="font-display text-2xl">{isSelf ? "Shared by you" : "Shared"}</h2>
+        <ThreadRule className="w-16" />
+      </div>
+      <ul className="space-y-5">
+        {data.items.map((post) => (
+          <li key={post.share?.id ?? post.id}>
+            <FeedPost post={post} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export function ProfilePage() {
   const { username = "" } = useParams();
   const { user } = useAuth();
@@ -266,6 +298,8 @@ export function ProfilePage() {
                 <Portfolio username={profile.username} />
               </section>
             )}
+
+            <SharedPosts username={profile.username} isSelf={isSelf} />
 
             <section>
               <div className="mb-4 flex items-baseline justify-between gap-4">

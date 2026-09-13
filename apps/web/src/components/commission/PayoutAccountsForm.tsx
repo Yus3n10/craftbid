@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { PayoutAccountDto } from "@craftbid/shared";
 import { ApiError, api } from "../../lib/api.js";
+import { useUnsavedChanges } from "../../lib/unsavedChanges.js";
 import { Button } from "../ui/Button.js";
 import { Field, TextInput } from "../ui/Field.js";
 import { FormError } from "../ui/States.js";
@@ -45,6 +46,24 @@ function toDraft(accounts: PayoutAccountDto[]): Draft {
 }
 
 /**
+ * One payment method: a heading and its fields on one shared two-column grid.
+ *
+ * Every method uses the same two columns, name on the left and number on the
+ * right, so the boxes line up down the whole form. It used to be two columns
+ * for GCash and Maya and three for the bank, and the number fields carried
+ * their format as a hint between label and box, which pushed those boxes lower
+ * than the name boxes beside them. The format is now the placeholder.
+ */
+function Method({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <fieldset className="rounded-md border border-fiber bg-paper p-4">
+      <legend className="px-1 text-sm font-semibold text-ink">{title}</legend>
+      <div className="grid gap-4 sm:grid-cols-2">{children}</div>
+    </fieldset>
+  );
+}
+
+/**
  * Where clients pay an artist.
  *
  * Shown to a client only inside an active commission with this artist, never
@@ -57,10 +76,16 @@ export function PayoutAccountsForm() {
     queryFn: () => api.get<PayoutAccountDto[]>("/me/payout-accounts"),
   });
   const [draft, setDraft] = useState<Draft>(EMPTY);
+  const [baseline, setBaseline] = useState<Draft>(EMPTY);
 
   useEffect(() => {
-    if (data) setDraft(toDraft(data));
+    if (data) {
+      setDraft(toDraft(data));
+      setBaseline(toDraft(data));
+    }
   }, [data]);
+
+  useUnsavedChanges(JSON.stringify(draft) !== JSON.stringify(baseline));
 
   const save = useMutation({
     mutationFn: () => {
@@ -83,6 +108,7 @@ export function PayoutAccountsForm() {
     },
     onSuccess: (saved) => {
       queryClient.setQueryData(["payout-accounts"], saved);
+      setBaseline(toDraft(saved));
       void queryClient.invalidateQueries({ queryKey: ["commission"] });
     },
   });
@@ -93,7 +119,7 @@ export function PayoutAccountsForm() {
 
   return (
     <form
-      className="space-y-6"
+      className="space-y-5"
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
@@ -102,42 +128,41 @@ export function PayoutAccountsForm() {
     >
       <FormError error={save.error} />
 
-      <fieldset className="grid gap-4 sm:grid-cols-2">
-        <legend className="mb-2 text-sm font-semibold text-ink">GCash</legend>
+      <Method title="GCash">
         <Field label="Name on the account">
           {({ id }) => <TextInput id={id} autoComplete="name" value={draft.gcashName} onChange={set("gcashName")} />}
         </Field>
-        <Field label="GCash number" hint="09XX XXX XXXX">
-          {({ id, describedBy }) => (
-            <TextInput id={id} inputMode="tel" autoComplete="tel" aria-describedby={describedBy} value={draft.gcashNumber} onChange={set("gcashNumber")} />
+        <Field label="GCash number">
+          {({ id }) => (
+            <TextInput id={id} inputMode="tel" autoComplete="tel" placeholder="09XX XXX XXXX" value={draft.gcashNumber} onChange={set("gcashNumber")} />
           )}
         </Field>
-      </fieldset>
+      </Method>
 
-      <fieldset className="grid gap-4 sm:grid-cols-2">
-        <legend className="mb-2 text-sm font-semibold text-ink">Maya</legend>
+      <Method title="Maya">
         <Field label="Name on the account">
           {({ id }) => <TextInput id={id} value={draft.mayaName} onChange={set("mayaName")} />}
         </Field>
-        <Field label="Maya number" hint="09XX XXX XXXX">
-          {({ id, describedBy }) => (
-            <TextInput id={id} inputMode="tel" aria-describedby={describedBy} value={draft.mayaNumber} onChange={set("mayaNumber")} />
+        <Field label="Maya number">
+          {({ id }) => (
+            <TextInput id={id} inputMode="tel" placeholder="09XX XXX XXXX" value={draft.mayaNumber} onChange={set("mayaNumber")} />
           )}
         </Field>
-      </fieldset>
+      </Method>
 
-      <fieldset className="grid gap-4 sm:grid-cols-3">
-        <legend className="mb-2 text-sm font-semibold text-ink">Bank</legend>
-        <Field label="Bank">
-          {({ id }) => <TextInput id={id} placeholder="BPI, BDO…" value={draft.bankName} onChange={set("bankName")} />}
-        </Field>
+      <Method title="Bank">
+        <div className="sm:col-span-2">
+          <Field label="Bank">
+            {({ id }) => <TextInput id={id} placeholder="BPI, BDO, Landbank…" value={draft.bankName} onChange={set("bankName")} />}
+          </Field>
+        </div>
         <Field label="Name on the account">
           {({ id }) => <TextInput id={id} value={draft.bankAccountName} onChange={set("bankAccountName")} />}
         </Field>
         <Field label="Account number">
           {({ id }) => <TextInput id={id} inputMode="numeric" value={draft.bankAccountNumber} onChange={set("bankAccountNumber")} />}
         </Field>
-      </fieldset>
+      </Method>
 
       {Object.keys(fields).length > 0 && (
         <p className="text-sm text-rust" role="alert">

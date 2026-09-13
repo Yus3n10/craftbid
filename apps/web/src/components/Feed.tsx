@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   CRAFT_CATEGORIES,
   formatPeso,
-  type ArtistPostDto,
+  type FeedItemDto,
   type Paginated,
   type PostingDto,
 } from "@craftbid/shared";
@@ -121,7 +121,7 @@ export function Feed() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["feed", tab],
     queryFn: () =>
-      api.get<Paginated<ArtistPostDto>>(
+      api.get<Paginated<FeedItemDto>>(
         `/feed?limit=12${tab === "saved" ? "&saved=true" : ""}`,
       ),
   });
@@ -181,7 +181,7 @@ export function Feed() {
         ) : (
           <ul className="stagger space-y-5">
             {posts.map((post) => (
-              <li key={post.id}>
+              <li key={post.share?.id ?? post.id}>
                 <FeedPost post={post} />
               </li>
             ))}

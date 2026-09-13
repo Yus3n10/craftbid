@@ -1,7 +1,13 @@
 import type { FastifyPluginAsync, FastifyReply } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
-import { loginSchema, passwordSchema, registerSchema } from "@craftbid/shared";
+import {
+  loginSchema,
+  passwordSchema,
+  registerSchema,
+  resendVerificationSchema,
+  verifyEmailSchema,
+} from "@craftbid/shared";
 import { config } from "../../config.js";
 import {
   ACCESS_COOKIE,
@@ -74,7 +80,13 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request, reply) => {
-      const tokens = await service.register(request.body);
+      const result = await service.register(request.body);
+
+      // Email verification on: the account exists, nobody is signed in, and
+      // the link in the email is what starts the session.
+      if ("status" in result) return reply.code(202).send(result);
+
+      const tokens = result;
       setSession(reply, tokens);
 
       // The token is also returned in the body for the desktop build, which
@@ -84,6 +96,48 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
       });
+    },
+  );
+
+  app.post(
+    "/verify-email",
+    {
+      schema: { body: verifyEmailSchema },
+      config: { rateLimit: { max: 20, timeWindow: "10 minutes" } },
+    },
+    async (request, reply) => {
+      const tokens = await service.verifyEmail(request.body.token);
+      setSession(reply, tokens);
+      return reply.send({
+        user: await getMe(tokens.userId),
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      });
+    },
+  );
+
+  app.post(
+    "/resend-verification",
+    {
+      schema: { body: resendVerificationSchema },
+      config: { rateLimit: { max: 5, timeWindow: "15 minutes" } },
+    },
+    async (request, reply) => {
+      const target = request.user
+        ? { userId: request.user.id }
+        : request.body.email
+          ? { email: request.body.email }
+          : null;
+
+      // Not awaited. Whether an address is registered changes how much work
+      // this does (a lookup, then an email), and answering only after that
+      // work would let the response time say who has an account.
+      if (target) {
+        service.resendVerification(target).catch((error: unknown) => {
+          request.log.error({ err: error }, "Resending a verification link failed");
+        });
+      }
+      return reply.code(204).send();
     },
   );
 

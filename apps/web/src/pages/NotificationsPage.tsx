@@ -21,6 +21,7 @@ const COPY: Record<NotificationType, string> = {
   review_received: "Someone left you a review.",
   post_reaction: "Someone reacted to your work.",
   post_comment: "Someone commented on your work.",
+  post_shared: "Someone shared your work to their profile.",
   payment_submitted: "The client recorded a payment. Check that you received it.",
   payment_confirmed: "A payment was confirmed as received.",
   payment_rejected: "The artist says a payment did not arrive. Check the details.",

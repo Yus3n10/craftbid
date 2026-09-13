@@ -10,6 +10,7 @@ import { withTransaction } from "../../db/query.js";
 import { badRequest, forbidden, notFound } from "../../lib/errors.js";
 import * as imagesRepo from "../images/images.repository.js";
 import * as repo from "./profiles.repository.js";
+import { emailVerificationEnabled } from "../../lib/mail/index.js";
 
 async function buildProfile(
   row: repo.ProfileRow,
@@ -59,7 +60,11 @@ export async function getMe(userId: string): Promise<MeDto> {
   const row = await repo.findProfileById(userId);
   if (!row) throw notFound("Account not found.");
   const profile = await buildProfile(row);
-  return { ...profile, email: row.email };
+  return {
+    ...profile,
+    email: row.email,
+    emailVerified: !emailVerificationEnabled() || row.emailVerifiedAt !== null,
+  };
 }
 
 export async function getPublicProfile(

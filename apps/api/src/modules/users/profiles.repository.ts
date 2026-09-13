@@ -20,6 +20,7 @@ export interface ProfileRow {
   region: string | null;
   city: string | null;
   createdAt: Date;
+  emailVerifiedAt: Date | null;
   avatarId: Buffer | null;
   avatarKey: string | null;
   avatarWidth: number | null;
@@ -34,7 +35,7 @@ export interface ProfileRow {
 
 const PROFILE_SELECT = `
   SELECT u.id, u.email, u.username, u.display_name, u.role, u.bio, u.region,
-         u.city, u.created_at,
+         u.city, u.created_at, u.email_verified_at,
          av.id AS avatar_id, av.object_key AS avatar_key,
          av.width AS avatar_width, av.height AS avatar_height,
          cv.id AS cover_id, cv.object_key AS cover_key,

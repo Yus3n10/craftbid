@@ -90,3 +90,90 @@ export async function deleteExpired(q: Queryable = db): Promise<number> {
     `DELETE FROM refresh_tokens WHERE expires_at < SYSTIMESTAMP - INTERVAL '7' DAY`,
   );
 }
+
+export interface VerificationTokenRecord {
+  id: string;
+  userId: string;
+  persistent: boolean;
+  expiresAt: Date;
+  usedAt: Date | null;
+}
+
+export async function storeVerificationToken(
+  input: { userId: string; tokenHash: string; expiresAt: Date; persistent: boolean },
+  q: Queryable = db,
+): Promise<void> {
+  await q.run(
+    `INSERT INTO email_verification_tokens (id, user_id, token_hash, persistent, expires_at)
+     VALUES (:id, :userId, :tokenHash, :persistent, :expiresAt)`,
+    {
+      id: uuidToBuf(newId()),
+      userId: uuidToBuf(input.userId),
+      tokenHash: input.tokenHash,
+      persistent: input.persistent ? 1 : 0,
+      expiresAt: input.expiresAt,
+    },
+  );
+}
+
+export async function findVerificationToken(
+  tokenHash: string,
+  q: Queryable = db,
+): Promise<VerificationTokenRecord | null> {
+  const row = await q.one<{
+    id: Buffer;
+    userId: Buffer;
+    persistent: number;
+    expiresAt: Date;
+    usedAt: Date | null;
+  }>(
+    `SELECT id, user_id, persistent, expires_at, used_at
+       FROM email_verification_tokens
+      WHERE token_hash = :tokenHash`,
+    { tokenHash },
+  );
+  if (!row) return null;
+  return {
+    id: bufToUuid(row.id)!,
+    userId: bufToUuid(row.userId)!,
+    persistent: row.persistent === 1,
+    expiresAt: row.expiresAt,
+    usedAt: row.usedAt,
+  };
+}
+
+/**
+ * Spends one link, and only if it is still unspent. Returns whether this call
+ * spent it, so two clicks racing on the same link cannot both sign someone in.
+ */
+export async function spendVerificationToken(id: string, tx: Queryable): Promise<boolean> {
+  const changed = await tx.run(
+    `UPDATE email_verification_tokens SET used_at = SYSTIMESTAMP
+      WHERE id = :id AND used_at IS NULL`,
+    { id: uuidToBuf(id) },
+  );
+  return changed === 1;
+}
+
+/** Once an address is verified, every other link sent to it stops working. */
+export async function spendAllVerificationTokens(userId: string, tx: Queryable): Promise<void> {
+  await tx.run(
+    `UPDATE email_verification_tokens SET used_at = SYSTIMESTAMP
+      WHERE user_id = :userId AND used_at IS NULL`,
+    { userId: uuidToBuf(userId) },
+  );
+}
+
+/** Links sent to this person recently, and when the last one went. */
+export async function recentVerificationTokens(
+  userId: string,
+  q: Queryable = db,
+): Promise<{ lastHour: number; lastSentAt: Date | null }> {
+  const row = await q.one<{ cnt: number; lastSentAt: Date | null }>(
+    `SELECT COUNT(*) AS cnt, MAX(created_at) AS last_sent_at
+       FROM email_verification_tokens
+      WHERE user_id = :userId AND created_at > SYSTIMESTAMP - INTERVAL '1' HOUR`,
+    { userId: uuidToBuf(userId) },
+  );
+  return { lastHour: Number(row?.cnt ?? 0), lastSentAt: row?.lastSentAt ?? null };
+}

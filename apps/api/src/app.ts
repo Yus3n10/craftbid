@@ -88,6 +88,8 @@ export async function buildApp(
             // Payment records: wallet and bank numbers, and what a receipt says.
             "req.body.accounts",
             "req.body.referenceNumber",
+            // A verification link's token signs its holder in.
+            "req.body.token",
           ],
         },
     trustProxy: true,

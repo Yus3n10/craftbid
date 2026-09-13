@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { LIMITS, type CommentDto } from "@craftbid/shared";
 import { api } from "../lib/api.js";
 import { useAuth } from "../lib/auth.js";
+import { useRequireAccount } from "../lib/authPrompt.js";
+import { useUnsavedChanges } from "../lib/unsavedChanges.js";
 import { Avatar } from "./ui/Primitives.js";
 import { Button } from "./ui/Button.js";
 import { FormError, RowSkeleton } from "./ui/States.js";
@@ -97,8 +99,10 @@ export function CommentThread({
   artistId: string;
 }) {
   const { user } = useAuth();
+  const requireAccount = useRequireAccount();
   const queryClient = useQueryClient();
   const [body, setBody] = useState("");
+  useUnsavedChanges(body.trim().length > 0);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["comments", postId],
@@ -173,12 +177,15 @@ export function CommentThread({
           </div>
         </form>
       ) : (
-        <p className="text-sm text-ink-faint">
-          <Link to="/login" className="font-medium text-indigo hover:underline">
-            Sign in
-          </Link>{" "}
-          to join the conversation.
-        </p>
+        // Looks like the comment box, so a visitor finds it where they expect
+        // to, and says why it needs an account the moment they reach for it.
+        <button
+          type="button"
+          onClick={() => requireAccount("comment on posts")}
+          className="w-full rounded-md border border-fiber-strong bg-paper-raised px-3 py-2 text-left text-sm text-ink-faint transition-colors hover:border-indigo"
+        >
+          Write a comment
+        </button>
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 import type {
   ArtistPostDto,
   CreateArtistPostInput,
+  FeedItemDto,
   Paginated,
 } from "@craftbid/shared";
 import { LIMITS } from "@craftbid/shared";
@@ -97,16 +98,19 @@ export async function listPosts(
 export async function feed(
   filter: { category?: string; saved?: boolean; limit: number; offset: number },
   viewerId: string | null,
-): Promise<Paginated<ArtistPostDto>> {
+): Promise<Paginated<FeedItemDto>> {
   if (!filter.saved) {
-    return listPosts(
-      {
-        ...(filter.category ? { category: filter.category } : {}),
-        limit: filter.limit,
-        offset: filter.offset,
-      },
-      viewerId,
-    );
+    const { entries, total } = await repo.feedEntries({
+      ...(filter.category ? { categorySlug: filter.category } : {}),
+      limit: filter.limit,
+      offset: filter.offset,
+    });
+    return {
+      items: await assembleFeed(entries, viewerId),
+      total,
+      limit: filter.limit,
+      offset: filter.offset,
+    };
   }
 
   if (!viewerId) {
@@ -130,6 +134,55 @@ export async function feed(
     limit: filter.limit,
     offset: filter.offset,
   };
+}
+
+/**
+ * Turns feed entries (a post, or a share of one) into cards, in the order
+ * given. Each post is loaded and decorated once however many shares of it the
+ * page holds, so a post shared five times costs the same as one.
+ */
+async function assembleFeed(
+  entries: { postId: string; shareId: string | null }[],
+  viewerId: string | null,
+): Promise<FeedItemDto[]> {
+  const [posts, shares] = await Promise.all([
+    repo.findManyByIds(entries.map((entry) => entry.postId)),
+    social.findSharesByIds(
+      entries.flatMap((entry) => (entry.shareId ? [entry.shareId] : [])),
+    ),
+  ]);
+  const decorated = new Map(
+    (await social.decorate([...posts.values()], viewerId)).map((post) => [post.id, post]),
+  );
+
+  const items: FeedItemDto[] = [];
+  for (const entry of entries) {
+    const post = decorated.get(entry.postId);
+    if (!post) continue;
+    if (!entry.shareId) {
+      items.push(post);
+      continue;
+    }
+    const share = shares.get(entry.shareId);
+    if (!share) continue;
+    const { postId: _postId, ...shareDto } = share;
+    items.push({ ...post, share: shareDto });
+  }
+  return items;
+}
+
+/** The posts one person shared to their profile, newest share first. */
+export async function sharesOf(
+  username: string,
+  paging: { limit: number; offset: number },
+  viewerId: string | null,
+): Promise<Paginated<FeedItemDto>> {
+  const { shares, total } = await social.sharesByUser(username, paging.limit, paging.offset);
+  const items = await assembleFeed(
+    shares.map((share) => ({ postId: share.postId, shareId: share.id })),
+    viewerId,
+  );
+  return { items, total, limit: paging.limit, offset: paging.offset };
 }
 
 async function loadOwned(postId: string, artistId: string) {

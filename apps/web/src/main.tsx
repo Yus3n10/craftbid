@@ -1,11 +1,13 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter } from "react-router-dom";
+import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./lib/auth.js";
 import { ErrorBoundary } from "./components/ErrorBoundary.js";
 import { App } from "./App.js";
 import { watchForAppUpdates } from "./lib/appUpdates.js";
+import { AuthPromptProvider } from "./lib/authPrompt.js";
+import { UnsavedChangesProvider } from "./lib/unsavedChanges.js";
 import "./index.css";
 
 const queryClient = new QueryClient({
@@ -31,6 +33,28 @@ const queryClient = new QueryClient({
 
 watchForAppUpdates();
 
+/**
+ * A data router with one catch-all route, and the app's own <Routes> inside.
+ *
+ * Only a data router supports useBlocker, which is what lets a half-filled
+ * form ask before a link takes someone away from it. The route table stays in
+ * App.tsx as it was; this wrapper exists for that one capability.
+ */
+const router = createBrowserRouter([
+  {
+    path: "*",
+    element: (
+      <AuthProvider>
+        <UnsavedChangesProvider>
+          <AuthPromptProvider>
+            <App />
+          </AuthPromptProvider>
+        </UnsavedChangesProvider>
+      </AuthProvider>
+    ),
+  },
+]);
+
 const root = document.getElementById("root");
 if (!root) throw new Error("Missing #root element");
 
@@ -41,11 +65,7 @@ createRoot(root).render(
   <StrictMode>
     <ErrorBoundary label="the app">
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </BrowserRouter>
+        <RouterProvider router={router} />
       </QueryClientProvider>
     </ErrorBoundary>
   </StrictMode>,

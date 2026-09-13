@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useUnsavedChanges } from "../lib/unsavedChanges.js";
 import {
   LIMITS,
   formatPeso,
@@ -118,6 +119,9 @@ function ApplyForm({
   const [price, setPrice] = useState<number | "">(posting.minBudgetCentavos);
   const [coverLetter, setCoverLetter] = useState("");
   const [samples, setSamples] = useState<string[]>([]);
+  useUnsavedChanges(
+    coverLetter.trim() !== "" || samples.length > 0 || price !== posting.minBudgetCentavos,
+  );
 
   const { user } = useAuth();
 

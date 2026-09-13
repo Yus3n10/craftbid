@@ -65,6 +65,7 @@ export const NOTIFICATION_TYPES = [
   "commission_shipped",
   "problem_reported",
   "problem_closed",
+  "post_shared",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -290,6 +291,7 @@ export const LIMITS = {
   password: { min: 10, max: 200 },
   bio: { max: 1000 },
   commentBody: { max: 1000 },
+  shareCaption: { max: 500 },
   headline: { max: 120 },
   postingTitle: { min: 8, max: 140 },
   postingDescription: { min: 30, max: 5000 },

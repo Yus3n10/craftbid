@@ -1,9 +1,11 @@
 import type { FastifyPluginAsync } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
+  activityQuerySchema,
   createCommentSchema,
   idParamSchema,
   setReactionSchema,
+  sharePostSchema,
 } from "@craftbid/shared";
 import * as service from "./social.service.js";
 
@@ -20,7 +22,7 @@ export const socialRoutes: FastifyPluginAsync = async (fastify) => {
   app.put(
     "/posts/:id/reaction",
     {
-      preHandler: fastify.requireAuth,
+      preHandler: fastify.requireVerified,
       schema: { params: idParamSchema, body: setReactionSchema },
       // A reaction is one row and one click; the cap is only here to stop a
       // script cycling one post's counts thousands of times a minute.
@@ -52,7 +54,7 @@ export const socialRoutes: FastifyPluginAsync = async (fastify) => {
   app.post(
     "/posts/:id/comments",
     {
-      preHandler: fastify.requireAuth,
+      preHandler: fastify.requireVerified,
       schema: { params: idParamSchema, body: createCommentSchema },
       // Comments are the cheapest way to spray a page with spam, so this is
       // tighter than the reaction limit.
@@ -79,7 +81,7 @@ export const socialRoutes: FastifyPluginAsync = async (fastify) => {
 
   app.put(
     "/posts/:id/save",
-    { preHandler: fastify.requireAuth, schema: { params: idParamSchema } },
+    { preHandler: fastify.requireVerified, schema: { params: idParamSchema } },
     async (request, reply) => {
       await service.setSaved(request.params.id, request.user!.id, true);
       return reply.code(204).send();
@@ -93,5 +95,41 @@ export const socialRoutes: FastifyPluginAsync = async (fastify) => {
       await service.setSaved(request.params.id, request.user!.id, false);
       return reply.code(204).send();
     },
+  );
+
+  // PUT because sharing again edits the caption rather than adding a second
+  // share, so repeating the request leaves the same state.
+  app.put(
+    "/posts/:id/share",
+    {
+      preHandler: fastify.requireVerified,
+      schema: { params: idParamSchema, body: sharePostSchema },
+      config: { rateLimit: { max: 30, timeWindow: "5 minutes" } },
+    },
+    async (request, reply) => {
+      await service.share(request.params.id, request.user!.id, request.body.caption);
+      return reply.code(204).send();
+    },
+  );
+
+  app.delete(
+    "/posts/:id/share",
+    { preHandler: fastify.requireAuth, schema: { params: idParamSchema } },
+    async (request, reply) => {
+      await service.unshare(request.params.id, request.user!.id);
+      return reply.code(204).send();
+    },
+  );
+
+  // Always the caller's own history: there is no parameter naming whose.
+  app.get(
+    "/me/activity",
+    { preHandler: fastify.requireAuth, schema: { querystring: activityQuerySchema } },
+    async (request) =>
+      service.activity(request.user!.id, {
+        ...(request.query.kind ? { kind: request.query.kind } : {}),
+        limit: request.query.limit,
+        offset: request.query.offset,
+      }),
   );
 };

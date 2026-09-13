@@ -6,6 +6,9 @@ import { useAuth } from "../../lib/auth.js";
 import { cx } from "../../lib/cx.js";
 import { useHideOnScroll } from "../../lib/useHideOnScroll.js";
 import { Avatar } from "../ui/Primitives.js";
+import { Dialog } from "../ui/Dialog.js";
+import { useUnsavedChangesState } from "../../lib/unsavedChanges.js";
+import { AccountMenu, accountLinks } from "./AccountMenu.js";
 import { Button, ButtonLink } from "../ui/Button.js";
 import { Logo } from "./Logo.js";
 import { SearchBox } from "../SearchBox.js";
@@ -43,17 +46,6 @@ function SearchIcon() {
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
       <circle cx="9" cy="9" r="5.5" stroke="currentColor" strokeWidth="1.5" />
       <path d="M13.2 13.2 17 17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function SettingsIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      {/* A cog: eight teeth as a dashed ring (2 x pi x 6.9 / 8 = 5.42 per tooth) around a body and a hub. */}
-      <circle cx="10" cy="10" r="6.9" stroke="currentColor" strokeWidth="2.4" strokeDasharray="2.3 3.12" />
-      <circle cx="10" cy="10" r="5.1" stroke="currentColor" strokeWidth="1.5" />
-      <circle cx="10" cy="10" r="1.9" stroke="currentColor" strokeWidth="1.5" />
     </svg>
   );
 }
@@ -151,9 +143,30 @@ export function Header() {
     ...(user?.role === "artist" ? [{ to: "/my/applications", label: "My bids" }] : []),
   ];
 
+  const { hasUnsavedChanges, leaveWithoutPrompt } = useUnsavedChangesState();
+  const [confirmingSignOut, setConfirmingSignOut] = useState<null | { unsaved: boolean }>(null);
+  const [signingOut, setSigningOut] = useState(false);
+
+  /**
+   * Signing out always asks first. It is one tap from the menu and easy to
+   * hit by mistake on a phone, and the way back is typing a password; when a
+   * form on the page holds unsent text, it says that will be lost too.
+   */
+  function askToSignOut() {
+    setMenuOpen(false);
+    setConfirmingSignOut({ unsaved: hasUnsavedChanges() });
+  }
+
   async function handleLogout() {
-    await logout();
-    navigate("/");
+    setSigningOut(true);
+    try {
+      leaveWithoutPrompt();
+      await logout();
+      setConfirmingSignOut(null);
+      navigate("/");
+    } finally {
+      setSigningOut(false);
+    }
   }
 
   function toggleSearch() {
@@ -220,12 +233,9 @@ export function Header() {
                 <UnreadDot />
               </Link>
 
-              {/* Settings was reachable only through "Edit profile" on the
-                  profile page, and it is where artists add the details
-                  clients pay them with. */}
-              <Link to="/settings" className={ICON_BUTTON} aria-label="Settings" title="Settings">
-                <SettingsIcon />
-              </Link>
+              {/* Settings, saved posts and history were reachable only through
+                  the profile page. The cog opens all of them, and Sign out. */}
+              <AccountMenu user={user} onSignOut={askToSignOut} />
 
               {user.role === "client" && (
                 <ButtonLink to="/postings/new" size="sm">
@@ -240,10 +250,6 @@ export function Header() {
               >
                 <Avatar user={user} size={32} />
               </Link>
-
-              <Button variant="ghost" size="sm" onClick={handleLogout}>
-                Sign out
-              </Button>
             </>
           ) : (
             <>
@@ -320,20 +326,17 @@ export function Header() {
                       Post a request
                     </ButtonLink>
                   )}
-                  <ButtonLink
-                    to={`/artists/${user.username}`}
-                    variant="secondary"
-                    size="sm"
-                  >
-                    Your profile
-                  </ButtonLink>
-                  <ButtonLink to="/notifications" variant="ghost" size="sm">
-                    Notifications
-                  </ButtonLink>
-                  <ButtonLink to="/settings" variant="ghost" size="sm">
-                    Settings
-                  </ButtonLink>
-                  <Button variant="ghost" size="sm" onClick={handleLogout}>
+                  {accountLinks(user).map((link, index) => (
+                    <ButtonLink
+                      key={link.to}
+                      to={link.to}
+                      variant={index === 0 ? "secondary" : "ghost"}
+                      size="sm"
+                    >
+                      {link.label}
+                    </ButtonLink>
+                  ))}
+                  <Button variant="ghost" size="sm" onClick={askToSignOut} className="text-rust">
                     Sign out
                   </Button>
                 </>
@@ -351,6 +354,31 @@ export function Header() {
           </nav>
         </div>
       )}
+
+      <Dialog
+        open={confirmingSignOut !== null}
+        onClose={() => setConfirmingSignOut(null)}
+        title="Sign out of Craftbid?"
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setConfirmingSignOut(null)}>
+              Stay signed in
+            </Button>
+            <Button variant="danger" loading={signingOut} onClick={() => void handleLogout()}>
+              Sign out
+            </Button>
+          </>
+        }
+      >
+        {confirmingSignOut?.unsaved ? (
+          <p>
+            <strong className="text-ink">You have unsaved changes on this page.</strong>{" "}
+            Signing out now will lose what you typed.
+          </p>
+        ) : (
+          <p>You will need your email and password to sign back in.</p>
+        )}
+      </Dialog>
     </header>
   );
 }

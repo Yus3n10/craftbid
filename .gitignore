@@ -75,3 +75,4 @@ Thumbs.db
 # Private commission files (receipts, finished-work photos) from the local
 # storage driver. Never committed, even in development.
 .storage-private/
+.outbox/

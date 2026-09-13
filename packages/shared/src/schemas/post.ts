@@ -52,3 +52,14 @@ export const feedQuerySchema = paginationSchema.extend({
 });
 
 export type CreateCommentInput = z.infer<typeof createCommentSchema>;
+
+export const sharePostSchema = z.preprocess(
+  (value) => value ?? {},
+  z.object({ caption: optionalText(LIMITS.shareCaption.max) }),
+);
+
+export type SharePostInput = z.infer<typeof sharePostSchema>;
+
+export const activityQuerySchema = paginationSchema.extend({
+  kind: z.enum(["reaction", "comment", "save", "share"]).optional(),
+});

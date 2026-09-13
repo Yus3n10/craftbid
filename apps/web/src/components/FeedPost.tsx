@@ -1,12 +1,13 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { ArtistPostDto } from "@craftbid/shared";
+import type { FeedItemDto } from "@craftbid/shared";
 import { api } from "../lib/api.js";
-import { useAuth } from "../lib/auth.js";
+import { useRequireAccount } from "../lib/authPrompt.js";
 import { cx } from "../lib/cx.js";
 import { Avatar, Card } from "./ui/Primitives.js";
-import { BookmarkIcon, CommentIcon, ShareIcon } from "./ui/Icons.js";
+import { BookmarkIcon, CommentIcon } from "./ui/Icons.js";
+import { ShareMenu } from "./ShareMenu.js";
 import { ReactionBar, ReactionSummaryLine } from "./ReactionBar.js";
 import { CommentThread } from "./CommentThread.js";
 import { Lightbox } from "./Lightbox.js";
@@ -30,14 +31,14 @@ function postedAgo(iso: string): string {
  * everything else is arranged around it: who made it above, what people made
  * of it below.
  */
-export function FeedPost({ post }: { post: ArtistPostDto }) {
-  const { user } = useAuth();
-  const navigate = useNavigate();
+export function FeedPost({ post }: { post: FeedItemDto }) {
+  const requireAccount = useRequireAccount();
   const queryClient = useQueryClient();
 
   const [showComments, setShowComments] = useState(false);
   const [zoomed, setZoomed] = useState<number | null>(null);
-  const [shared, setShared] = useState(false);
+  // A moment of feedback after saving, pointing at where saved posts live.
+  const [justSaved, setJustSaved] = useState(false);
   const [saved, setSaved] = useState(post.saved ?? false);
 
   const save = useMutation({
@@ -46,42 +47,24 @@ export function FeedPost({ post }: { post: ArtistPostDto }) {
         ? api.put(`/posts/${post.id}/save`)
         : api.delete(`/posts/${post.id}/save`),
     onError: () => setSaved(post.saved ?? false),
+    onSuccess: (_data, next) => setJustSaved(next),
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ["feed"] });
+      void queryClient.invalidateQueries({ queryKey: ["activity"] });
     },
   });
 
+  useEffect(() => {
+    if (!justSaved) return;
+    const timer = setTimeout(() => setJustSaved(false), 5000);
+    return () => clearTimeout(timer);
+  }, [justSaved]);
+
   function toggleSave() {
-    if (!user) {
-      navigate("/login", { state: { from: window.location.pathname } });
-      return;
-    }
+    if (!requireAccount("save posts")) return;
     const next = !saved;
     setSaved(next);
     save.mutate(next);
-  }
-
-  /**
-   * Share copies a link rather than opening a share sheet everywhere.
-   *
-   * navigator.share exists on phones and almost nowhere on desktop, so the
-   * clipboard is the path that always works and the share sheet is the
-   * upgrade where it is offered.
-   */
-  async function share() {
-    const url = `${window.location.origin}/posts/${post.id}`;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: post.caption, url });
-        return;
-      }
-      await navigator.clipboard.writeText(url);
-      setShared(true);
-      setTimeout(() => setShared(false), 2000);
-    } catch {
-      // A cancelled share sheet and a blocked clipboard both land here, and
-      // neither is worth interrupting anyone over.
-    }
   }
 
   const cover = post.images[0];
@@ -89,6 +72,29 @@ export function FeedPost({ post }: { post: ArtistPostDto }) {
   return (
     <Card categorySlug={post.category?.slug} className="overflow-hidden">
       <article>
+        {post.share && (
+          // Who shared it sits above the post, which keeps its own artist
+          // header: the work is always credited to the person who made it.
+          <div className="border-b border-fiber bg-paper px-4 py-3 pl-5">
+            <div className="flex items-center gap-2 text-sm">
+              <Link to={`/artists/${post.share.user.username}`} className="shrink-0">
+                <Avatar user={post.share.user} size={24} />
+              </Link>
+              <p className="min-w-0 text-ink-soft">
+                <Link
+                  to={`/artists/${post.share.user.username}`}
+                  className="font-medium text-ink hover:underline"
+                >
+                  {post.share.user.displayName}
+                </Link>{" "}
+                shared this · {postedAgo(post.share.createdAt)}
+              </p>
+            </div>
+            {post.share.caption && (
+              <p className="mt-2 whitespace-pre-wrap text-sm text-ink">{post.share.caption}</p>
+            )}
+          </div>
+        )}
         <header className="flex items-start gap-3 p-4 pl-5">
           <Link to={`/artists/${post.artist.username}`}>
             <Avatar user={post.artist} size={40} />
@@ -118,6 +124,15 @@ export function FeedPost({ post }: { post: ArtistPostDto }) {
             <BookmarkIcon filled={saved} />
           </button>
         </header>
+
+        {justSaved && (
+          <p className="mx-4 mb-3 ml-5 rounded-sm bg-indigo-wash px-3 py-2 text-sm text-ink" role="status">
+            Saved.{" "}
+            <Link to="/saved" className="font-medium text-indigo underline">
+              See your saved posts
+            </Link>
+          </p>
+        )}
 
         <div className="px-4 pb-3 pl-5">
           <p className="whitespace-pre-wrap">{post.caption}</p>
@@ -202,14 +217,7 @@ export function FeedPost({ post }: { post: ArtistPostDto }) {
                 <span>Comment</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => void share()}
-                className="press inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-ink-soft transition-colors hover:bg-paper-sunk hover:text-ink"
-              >
-                <ShareIcon />
-                <span>{shared ? "Link copied" : "Share"}</span>
-              </button>
+              <ShareMenu post={post} />
             </div>
           </div>
 

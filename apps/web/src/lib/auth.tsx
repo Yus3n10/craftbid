@@ -1,6 +1,6 @@
 import { createContext, useContext, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { LoginInput, MeDto, RegisterInput } from "@craftbid/shared";
+import type { LoginInput, MeDto, RegisterInput, VerificationSentDto } from "@craftbid/shared";
 import { ApiError, api } from "./api.js";
 import { BEARER_MODE, clearTokens, getRefreshToken, storeTokens } from "./session.js";
 
@@ -15,7 +15,15 @@ interface AuthValue {
   user: MeDto | null;
   isLoading: boolean;
   login: (input: LoginInput) => Promise<MeDto>;
-  register: (input: RegisterInput) => Promise<MeDto>;
+  /**
+   * The new account, signed in; or, with email verification on, the address
+   * a link was sent to, and nobody is signed in yet.
+   */
+  register: (input: RegisterInput) => Promise<MeDto | VerificationSentDto>;
+  /** Follows a verification link: confirms the address and signs in. */
+  verifyEmail: (token: string) => Promise<MeDto>;
+  /** Asks for another link, to the signed-in account or to the given address. */
+  resendVerification: (email?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -91,8 +99,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const registerMutation = useMutation({
-    mutationFn: async (input: RegisterInput) =>
-      establish(await api.post<SessionResponse>("/auth/register", withRemember(input))),
+    mutationFn: async (input: RegisterInput) => {
+      const result = await api.post<SessionResponse | VerificationSentDto>(
+        "/auth/register",
+        withRemember(input),
+      );
+      return "status" in result ? result : establish(result);
+    },
+  });
+
+  const verifyMutation = useMutation({
+    mutationFn: async (token: string) =>
+      establish(await api.post<SessionResponse>("/auth/verify-email", { token })),
   });
 
   const logoutMutation = useMutation({
@@ -116,6 +134,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     login: (input) => loginMutation.mutateAsync(input),
     register: (input) => registerMutation.mutateAsync(input),
+    verifyEmail: (token) => verifyMutation.mutateAsync(token),
+    resendVerification: async (email) => {
+      await api.post<void>("/auth/resend-verification", email ? { email } : {});
+    },
     logout: async () => {
       await logoutMutation.mutateAsync();
     },

@@ -16,6 +16,7 @@ export interface UserRecord {
   coverImageId: string | null;
   status: UserStatus;
   createdAt: Date;
+  emailVerifiedAt: Date | null;
 }
 
 interface UserRow {
@@ -32,6 +33,7 @@ interface UserRow {
   coverImageId: Buffer | null;
   status: UserStatus;
   createdAt: Date;
+  emailVerifiedAt: Date | null;
 }
 
 function mapUser(row: UserRow): UserRecord {
@@ -49,12 +51,14 @@ function mapUser(row: UserRow): UserRecord {
     coverImageId: bufToUuid(row.coverImageId),
     status: row.status,
     createdAt: row.createdAt,
+    emailVerifiedAt: row.emailVerifiedAt,
   };
 }
 
 const SELECT_USER = `
   SELECT id, email, username, password_hash, role, display_name, bio,
-         region, city, avatar_image_id, cover_image_id, status, created_at
+         region, city, avatar_image_id, cover_image_id, status, created_at,
+         email_verified_at
     FROM users
 `;
 
@@ -127,6 +131,18 @@ export async function createUser(
   }
 
   return id;
+}
+
+/**
+ * Records that the address was proved. Only ever sets it once: verifying
+ * again does not move the date on an account that was already verified.
+ */
+export async function markEmailVerified(id: string, tx: Queryable): Promise<void> {
+  await tx.run(
+    `UPDATE users SET email_verified_at = SYSTIMESTAMP, updated_at = SYSTIMESTAMP
+      WHERE id = :id AND email_verified_at IS NULL`,
+    { id: uuidToBuf(id) },
+  );
 }
 
 export async function touchUpdatedAt(id: string, q: Queryable = db): Promise<void> {

@@ -59,5 +59,19 @@ export const loginSchema = z.object({
   remember: rememberSchema,
 });
 
+/** The token from a verification link. Opaque base64url, fixed length. */
+export const verifyEmailSchema = z.object({
+  token: z.string().regex(/^[A-Za-z0-9_-]{43}$/, "This link is not valid."),
+});
+
+/**
+ * Asking for another link. Signed in, the account's own address is used and
+ * this may be empty; signed out, the address is required.
+ */
+export const resendVerificationSchema = z.preprocess(
+  (value) => value ?? {},
+  z.object({ email: emailSchema.optional() }),
+);
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;

@@ -56,8 +56,8 @@
   --color-mat-wood: #6e5138;
   --color-mat-other: #5c6661;
 
-  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
-  --font-body: "Karla", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-body: "Figtree", ui-sans-serif, system-ui, -apple-system, sans-serif;
 
   --radius-sm: 3px;
   --radius-md: 6px;
@@ -85,12 +85,22 @@
   h2,
   h3 {
     font-family: var(--font-display);
-    /* Fraunces' WONK axis keeps the letterforms slightly irregular, the way a
-       hand-cut punch would be. It is the reason this face is here. */
-    font-variation-settings: "SOFT" 20, "WONK" 1;
+    /* Optical size pinned at 24. Left automatic, a large heading picks
+       Bricolage's display cut, which is drawn narrow and tight, and on a phone
+       a heading like "You need an account for that" read as crushed. The text
+       cut keeps its ink traps, which are the reason this face is here, with
+       room between the letters. */
+    font-weight: 600;
+    font-variation-settings: "opsz" 24;
     line-height: 1.12;
-    letter-spacing: -0.015em;
+    letter-spacing: 0;
     color: var(--color-ink);
+  }
+
+  /* The same optical size for display text that is not a heading, such as
+     the role cards on sign-up and the rating figures, so it matches. */
+  .font-display {
+    font-variation-settings: "opsz" 24;
   }
 
   /* Prices must line up in a column of bids the client is comparing. */

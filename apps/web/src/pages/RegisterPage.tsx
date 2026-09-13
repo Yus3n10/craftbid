@@ -6,6 +6,8 @@ import { ApiError } from "../lib/api.js";
 import { useAuth } from "../lib/auth.js";
 import { BEARER_MODE } from "../lib/session.js";
 import { RememberMe } from "../components/RememberMe.js";
+import { CheckYourEmail } from "../components/CheckYourEmail.js";
+import { useUnsavedChanges } from "../lib/unsavedChanges.js";
 import { cx } from "../lib/cx.js";
 import { Page } from "../components/layout/Shell.js";
 import { Button } from "../components/ui/Button.js";
@@ -42,6 +44,12 @@ export function RegisterPage() {
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [verificationSentTo, setVerificationSentTo] = useState<string | null>(null);
+
+  // Half a sign-up form is worth asking about before a link throws it away.
+  useUnsavedChanges(
+    verificationSentTo === null && Object.values(form).some((value) => value.trim() !== ""),
+  );
 
   // Redirecting here rather than calling navigate() after the mutation. Doing
   // both meant this guard re-rendered the moment the session landed and raced
@@ -50,6 +58,14 @@ export function RegisterPage() {
   // requests they came to post against.
   if (user) {
     return <Navigate to={user.role === "artist" ? "/settings" : "/postings"} replace />;
+  }
+
+  if (verificationSentTo) {
+    return (
+      <Page width="narrow">
+        <CheckYourEmail email={verificationSentTo} />
+      </Page>
+    );
   }
 
   const fields = error instanceof ApiError ? error.fields : {};
@@ -64,7 +80,8 @@ export function RegisterPage() {
     setSubmitting(true);
     try {
       // The redirect above takes over as soon as the session lands.
-      await register({ ...form, role, remember });
+      const result = await register({ ...form, role, remember });
+      if ("status" in result) setVerificationSentTo(result.email);
     } catch (caught) {
       setError(caught);
     } finally {

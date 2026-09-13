@@ -90,12 +90,14 @@ pointed at the cloud database by accident.
 > Do **not** seed production. The seed is demo data with a shared password.
 
 > **Run migrations before the code that needs them deploys.** Pushing does not
-> run them. `010-payment-records.sql` is the current example: the API that
-> creates commissions writes the payment columns, so accepting a bid fails if
-> that code reaches Render first. Migrate, confirm with `migrate:status`, then
-> push. Both 009 and 010 are additive and leave existing rows as they were
-> (sessions stay persistent, existing commissions stay untracked), so running
-> them early is harmless to the code already deployed.
+> run them. `011-post-shares.sql` and `012-email-verification.sql` are the
+> current examples: the API that loads the feed reads `post_shares`, and the
+> API that loads any account reads `users.email_verified_at`, so without them
+> the feed and every sign-in fail. Migrate, confirm with `migrate:status`, then
+> push. All of 009 to 012 are additive and leave existing rows as they were
+> (sessions stay persistent, existing commissions stay untracked, existing
+> accounts stay active and unverified), so running them early is harmless to
+> the code already deployed.
 
 ### Reported problems on commissions
 
@@ -131,6 +133,40 @@ reason it is not the default.
 ---
 
 ## 3. The API on Render
+
+### Email verification (Brevo)
+
+Verification is off until an email service is configured: with
+`MAIL_DRIVER` unset or `none`, registration signs people straight in, as it
+always did. Render's free plan blocks outbound SMTP, so sending through a Gmail
+account does not work; Brevo's HTTP API does, and its free plan (300 emails a
+day) needs no domain.
+
+1. Create a free account at brevo.com with the address that should send the
+   emails, for example a dedicated `craftbid.ph@gmail.com`.
+2. **Senders, domains and dedicated IPs → Senders → Add a sender** with that
+   address, then click the confirmation link Brevo emails to it.
+3. **SMTP and API → API keys → Generate a new API key.** Copy it once; Brevo
+   does not show it again.
+4. In Render, set on the API service:
+   `MAIL_DRIVER=brevo`, `BREVO_API_KEY=<the key>`,
+   `MAIL_FROM_EMAIL=<the verified sender>`, `MAIL_FROM_NAME=Craftbid`,
+   `PUBLIC_WEB_URL=https://craftbid.pgeagoni.workers.dev`.
+5. Save, let Render redeploy, then register a test account with a real inbox
+   you control and follow the link.
+
+The API refuses to start with `MAIL_DRIVER=brevo` and a missing key or sender,
+and refuses `log` or `outbox` in production, since both would put working
+sign-in links somewhere other than the recipient's inbox.
+
+From a Gmail address, some messages land in Spam or Promotions; the sign-up
+page tells people to look there. A domain of Craftbid's own, authenticated in
+Brevo, is what fixes that for good.
+
+Switching it on changes what existing accounts can do: they still sign in, but
+see a banner asking them to confirm their email, and posting, bidding,
+reacting, commenting, saving and sharing are refused until they do. Actions on
+commissions already under way are not affected.
 
 The repository includes `render.yaml`, so you can create the service as a
 Blueprint and Render will prompt for each secret.

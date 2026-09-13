@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { deflateSync, crc32 } from "node:zlib";
 import { expect, test, type Browser, type Page, type TestInfo } from "@playwright/test";
+import { confirmEmail } from "./email.js";
 
 /**
  * A commission from bid to completion through the payment record, driven the
@@ -84,7 +85,8 @@ async function register(page: Page, role: "client" | "artist"): Promise<void> {
   await page.getByLabel("Email").fill(`${username}@example.com`);
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(role === "artist" ? /\/settings/ : /\/postings/, { timeout: 20_000 });
+  await confirmEmail(page, `${username}@example.com`);
+  await page.goto(role === "artist" ? "/settings" : "/postings");
 }
 
 /** A reference number no earlier run has used, since Craftbid refuses a repeat. */

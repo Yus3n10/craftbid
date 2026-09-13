@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useUnsavedChanges } from "../../lib/unsavedChanges.js";
 import {
   LIMITS,
   PROBLEM_REASONS,
@@ -171,6 +172,7 @@ function TransferForm({
   const [referenceNumber, setReferenceNumber] = useState("");
   const [paidOn, setPaidOn] = useState(today());
   const [receipt, setReceipt] = useState<{ id: string; preview: string } | null>(null);
+  useUnsavedChanges(referenceNumber.trim() !== "" || receipt !== null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<unknown>(null);
 
@@ -389,6 +391,7 @@ function BalanceMethodPicker({ commissionId, current }: { commissionId: string; 
 function FinishForm({ commissionId }: { commissionId: string }) {
   const refresh = useRefresh(commissionId);
   const [photos, setPhotos] = useState<{ id: string; preview: string }[]>([]);
+  useUnsavedChanges(photos.length > 0);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<unknown>(null);
 
@@ -456,6 +459,7 @@ function ShippingForm({ commissionId, cod }: { commissionId: string; cod: boolea
   const refresh = useRefresh(commissionId);
   const [courier, setCourier] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
+  useUnsavedChanges(courier.trim() !== "" || trackingNumber.trim() !== "");
   const ship = useMutation({
     mutationFn: () => api.put(`/commissions/${commissionId}/shipping`, { courier, trackingNumber }),
     onSuccess: refresh,
@@ -499,6 +503,7 @@ function ReportProblem({ commissionId }: { commissionId: string }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<ProblemReason>("payment_not_received");
   const [details, setDetails] = useState("");
+  useUnsavedChanges(open && details.trim() !== "");
   const report = useMutation({
     mutationFn: () => api.post(`/commissions/${commissionId}/problems`, { reason, details }),
     onSuccess: () => {

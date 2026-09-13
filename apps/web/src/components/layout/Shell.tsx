@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Link, Outlet, useLocation, useNavigationType } from "react-router-dom";
 import { BRAND } from "@craftbid/shared";
 import { Header } from "./Header.js";
+import { AccountNotices } from "./AccountNotices.js";
 import { Logo } from "./Logo.js";
 import { ErrorBoundary } from "../ErrorBoundary.js";
 import { reloadIfUpdateWaiting } from "../../lib/appUpdates.js";
@@ -39,6 +40,7 @@ export function Shell() {
       </a>
 
       <Header />
+      <AccountNotices />
 
       {/*
         The error boundary sits here, inside the chrome, so a screen that fails

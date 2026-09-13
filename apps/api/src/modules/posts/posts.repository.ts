@@ -84,7 +84,7 @@ async function imagesForPosts(
  */
 export type UndecoratedPost = Omit<
   ArtistPostDto,
-  "reactions" | "commentCount" | "saved"
+  "reactions" | "commentCount" | "saved" | "shareCount" | "shared"
 >;
 
 function mapPost(row: PostRow, images: ImageDto[]): UndecoratedPost {
@@ -134,6 +134,81 @@ export async function findById(
   if (!row) return null;
   const images = await imagesForPosts([id], q);
   return mapPost(row, images.get(id) ?? []);
+}
+
+/** Several published posts at once, keyed by id. Missing or removed ids are absent. */
+export async function findManyByIds(
+  ids: string[],
+  q: Queryable = db,
+): Promise<Map<string, UndecoratedPost>> {
+  const out = new Map<string, UndecoratedPost>();
+  const unique = [...new Set(ids)];
+  if (unique.length === 0) return out;
+
+  const binds: Record<string, BindValue> = {};
+  const placeholders = unique.map((id, index) => {
+    binds[`i${index}`] = uuidToBuf(id);
+    return `:i${index}`;
+  });
+
+  const rows = await q.many<PostRow>(
+    `${POST_SELECT} WHERE p.id IN (${placeholders.join(", ")}) AND p.status = 'published'`,
+    binds,
+  );
+  const images = await imagesForPosts(rows.map((row) => bufToUuid(row.id)!), q);
+  for (const row of rows) {
+    const id = bufToUuid(row.id)!;
+    out.set(id, mapPost(row, images.get(id) ?? []));
+  }
+  return out;
+}
+
+/**
+ * The feed's order: every published post, and every share of one, by when it
+ * happened. Only ids come back; the cards are loaded for the page afterwards.
+ *
+ * A share of a removed post drops out with the post, so a feed never shows
+ * "Maya shared" above work the artist took down.
+ */
+export async function feedEntries(
+  filter: { categorySlug?: string; limit: number; offset: number },
+  q: Queryable = db,
+): Promise<{ entries: { postId: string; shareId: string | null }[]; total: number }> {
+  const category = filter.categorySlug ? "AND c.slug = :category" : "";
+  const binds: Record<string, BindValue> = filter.categorySlug
+    ? { category: filter.categorySlug }
+    : {};
+
+  const union = `
+    SELECT p.id AS post_id, CAST(NULL AS RAW(16)) AS share_id, p.created_at AS at
+      FROM artist_posts p
+      LEFT JOIN craft_categories c ON c.id = p.category_id
+     WHERE p.status = 'published' ${category}
+    UNION ALL
+    SELECT s.post_id, s.id, s.created_at
+      FROM post_shares s
+      JOIN artist_posts p ON p.id = s.post_id
+      LEFT JOIN craft_categories c ON c.id = p.category_id
+     WHERE p.status = 'published' ${category}
+  `;
+
+  const [countRow, rows] = await Promise.all([
+    q.one<{ cnt: number }>(`SELECT COUNT(*) AS cnt FROM (${union})`, binds),
+    q.many<{ postId: Buffer; shareId: Buffer | null }>(
+      `SELECT post_id, share_id FROM (${union})
+        ORDER BY at DESC
+        OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY`,
+      { ...binds, offset: filter.offset, limit: filter.limit },
+    ),
+  ]);
+
+  return {
+    entries: rows.map((row) => ({
+      postId: bufToUuid(row.postId)!,
+      shareId: bufToUuid(row.shareId),
+    })),
+    total: Number(countRow?.cnt ?? 0),
+  };
 }
 
 export async function findOwner(

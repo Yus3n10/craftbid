@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { confirmEmail, signOutThroughMenu } from "./email.js";
 
 /**
  * End-to-end coverage of the workflow a real pair of users would follow, driven
@@ -29,25 +30,16 @@ async function register(
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
 
-  // Where registration lands is the signal, rather than a header control:
-  // the header collapses into a menu on mobile, so nothing in it is reliably
-  // visible across both viewports.
-  await expect(page).toHaveURL(role === "artist" ? /\/settings/ : /\/postings/, {
-    timeout: 20_000,
-  });
+  // The account is confirmed through the emailed link, which lands on the
+  // home page signed in.
+  await confirmEmail(page, `${username}@example.com`);
+  await page.goto(role === "artist" ? "/settings" : "/postings");
 
   return { username };
 }
 
 async function signOut(page: Page): Promise<void> {
-  const button = page.getByRole("button", { name: "Sign out" });
-  if (await button.isVisible().catch(() => false)) {
-    await button.click();
-  } else {
-    // Mobile keeps it behind the menu.
-    await page.getByRole("button", { name: "Menu" }).click();
-    await page.getByRole("button", { name: "Sign out" }).click();
-  }
+  await signOutThroughMenu(page);
 
   // Confirms the session is actually gone rather than just the button: a
   // protected route must now send us to sign in. Retried, because the click

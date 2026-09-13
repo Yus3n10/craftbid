@@ -5,8 +5,11 @@ import {
   createArtistPostSchema,
   feedQuerySchema,
   idParamSchema,
+  paginationSchema,
   updateArtistPostSchema,
+  usernameSchema,
 } from "@craftbid/shared";
+import { z } from "zod";
 import * as service from "./posts.service.js";
 
 export const postRoutes: FastifyPluginAsync = async (fastify) => {
@@ -30,6 +33,20 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
     async (request) => service.feed(request.query, request.user?.id ?? null),
   );
 
+  // Public, like a profile's own posts: a share is something its author put on
+  // their profile for people to see.
+  app.get(
+    "/users/:username/shares",
+    {
+      schema: {
+        params: z.object({ username: usernameSchema }),
+        querystring: paginationSchema,
+      },
+    },
+    async (request) =>
+      service.sharesOf(request.params.username, request.query, request.user?.id ?? null),
+  );
+
   app.get(
     "/posts/:id",
     { schema: { params: idParamSchema } },
@@ -39,7 +56,7 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
   app.post(
     "/posts",
     {
-      preHandler: fastify.requireRole("artist"),
+      preHandler: [fastify.requireRole("artist"), fastify.requireVerified],
       schema: { body: createArtistPostSchema },
       config: { rateLimit: { max: 30, timeWindow: "1 hour" } },
     },

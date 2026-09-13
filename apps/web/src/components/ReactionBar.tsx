@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ReactionKind, ReactionSummary } from "@craftbid/shared";
 import { api } from "../lib/api.js";
-import { useAuth } from "../lib/auth.js";
+import { useRequireAccount } from "../lib/authPrompt.js";
 import { cx } from "../lib/cx.js";
 import { FlowerIcon, HandshakeIcon, ThumbUpIcon } from "./ui/Icons.js";
 
@@ -33,8 +32,7 @@ export function ReactionBar({
   postId: string;
   reactions: ReactionSummary;
 }) {
-  const { user } = useAuth();
-  const navigate = useNavigate();
+  const requireAccount = useRequireAccount();
   const queryClient = useQueryClient();
   const [local, setLocal] = useState<ReactionSummary | null>(null);
 
@@ -54,10 +52,7 @@ export function ReactionBar({
   });
 
   function choose(kind: ReactionKind) {
-    if (!user) {
-      navigate("/login", { state: { from: window.location.pathname } });
-      return;
-    }
+    if (!requireAccount("react to posts")) return;
 
     // Clicking the reaction you already have removes it.
     const next = current.mine === kind ? null : kind;

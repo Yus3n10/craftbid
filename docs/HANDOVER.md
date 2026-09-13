@@ -394,7 +394,25 @@ reference number that can back only one live payment anywhere on Craftbid
 confirmation, which is the proof. Do not add image similarity back without
 measuring it on real receipts.
 
-### 4.14 Smaller ones
+### 4.14 Settings open, but the payment details were not there
+
+**Symptom.** The client's developer opened Settings the day payment details
+shipped and found no "Where clients pay you" section.
+
+**Cause.** Two, found together. The service worker answers every page load from
+its precache, so the first visit after a deploy runs the previous build while
+the new worker installs behind it; only a second reload showed the new screens.
+And Settings itself was reachable only through "Edit profile" on the profile
+page.
+
+**Fix.** `lib/appUpdates.ts` reloads into the new build when a new worker takes
+control: at once if the page has not been touched, otherwise on the next change
+of page, never on returning to a tab (where a half-filled payment form may be
+waiting). Settings, saved posts and history now sit under the cog in the
+header. Reproduced first by serving one build, swapping in another and watching
+what a real browser with the worker ran.
+
+### 4.15 Smaller ones
 
 - **Sign-in dropped users on the home page.** Both auth pages redirected an
   already-authenticated visitor to `/` *and* navigated imperatively after the
@@ -502,6 +520,39 @@ keep the original flow.
 
 Code: `apps/api/src/modules/commission-payments/`, the panel in
 `apps/web/src/components/commission/`.
+
+### Client batch: reposts, history, verification, confirmations
+
+- **Reposts.** Share a portfolio post to your profile, with an optional note.
+  One share per person per post (sharing again edits the note); an artist
+  cannot share their own post; the card always keeps the original artist.
+  Shares appear on the sharer's profile and interleaved in the home feed.
+  Never available on craft requests, for the same reason as comments.
+- **Activity history** (`/activity`). Your own reactions, comments, saves and
+  shares with dates and times, grouped by day, each undoable. Read from the
+  tables the actions live in, so undoing something removes it from both.
+- **Saved posts** (`/saved`), linked from the account menu and from the note
+  that appears when you save.
+- **Sign-in popup.** Save, react, comment and share open a popup for signed-out
+  visitors (and a "confirm your email" popup for unverified accounts) instead
+  of redirecting. Presentation only: the API refuses all of them regardless.
+- **Asking before losing work.** Sign-out always asks. A form holding unsent
+  text asks before a link, Back, reload or closing the tab throws it away
+  (`lib/unsavedChanges.tsx`, one router blocker for the whole app; the router
+  became a data router for this). Forms that navigate after saving call
+  `leaveWithoutPrompt()` first.
+- **Email verification** (`MAIL_DRIVER`, see DEPLOY.md). New accounts get a link
+  and are signed in by following it; the link page posts the token rather than
+  verifying on GET, so mail scanners cannot spend it. Tokens are stored as
+  SHA-256, single-use, 24 hours, and every other link dies when one is used.
+  Unverified accounts can sign in and browse; `requireVerified` refuses posting,
+  bidding and the social actions, checked against the database so confirming
+  in one browser counts everywhere at once. Resend answers identically whether
+  or not an address exists, is not awaited (so timing cannot tell either), and
+  is limited to one a minute and five an hour per account.
+- **Fonts.** Bricolage Grotesque (headings, optical size pinned at 24) and
+  Figtree (text), replacing Fraunces and Karla, which another of the
+  developer's projects already used.
 
 ## 6. Performance
 
@@ -683,8 +734,11 @@ Ordered by what I would do next.
    installers built and are in a draft release; the Linux fix needs a new tag
    (`git tag v0.1.1 && git push origin v0.1.1`). Nobody has installed or run
    any of them.
-2. **No email or push notifications.** In-app rows only, so an artist sees a
-   notice when they next open the site. Both cost money at volume.
+2. **Email is verification only.** The Brevo setup in DEPLOY.md has to be done
+   before verification switches on in production. Notices stay in-app: no
+   notification emails or push, which would also exhaust Brevo's free 300 a
+   day. An account registered with a mistyped address cannot fix it (there is
+   no change-email flow); the person registers again.
 3. **Search is a substring scan** that cannot use an index. Fine at this scale;
    Oracle Text is the upgrade, at the cost of an index type, a sync job and a
    query dialect.

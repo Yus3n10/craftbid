@@ -1,7 +1,9 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 import fp from "fastify-plugin";
 import type { UserRole } from "@craftbid/shared";
-import { forbidden, unauthorized } from "../lib/errors.js";
+import { AppError, forbidden, unauthorized } from "../lib/errors.js";
+import { emailVerificationEnabled } from "../lib/mail/index.js";
+import { findById } from "../modules/users/users.repository.js";
 import { ACCESS_COOKIE, verifyAccessToken } from "../lib/tokens.js";
 
 export interface AuthUser {
@@ -19,6 +21,7 @@ declare module "fastify" {
     requireRole: (
       role: UserRole,
     ) => (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    requireVerified: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   }
 }
 
@@ -52,6 +55,28 @@ const authPlugin: FastifyPluginAsync = async (app) => {
 
   app.decorate("requireAuth", async (request: FastifyRequest) => {
     if (!request.user) throw unauthorized();
+  });
+
+  /**
+   * For actions that put something in front of other people: posting,
+   * bidding, reacting, commenting, saving and sharing. An account that has not
+   * proved its address can sign in and look around, and is refused these.
+   *
+   * Read from the database rather than from the access token, so confirming
+   * the address in one browser takes effect in every other one immediately,
+   * not when their token next rotates.
+   */
+  app.decorate("requireVerified", async (request: FastifyRequest) => {
+    if (!request.user) throw unauthorized();
+    if (!emailVerificationEnabled()) return;
+    const user = await findById(request.user.id);
+    if (!user?.emailVerifiedAt) {
+      throw new AppError(
+        403,
+        "email_unverified",
+        "Confirm your email first. Use the link we sent you, or ask for a new one from the banner at the top of the page.",
+      );
+    }
   });
 
   app.decorate("requireRole", (role: UserRole) => {

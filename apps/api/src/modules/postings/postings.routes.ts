@@ -39,7 +39,7 @@ export const postingRoutes: FastifyPluginAsync = async (fastify) => {
   app.post(
     "/postings",
     {
-      preHandler: fastify.requireRole("client"),
+      preHandler: [fastify.requireRole("client"), fastify.requireVerified],
       schema: { body: createPostingSchema },
       config: { rateLimit: { max: 20, timeWindow: "1 hour" } },
     },
@@ -83,7 +83,7 @@ export const postingRoutes: FastifyPluginAsync = async (fastify) => {
   app.post(
     "/postings/:id/applications",
     {
-      preHandler: fastify.requireRole("artist"),
+      preHandler: [fastify.requireRole("artist"), fastify.requireVerified],
       schema: { params: idParamSchema, body: createApplicationSchema },
       config: { rateLimit: { max: 30, timeWindow: "1 hour" } },
     },

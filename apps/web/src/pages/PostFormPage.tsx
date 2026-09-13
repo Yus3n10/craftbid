@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useUnsavedChanges, useUnsavedChangesState } from "../lib/unsavedChanges.js";
 import { CRAFT_CATEGORIES, LIMITS, type ArtistPostDto } from "@craftbid/shared";
 import { ApiError, api } from "../lib/api.js";
 import { useAuth } from "../lib/auth.js";
@@ -37,6 +38,18 @@ export function PostFormPage() {
     setImages(post.images.map((image) => ({ id: image.id, url: image.url })));
   }, [existing.data]);
 
+  const snapshot = JSON.stringify([caption, description, categorySlug, images.map((image) => image.id)]);
+  const loaded = existing.data
+    ? JSON.stringify([
+        existing.data.caption,
+        existing.data.description ?? "",
+        existing.data.category?.slug ?? "",
+        existing.data.images.map((image) => image.id),
+      ])
+    : JSON.stringify(["", "", "", []]);
+  useUnsavedChanges((!editing || Boolean(existing.data)) && snapshot !== loaded);
+  const { leaveWithoutPrompt } = useUnsavedChangesState();
+
   const mutation = useMutation({
     mutationFn: () => {
       const payload = {
@@ -51,6 +64,7 @@ export function PostFormPage() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["posts"] });
+      leaveWithoutPrompt();
       navigate(`/artists/${user!.username}`);
     },
   });

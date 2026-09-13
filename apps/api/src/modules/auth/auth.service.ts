@@ -1,7 +1,9 @@
-import type { LoginInput, RegisterInput, UserRole } from "@craftbid/shared";
+import type { LoginInput, RegisterInput, UserRole, VerificationSentDto } from "@craftbid/shared";
+import { config } from "../../config.js";
 import { uuidToBuf } from "../../db/ids.js";
 import { DbError, withTransaction } from "../../db/query.js";
-import { badRequest, conflict, unauthorized } from "../../lib/errors.js";
+import { AppError, badRequest, conflict, unauthorized } from "../../lib/errors.js";
+import { emailVerificationEnabled, getMailer } from "../../lib/mail/index.js";
 import { hashPassword, verifyPassword, wastePasswordTime } from "../../lib/password.js";
 import {
   generateRefreshToken,
@@ -11,6 +13,7 @@ import {
 } from "../../lib/tokens.js";
 import * as users from "../users/users.repository.js";
 import * as sessions from "./auth.repository.js";
+import { verificationEmail } from "./verification-email.js";
 
 export interface SessionTokens {
   userId: string;
@@ -42,7 +45,14 @@ async function issueTokens(
   };
 }
 
-export async function register(input: RegisterInput): Promise<SessionTokens> {
+/**
+ * Creates the account. With email verification on, nobody is signed in yet:
+ * a link goes to the address, and following it is what starts the session.
+ * With it off, registration signs in straight away, as it always did.
+ */
+export async function register(
+  input: RegisterInput,
+): Promise<SessionTokens | VerificationSentDto> {
   const passwordHash = await hashPassword(input.password);
 
   let userId: string;
@@ -77,7 +87,124 @@ export async function register(input: RegisterInput): Promise<SessionTokens> {
     throw error;
   }
 
+  if (emailVerificationEnabled()) {
+    try {
+      await sendVerification(userId, input.email, input.displayName, input.remember === true);
+    } catch (error) {
+      // The account exists either way. A failed send is recoverable from the
+      // page that follows, which offers another link, so it must not turn
+      // into an error that invites registering the same address again.
+      console.error("Verification email failed to send", error);
+    }
+    return { status: "verification_sent", email: input.email };
+  }
+
   return issueTokens(userId, input.role, input.remember === true);
+}
+
+const VERIFICATION_HOURS = 24;
+
+async function sendVerification(
+  userId: string,
+  email: string,
+  displayName: string,
+  persistent: boolean,
+): Promise<void> {
+  const token = generateRefreshToken();
+  await sessions.storeVerificationToken({
+    userId,
+    tokenHash: hashRefreshToken(token),
+    expiresAt: new Date(Date.now() + VERIFICATION_HOURS * 3_600_000),
+    persistent,
+  });
+  await getMailer().send(
+    verificationEmail({
+      to: email,
+      displayName,
+      link: `${config.mail.publicWebUrl}/verify-email?token=${token}`,
+      hoursValid: VERIFICATION_HOURS,
+    }),
+  );
+}
+
+/**
+ * Follows a verification link: proves the address, and signs that person in.
+ *
+ * Signing in here is what "takes them to their new account" means. Holding
+ * the link is proof of the inbox, which is the same proof a password reset
+ * relies on, and the link is single-use and short-lived.
+ */
+export async function verifyEmail(token: string): Promise<SessionTokens> {
+  const record = await sessions.findVerificationToken(hashRefreshToken(token));
+  if (!record) {
+    throw new AppError(400, "link_invalid", "This link is not valid. Ask for a new one below.");
+  }
+
+  const user = await users.findById(record.userId);
+  if (!user || user.status !== "active") {
+    throw unauthorized("This account is not active.");
+  }
+
+  if (record.usedAt) {
+    throw new AppError(
+      409,
+      user.emailVerifiedAt ? "already_verified" : "link_used",
+      user.emailVerifiedAt
+        ? "Your email is already confirmed. Sign in to continue."
+        : "This link was already used. Ask for a new one below.",
+    );
+  }
+  if (record.expiresAt.getTime() < Date.now()) {
+    throw new AppError(410, "link_expired", "This link has expired. Ask for a new one below.");
+  }
+
+  const spent = await withTransaction(async (tx) => {
+    if (!(await sessions.spendVerificationToken(record.id, tx))) return false;
+    await users.markEmailVerified(user.id, tx);
+    await sessions.spendAllVerificationTokens(user.id, tx);
+    return true;
+  });
+  if (!spent) {
+    throw new AppError(409, "link_used", "This link was already used. Sign in to continue.");
+  }
+
+  return issueTokens(user.id, user.role, record.persistent);
+}
+
+/**
+ * Sends another link. Signed in, it goes to that account's address; signed
+ * out, to the address given.
+ *
+ * Always answers the same way whether or not the address has an account, is
+ * already verified, or has asked too often, so this cannot be used to find out
+ * who is registered. The limits (one a minute, five an hour per account) are
+ * enforced silently for the same reason.
+ */
+export async function resendVerification(
+  target: { userId: string } | { email: string },
+): Promise<void> {
+  if (!emailVerificationEnabled()) return;
+
+  const user =
+    "userId" in target ? await users.findById(target.userId) : await users.findByEmail(target.email);
+  if (!user || user.status !== "active" || user.emailVerifiedAt) return;
+
+  const recent = await sessions.recentVerificationTokens(user.id);
+  if (recent.lastHour >= 5) return;
+  if (recent.lastSentAt && Date.now() - recent.lastSentAt.getTime() < 60_000) return;
+
+  try {
+    await sendVerification(user.id, user.email, user.displayName, false);
+  } catch (error) {
+    console.error("Verification email failed to send", error);
+  }
+}
+
+/** Whether an account may do the things that need a proved address. */
+export async function isVerified(userId: string): Promise<boolean> {
+  if (!emailVerificationEnabled()) return true;
+  const user = await users.findById(userId);
+  return Boolean(user?.emailVerifiedAt);
 }
 
 export async function login(input: LoginInput): Promise<SessionTokens> {
