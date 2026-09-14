@@ -76,7 +76,9 @@ export function Shell() {
               <p className="mt-3 text-sm text-ink-soft">{BRAND.tagline}</p>
             </div>
 
-            <nav aria-label="Footer" className="flex gap-12 text-sm">
+            {/* Wraps rather than squeezing: three columns fill a 320px phone exactly,
+                and the Linux CI runner's wider text pushed them 3px past it. */}
+            <nav aria-label="Footer" className="flex flex-wrap gap-x-12 gap-y-8 text-sm">
               <div>
                 <h2 className="eyebrow mb-3">For clients</h2>
                 <ul className="space-y-2 text-ink-soft">
