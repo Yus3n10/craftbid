@@ -324,7 +324,12 @@ export function PostingDetailPage() {
 
   const cancelMutation = useMutation({
     mutationFn: () => api.post<PostingDto>(`/postings/${id}/cancel`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["posting", id] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["posting", id] });
+      // A cancelled request leaves the request lists and the home feed.
+      void queryClient.invalidateQueries({ queryKey: ["postings"] });
+      void queryClient.invalidateQueries({ queryKey: ["feed"] });
+    },
   });
 
   if (isLoading) {

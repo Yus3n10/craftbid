@@ -67,6 +67,20 @@ export class ApiError extends Error {
 }
 
 /**
+ * A signal that aborts after `ms`.
+ *
+ * AbortSignal.timeout arrived in Safari 16 and Chrome 103. Phones older than
+ * that still reach this site, and calling it there threw before every request
+ * was sent, so the page painted but nothing on it ever loaded.
+ */
+function deadlineSignal(ms: number): AbortSignal {
+  if (typeof AbortSignal.timeout === "function") return AbortSignal.timeout(ms);
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(new DOMException("The request timed out.", "TimeoutError")), ms);
+  return controller.signal;
+}
+
+/**
  * Sessions ride on httpOnly cookies, so no token is ever readable from
  * JavaScript and an XSS cannot walk off with one. Every request opts in with
  * `credentials: "include"` because the API is on a different origin.
@@ -86,7 +100,7 @@ async function refreshSession(): Promise<boolean> {
       const response = await fetch(`${API_URL}/auth/refresh`, {
         method: "POST",
         credentials: "include",
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        signal: deadlineSignal(REQUEST_TIMEOUT_MS),
         // An explicit body, because a POST with no body at all fails JSON body
         // validation with a 400 before the route is reached, which would make
         // a genuinely renewable session look unrecoverable. In bearer mode the
@@ -173,7 +187,7 @@ export async function request<T>(
   // unmounted and the deadline still applies when it does not. AbortSignal.any
   // is recent enough to be worth a fallback: this audience is on Android
   // phones, and the browser there is often older than the one it was built on.
-  const deadline = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+  const deadline = deadlineSignal(REQUEST_TIMEOUT_MS);
   init.signal = signal ? combineSignals(signal, deadline) : deadline;
 
   let response: Response;

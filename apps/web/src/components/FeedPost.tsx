@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { FeedItemDto } from "@craftbid/shared";
+import { daysAgo, type FeedItemDto } from "@craftbid/shared";
 import { api } from "../lib/api.js";
 import { useAuth } from "../lib/auth.js";
 import { useRequireAccount } from "../lib/authPrompt.js";
@@ -15,18 +15,6 @@ import { Lightbox } from "./Lightbox.js";
 import { ReportDialog } from "./ReportButton.js";
 import { ClampedText } from "./ClampedText.js";
 import { SharedPostCard } from "./SharedPostCard.js";
-
-function postedAgo(iso: string): string {
-  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
-  if (days === 0) return "Today";
-  if (days === 1) return "Yesterday";
-  if (days < 30) return `${days} days ago`;
-  return new Date(iso).toLocaleDateString("en-PH", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 /**
  * One piece of work in the feed.
@@ -134,7 +122,7 @@ function OwnPost({ post }: { post: FeedItemDto }) {
               {post.artist.displayName}
             </Link>
             <p className="text-xs text-ink-faint">
-              {postedAgo(post.createdAt)}
+              {daysAgo(post.createdAt)}
               {post.category ? ` · ${post.category.name}` : ""}
             </p>
           </div>

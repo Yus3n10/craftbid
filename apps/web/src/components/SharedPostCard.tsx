@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import type { ArtistPostDto, FeedItemDto, ShareDto } from "@craftbid/shared";
+import { daysAgo, type ArtistPostDto, type FeedItemDto, type ShareDto } from "@craftbid/shared";
 import { api } from "../lib/api.js";
 import { Avatar, Card } from "./ui/Primitives.js";
 import { CommentIcon } from "./ui/Icons.js";
@@ -12,14 +12,6 @@ import { CommentThread } from "./CommentThread.js";
 import { FeedPost } from "./FeedPost.js";
 import { ReactionBar, ReactionSummaryLine } from "./ReactionBar.js";
 import { ShareMenu } from "./ShareMenu.js";
-
-function postedAgo(iso: string): string {
-  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
-  if (days === 0) return "Today";
-  if (days === 1) return "Yesterday";
-  if (days < 30) return `${days} days ago`;
-  return new Date(iso).toLocaleDateString("en-PH", { day: "numeric", month: "short", year: "numeric" });
-}
 
 /**
  * The original post, loaded fresh, in its own card: its own reactions and
@@ -72,7 +64,7 @@ export function SharedPostCard({ post, share }: { post: FeedItemDto; share: Shar
               </Link>{" "}
               shared a post
             </p>
-            <p className="text-xs text-ink-faint">{postedAgo(share.createdAt)}</p>
+            <p className="text-xs text-ink-faint">{daysAgo(share.createdAt)}</p>
           </div>
         </header>
 
@@ -94,7 +86,7 @@ export function SharedPostCard({ post, share }: { post: FeedItemDto; share: Shar
               <span className="min-w-0">
                 <span className="block truncate text-sm font-medium text-ink">{post.artist.displayName}</span>
                 <span className="block text-xs text-ink-faint">
-                  {postedAgo(post.createdAt)}
+                  {daysAgo(post.createdAt)}
                   {post.category ? ` · ${post.category.name}` : ""}
                 </span>
               </span>

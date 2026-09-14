@@ -119,7 +119,8 @@ test.describe("a conversation", () => {
   });
 
   test("fits a phone, with the message box on screen", async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 700 });
+    // 320px: the narrowest phone the header is tested at.
+    await page.setViewportSize({ width: 320, height: 700 });
     await stubApi(page, (route, path) => {
       if (path === `/conversations/${CONVERSATION_ID}`) return route.fulfill(json({ ...CONVERSATION, stage: "commission", commissionId: "01920000-0000-7000-8000-0000000000d1" }));
       if (path === `/conversations/${CONVERSATION_ID}/read`) return route.fulfill({ status: 204 });
@@ -136,6 +137,14 @@ test.describe("a conversation", () => {
     await expect(page.getByText("Message number 19 about the yarn, the colour and the timing.")).toBeVisible();
     // Commission-stage suggestions for a client.
     await expect(page.getByRole("button", { name: "Can you send me a progress photo?" })).toBeVisible();
+    // Three at most, and every one readable without scrolling sideways.
+    const chips = page.getByRole("list", { name: "Suggested messages" }).getByRole("button");
+    await expect(chips).toHaveCount(3);
+    for (const chip of await chips.all()) {
+      const box = (await chip.boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(320);
+    }
     await expect(page.getByRole("textbox", { name: "Message Nena Hooks" })).toBeInViewport();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);

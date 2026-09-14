@@ -235,17 +235,17 @@ export function ConversationPage() {
             submit();
           }}
         >
-          {/* Suggestions fill the box and never send; one row that scrolls sideways on a phone. */}
-          <ul className="-mx-4 mb-2 flex gap-2 overflow-x-auto px-4 pb-1" aria-label="Suggested messages">
+          {/* Suggestions fill the box and never send. Three at most, wrapping rather than scrolling sideways. */}
+          <ul className="mb-2 flex flex-wrap gap-2" aria-label="Suggested messages">
             {suggestions.map((suggestion) => (
-              <li key={suggestion} className="shrink-0">
+              <li key={suggestion}>
                 <button
                   type="button"
                   onClick={() => {
                     setDraft(suggestion);
                     input.current?.focus();
                   }}
-                  className="whitespace-nowrap rounded-full border border-fiber bg-paper-raised px-3 py-1.5 text-xs text-ink-soft transition-colors hover:border-fiber-strong hover:text-ink"
+                  className="rounded-2xl border border-fiber bg-paper-raised px-3 py-1.5 text-left text-xs text-ink-soft transition-colors hover:border-fiber-strong hover:text-ink"
                 >
                   {suggestion}
                 </button>

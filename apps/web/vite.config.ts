@@ -61,6 +61,9 @@ export default defineConfig(({ mode }) => {
           // Never cache API responses: a marketplace showing yesterday's
           // postings and bids is worse than one that waits for the network.
           navigateFallbackDenylist: [/^\/api/],
+          // The app shell plus the Latin font files, so a repeat visit needs no
+          // network for type. Other subsets load on demand by unicode-range.
+          globPatterns: ["**/*.{js,css,html,svg,png}", "**/*-latin-{opsz,wght}-normal-*.woff2"],
         },
       }),
     ],

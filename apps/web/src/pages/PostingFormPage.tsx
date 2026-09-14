@@ -83,6 +83,8 @@ export function PostingFormPage() {
     onSuccess: (posting) => {
       void queryClient.invalidateQueries({ queryKey: ["postings"] });
       void queryClient.invalidateQueries({ queryKey: ["posting", posting.id] });
+      // The home feed lists open requests, so a new or edited one shows there on return.
+      void queryClient.invalidateQueries({ queryKey: ["feed"] });
       leaveWithoutPrompt();
       navigate(`/postings/${posting.id}`);
     },

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { LIMITS, type CommentDto } from "@craftbid/shared";
+import { LIMITS, shortAgo, type CommentDto } from "@craftbid/shared";
 import { api } from "../lib/api.js";
 import { useAuth } from "../lib/auth.js";
 import { useRequireAccount } from "../lib/authPrompt.js";
@@ -11,21 +11,6 @@ import { Button } from "./ui/Button.js";
 import { FormError, RowSkeleton } from "./ui/States.js";
 import { TrashIcon } from "./ui/Icons.js";
 import { ReportButton } from "./ReportButton.js";
-
-function timeAgo(iso: string): string {
-  const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d`;
-  return new Date(iso).toLocaleDateString("en-PH", {
-    day: "numeric",
-    month: "short",
-  });
-}
 
 function Comment({
   comment,
@@ -66,7 +51,7 @@ function Comment({
         </div>
 
         <div className="mt-1 flex items-center gap-3 pl-1 text-xs text-ink-faint">
-          <span>{timeAgo(comment.createdAt)}</span>
+          <span>{shortAgo(comment.createdAt)}</span>
           {(comment.mine || canModerate) && (
             <button
               type="button"

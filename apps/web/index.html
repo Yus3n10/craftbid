@@ -41,24 +41,32 @@
       content="Craftbid connects Filipino handmade-craft artists with people who want to commission their work."
     />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!--
-      Bricolage Grotesque carries the display voice: its ink traps and uneven
-      stroke contrast read as cut by hand rather than drawn by machine, which
-      suits work made by hand. Figtree handles interface text, clear and warm at
-      small sizes on a phone. Both degrade to system faces offline, which
-      matters for the desktop build.
+      No stylesheet from another host belongs here. Google Fonts was linked in
+      this head, and a stylesheet in the head blocks the whole page: whenever
+      that host was slow or unreachable, nothing painted at all (black inside
+      Messenger, white in Chrome). The fonts are now bundled with the app and
+      imported in main.tsx.
     -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=Figtree:wght@400..700&display=swap"
-      rel="stylesheet"
-    />
 
     <title>Craftbid — Commission handmade work from Filipino artists</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!--
+        Shown until React replaces it. Inline styles only, because the
+        stylesheet may not have arrived yet, and a blank screen on a slow
+        connection looks like a broken site.
+      -->
+      <p
+        style="margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f7f4ee; color: #4a5450; font: 16px system-ui, -apple-system, sans-serif"
+      >
+        Loading Craftbid…
+      </p>
+    </div>
+    <noscript>
+      <p style="padding: 24px; font: 16px system-ui, sans-serif">Craftbid needs JavaScript turned on.</p>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

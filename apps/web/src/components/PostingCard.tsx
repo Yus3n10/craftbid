@@ -1,15 +1,6 @@
 import { Link } from "react-router-dom";
-import type { PostingDto } from "@craftbid/shared";
+import { daysAgo, type PostingDto } from "@craftbid/shared";
 import { Card, ImageFrame, Money, StatusBadge } from "./ui/Primitives.js";
-
-function timeAgo(iso: string): string {
-  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
-  if (days === 0) return "Today";
-  if (days === 1) return "Yesterday";
-  if (days < 30) return `${days} days ago`;
-  const months = Math.floor(days / 30);
-  return months === 1 ? "1 month ago" : `${months} months ago`;
-}
 
 export function PostingCard({ posting }: { posting: PostingDto }) {
   const bids = posting.applicationCount;
@@ -50,7 +41,7 @@ export function PostingCard({ posting }: { posting: PostingDto }) {
             <span className="block">
               {bids === 0 ? "No bids yet" : bids === 1 ? "1 bid" : `${bids} bids`}
             </span>
-            <span className="block">{timeAgo(posting.createdAt)}</span>
+            <span className="block">{daysAgo(posting.createdAt, { older: "months" })}</span>
           </div>
         </div>
       </div>
