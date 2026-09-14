@@ -1,10 +1,11 @@
 import type { FastifyPluginAsync } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import type { SearchResultsDto } from "@craftbid/shared";
-import { searchQuerySchema } from "@craftbid/shared";
+import { categoriesForSearch, searchQuerySchema } from "@craftbid/shared";
 import { db } from "../db/query.js";
 import { bufToUuid } from "../db/ids.js";
 import { getStorage } from "../lib/storage/index.js";
+import { recordInterest } from "./interests/interests.service.js";
 
 /**
  * One search box over people, work and open requests.
@@ -139,6 +140,13 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
             description: row.categoryDescription,
           },
         }));
+      }
+
+      // A signed-in search that names a craft says a little about what this
+      // person wants to see. One that names none records nothing.
+      const named = categoriesForSearch(q);
+      if (request.user && named.length > 0) {
+        await recordInterest(request.user.id, "search", { categorySlugs: named });
       }
 
       const [artists, clients, foundPosts, foundRequests] = await Promise.all([

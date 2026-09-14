@@ -5,6 +5,7 @@ import type {
   FeedItemDto,
   ExternalLinkDto,
   Paginated,
+  PostingDto,
   PublicProfileDto,
   ReviewDto,
 } from "@craftbid/shared";
@@ -26,6 +27,7 @@ import {
 } from "../components/ui/States.js";
 import { PostCard } from "../components/PostCard.js";
 import { FeedPost } from "../components/FeedPost.js";
+import { PostingCard } from "../components/PostingCard.js";
 
 
 function LinkList({ links }: { links: ExternalLinkDto[] }) {
@@ -201,6 +203,34 @@ function SharedPosts({ username, isSelf }: { username: string; isSelf: boolean }
   );
 }
 
+/**
+ * Requests this person has open or underway. Hidden entirely when there are
+ * none, like shares, so an artist's profile or a new client's does not open on
+ * an empty section.
+ */
+function Requests({ username, isSelf }: { username: string; isSelf: boolean }) {
+  const { data } = useQuery({
+    queryKey: ["postings", "user", username],
+    queryFn: () => api.get<Paginated<PostingDto>>(`/users/${username}/postings?limit=12`),
+  });
+
+  if (!data || data.items.length === 0) return null;
+
+  return (
+    <section>
+      <div className="mb-4 flex items-baseline justify-between gap-4">
+        <h2 className="font-display text-2xl">{isSelf ? "Your requests" : "Requests"}</h2>
+        <ThreadRule className="w-16" />
+      </div>
+      <div className="stagger grid gap-5 sm:grid-cols-2">
+        {data.items.map((posting) => (
+          <PostingCard key={posting.id} posting={posting} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function ProfilePage() {
   const { username = "" } = useParams();
   const { user } = useAuth();
@@ -315,6 +345,8 @@ export function ProfilePage() {
                 <Portfolio username={profile.username} />
               </section>
             )}
+
+            <Requests username={profile.username} isSelf={isSelf} />
 
             <SharedPosts username={profile.username} isSelf={isSelf} />
 

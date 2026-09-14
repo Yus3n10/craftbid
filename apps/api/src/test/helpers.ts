@@ -83,6 +83,7 @@ export async function closeTestApp(): Promise<void> {
  */
 export async function resetData(): Promise<void> {
   const statements = [
+    `DELETE FROM user_category_interest`,
     `DELETE FROM commission_problems`,
     `DELETE FROM commission_payments`,
     `DELETE FROM commission_files`,
@@ -239,14 +240,14 @@ export async function applyToPosting(
   });
 }
 
-export async function createArtistPost(artist: Session, caption = "Bridal bouquet") {
+export async function createArtistPost(artist: Session, caption = "Bridal bouquet", categorySlug = "crochet") {
   const instance = await getTestApp();
   const imageId = await seedImage(artist.id);
   const response = await instance.inject({
     method: "POST",
     url: "/posts",
     headers: authHeaders(artist),
-    payload: { caption, categorySlug: "crochet", imageIds: [imageId] },
+    payload: { caption, categorySlug, imageIds: [imageId] },
   });
   if (response.statusCode !== 201) {
     throw new Error(`createArtistPost failed: ${response.statusCode} ${response.body}`);
@@ -509,4 +510,23 @@ export async function setStatus(userId: string, status: "active" | "suspended" |
 
 export async function makeStaff(userId: string): Promise<void> {
   await db.run(`UPDATE users SET is_staff = 1 WHERE id = :id`, { id: uuidToBuf(userId) });
+}
+
+/** One person's craft interest scores, decayed to now, by slug. */
+export async function interestOf(userId: string): Promise<Map<string, number>> {
+  const { scoresFor } = await import("../modules/interests/interests.service.js");
+  return scoresFor(userId);
+}
+
+/** Stores an interest score as if it had last been written `daysAgo` days ago. */
+export async function setInterest(userId: string, slug: string, score: number, daysAgo = 0): Promise<void> {
+  await db.run(
+    `MERGE INTO user_category_interest t
+     USING (SELECT id AS category_id FROM craft_categories WHERE slug = :slug) s
+        ON (t.user_id = :userId AND t.category_id = s.category_id)
+      WHEN MATCHED THEN UPDATE SET t.score = :score, t.updated_at = SYSTIMESTAMP - NUMTODSINTERVAL(:days, 'DAY')
+      WHEN NOT MATCHED THEN INSERT (user_id, category_id, score, updated_at)
+           VALUES (:userId, s.category_id, :score, SYSTIMESTAMP - NUMTODSINTERVAL(:days, 'DAY'))`,
+    { userId: uuidToBuf(userId), slug, score, days: daysAgo },
+  );
 }

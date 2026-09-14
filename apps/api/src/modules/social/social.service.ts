@@ -10,6 +10,7 @@ import { badRequest, forbidden, notFound } from "../../lib/errors.js";
 import * as postsRepo from "../posts/posts.repository.js";
 import * as repo from "./social.repository.js";
 import * as notifications from "../notifications/notifications.repository.js";
+import { recordInterest } from "../interests/interests.service.js";
 
 /**
  * Every one of these starts by confirming the post exists and is published.
@@ -49,6 +50,7 @@ export async function react(
       tx,
     );
   });
+  await recordInterest(userId, "reaction", { postId });
 }
 
 export async function unreact(postId: string, userId: string): Promise<void> {
@@ -91,6 +93,7 @@ export async function addComment(
 
     return commentId;
   });
+  await recordInterest(authorId, "comment", { postId });
 
   const comments = await repo.listComments(postId, authorId);
   const created = comments.find((comment) => comment.id === id);
@@ -158,6 +161,7 @@ export async function reactToShare(shareId: string, userId: string, kind: Reacti
       tx,
     );
   });
+  await recordInterest(userId, "reaction", { shareId });
 }
 
 export async function unreactToShare(shareId: string, userId: string): Promise<void> {
@@ -186,6 +190,7 @@ export async function addShareComment(shareId: string, authorId: string, body: s
     }
     return commentId;
   });
+  await recordInterest(authorId, "comment", { shareId });
   const created = (await repo.listComments(shareId, authorId, db, "share")).find((comment) => comment.id === id);
   if (!created) throw notFound();
   return created;
@@ -198,6 +203,8 @@ export async function setSaved(
 ): Promise<void> {
   await requirePost(postId);
   await repo.setSaved(postId, userId, saved);
+  // Unsaving takes nothing back: interest fades on its own.
+  if (saved) await recordInterest(userId, "save", { postId });
 }
 
 /**
@@ -226,6 +233,7 @@ export async function share(
       tx,
     );
   });
+  await recordInterest(userId, "share", { postId });
 }
 
 export async function unshare(postId: string, userId: string): Promise<void> {

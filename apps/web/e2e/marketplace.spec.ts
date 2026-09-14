@@ -92,6 +92,11 @@ test.describe("marketplace", () => {
     await expect(page.getByText("₱1,500").first()).toBeVisible();
     await expect(page.getByText("Open for bids").first()).toBeVisible();
 
+    // Back on the home page the new request is the first card, for its client.
+    await page.getByRole("link", { name: "Craftbid home" }).first().click();
+    await expect(page.getByRole("article").first()).toHaveAccessibleName(title, { timeout: 20_000 });
+    await page.goBack();
+
     const postingUrl = page.url();
     await signOut(page);
 

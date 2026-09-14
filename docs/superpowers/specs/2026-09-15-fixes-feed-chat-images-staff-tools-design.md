@@ -120,8 +120,8 @@ is committed and deployed only when the developer says so.
 - Scores decay with a 30-day half-life. A bump reads the stored score, decays it
   to now, adds the weight and stores it. Reads decay to now as well, so an old
   interest fades even with no new activity.
-- Weights, bumped in the service that records the action, inside its
-  transaction:
+- Weights, bumped in the service that records the action, after the action
+  succeeds and never able to fail it (a failed bump is logged):
 
   | Signal | Weight |
   |---|---|
@@ -132,7 +132,7 @@ is committed and deployed only when the developer says so.
   | Post a request (client) | 2 |
   | React to a post or share | 1 |
   | Search whose text matches a category name or slug | 1 |
-  | Pick a category filter on the home page | 0.5 |
+  | Open a craft's list on Craft requests or Discover (first page) | 0.5 |
 
   Undoing a reaction, save or share does not subtract. Decay handles drift and
   it keeps the writes simple.
@@ -147,12 +147,16 @@ is committed and deployed only when the developer says so.
   union: `{ kind: "post", ...FeedItemDto }` or `{ kind: "request", ...PostingDto }`.
 - Candidates: the newest 500 items across posts, shares and open requests (with
   the category filter applied). Ranking happens in SQL over that window.
-- `rank = freshness * (1 + interest)` where
+- `rank = freshness * (1 + fresh + interest)` where
   - `freshness = 0.5 ^ (ageHours / 36)`
+  - `fresh = 1` for anything less than 6 hours old, else 0
   - `interest = LEAST(score, 10) / 10` for the item's category (0 when none),
     so interest can at most double an item's weight.
-- Anything less than 6 hours old gets `freshness` of at least 0.9, so a new
-  item is near the top for everyone on refresh whatever their interests.
+- The `fresh` step puts everything under 6 hours old above everything older,
+  whatever the viewer's interests, so a new item shows at the top on refresh;
+  interest still orders items within each group. (Revised during Batch 2: the
+  first draft's "freshness of at least 0.9" only changed items between 5.5 and
+  6 hours old, and a 5-hour-old item still lost to favourites under 42 hours.)
 - The viewer's own item from the last 24 hours sorts first for them.
 - Signed out, or with no scores at all: freshness only, which is newest first.
 - Ties break on `created_at DESC, id` so pages are stable.

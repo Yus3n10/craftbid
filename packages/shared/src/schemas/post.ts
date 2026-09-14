@@ -51,6 +51,10 @@ export const feedQuerySchema = paginationSchema.extend({
     .transform((value) => value === "true"),
 });
 
+export const homeQuerySchema = paginationSchema.extend({
+  category: z.enum(CRAFT_CATEGORY_SLUGS as [string, ...string[]]).optional(),
+});
+
 export type CreateCommentInput = z.infer<typeof createCommentSchema>;
 
 export const sharePostSchema = z.preprocess(

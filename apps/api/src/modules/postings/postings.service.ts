@@ -12,6 +12,8 @@ import { badRequest, forbidden, notFound } from "../../lib/errors.js";
 import * as imagesRepo from "../images/images.repository.js";
 import type { AuthUser } from "../../plugins/auth.plugin.js";
 import * as repo from "./postings.repository.js";
+import * as users from "../users/users.repository.js";
+import { recordInterest } from "../interests/interests.service.js";
 
 async function assertOwnsImages(ids: string[], ownerId: string): Promise<void> {
   const unique = [...new Set(ids)];
@@ -48,6 +50,7 @@ export async function createPosting(
     );
     await repo.attachImages(id, input.imageIds, tx);
   });
+  await recordInterest(clientId, "request", { postingId: id });
 
   const posting = await repo.findById(id);
   if (!posting) throw notFound();
@@ -85,6 +88,29 @@ export async function listPostings(
 ): Promise<Paginated<PostingDto>> {
   const { items, total } = await repo.list(query);
   return { items, total, limit: query.limit, offset: query.offset };
+}
+
+/**
+ * The requests shown on someone's profile: open and in progress, newest first.
+ * Cancelled, completed and removed ones are left off, and a removed account
+ * has no profile to show them on.
+ */
+export async function listForUser(
+  username: string,
+  paging: { limit: number; offset: number },
+): Promise<Paginated<PostingDto>> {
+  const user = await users.findByUsername(username);
+  if (!user || user.status === "deleted") throw notFound("That profile does not exist.");
+  const { items, total } = await repo.list({
+    clientId: user.id,
+    statuses: ["open", "in_progress"],
+    excludeRemoved: true,
+    mine: false,
+    sort: "newest",
+    limit: paging.limit,
+    offset: paging.offset,
+  });
+  return { items, total, limit: paging.limit, offset: paging.offset };
 }
 
 /**

@@ -64,7 +64,7 @@ async function stubApi(page: Page, me: () => object | null, extra?: Handler) {
       if (path === "/auth/refresh") return route.fulfill(SIGNED_OUT);
       if (path === "/me/payout-accounts") return route.fulfill(json([]));
       if (path === "/notifications") return route.fulfill(json({ ...JSON.parse(EMPTY_PAGE.body), unread: 0 }));
-      if (/^\/(feed|posts|postings|applications\/mine|commissions)$/.test(path)) return route.fulfill(EMPTY_PAGE);
+      if (/^\/(home|feed|posts|postings|applications\/mine|commissions)$/.test(path)) return route.fulfill(EMPTY_PAGE);
       return route.fulfill(json({ error: { code: "not_found", message: "Not found" } }, 404));
     },
   );
@@ -89,11 +89,11 @@ test.describe("the home feed", () => {
 
     await page.goto("/");
     await page.waitForTimeout(800);
-    expect(calls.filter((call) => call.startsWith("GET /feed")), "feed asked for before the session settled").toHaveLength(0);
+    expect(calls.filter((call) => call.startsWith("GET /home")), "feed asked for before the session settled").toHaveLength(0);
 
     releaseMe();
-    await expect(page.getByRole("heading", { name: "No work posted yet" })).toBeVisible();
-    expect(calls.filter((call) => call.startsWith("GET /feed"))).toHaveLength(1);
+    await expect(page.getByRole("heading", { name: "Nothing here yet" })).toBeVisible();
+    expect(calls.filter((call) => call.startsWith("GET /home"))).toHaveLength(1);
   });
 
   test("a first-time visitor gets the feed without waiting on a session", async ({ page }) => {
@@ -101,8 +101,8 @@ test.describe("the home feed", () => {
       path === "/auth/me" ? new Promise<void>(() => undefined) : undefined,
     );
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: "No work posted yet" })).toBeVisible();
-    expect(calls.some((call) => call.startsWith("GET /feed"))).toBe(true);
+    await expect(page.getByRole("heading", { name: "Nothing here yet" })).toBeVisible();
+    expect(calls.some((call) => call.startsWith("GET /home"))).toBe(true);
   });
 });
 

@@ -5,10 +5,11 @@ import {
   CRAFT_CATEGORIES,
   formatPeso,
   type FeedItemDto,
+  type HomeItemDto,
   type Paginated,
   type PostingDto,
 } from "@craftbid/shared";
-import { api } from "../lib/api.js";
+import { api, ApiError } from "../lib/api.js";
 import { useAuth } from "../lib/auth.js";
 import { mayHaveSession } from "../lib/session.js";
 import { cx } from "../lib/cx.js";
@@ -17,6 +18,7 @@ import { ButtonLink } from "./ui/Button.js";
 import { Card, ThreadRule } from "./ui/Primitives.js";
 import { CardSkeleton, EmptyState, ErrorState } from "./ui/States.js";
 import { FeedPost } from "./FeedPost.js";
+import { FeedRequestCard } from "./FeedRequestCard.js";
 
 type Tab = "all" | "saved";
 
@@ -41,12 +43,12 @@ function useSettledViewer(): { ready: boolean; key: string } {
 }
 
 /**
- * Open craft requests, alongside the feed rather than inside it.
+ * The newest open craft requests, kept reachable beside the feed.
  *
- * A request is the start of a private negotiation and a post is public work.
- * Mixing them into one column would invite people to react to a request the
- * way they react to a photograph, and the whole point is that bidding stays
- * between the client and each artist separately.
+ * Requests also appear in the feed itself, ranked with everything else, as
+ * cards with no reactions, comments, saves or shares: bidding stays between
+ * the client and each artist separately. This list is the quick way to the
+ * newest ones, whatever the feed put first.
  */
 function OpenRequests() {
   const viewer = useSettledViewer();
@@ -130,6 +132,30 @@ function CategoryList() {
 }
 
 /**
+ * The home feed: work, shares and open requests, ordered for this reader.
+ *
+ * /home is newer than /feed, and the site and the API deploy minutes apart.
+ * When the site arrives first, /home answers 404 until the API catches up, so
+ * the feed falls back to /feed (work only, newest first) rather than showing
+ * an error for those minutes.
+ */
+async function homeFeed(): Promise<Paginated<HomeItemDto>> {
+  try {
+    return await api.get<Paginated<HomeItemDto>>("/home?limit=12");
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.status !== 404) throw error;
+    const fallback = await api.get<Paginated<FeedItemDto>>("/feed?limit=12");
+    return { ...fallback, items: fallback.items.map((item) => ({ kind: "post" as const, ...item })) };
+  }
+}
+
+/** What this reader saved, most recently saved first. Posts only. */
+async function savedFeed(): Promise<Paginated<HomeItemDto>> {
+  const saved = await api.get<Paginated<FeedItemDto>>("/feed?limit=12&saved=true");
+  return { ...saved, items: saved.items.map((item) => ({ kind: "post" as const, ...item })) };
+}
+
+/**
  * The feed.
  *
  * One column of work at a readable width with the marketplace alongside it,
@@ -147,14 +173,11 @@ export function Feed() {
   // "No work posted yet" at someone whose feed is about to arrive.
   const { data, isPending: isLoading, error, refetch } = useQuery({
     queryKey: ["feed", tab, viewer.key],
-    queryFn: () =>
-      api.get<Paginated<FeedItemDto>>(
-        `/feed?limit=12${tab === "saved" ? "&saved=true" : ""}`,
-      ),
+    queryFn: () => (tab === "saved" ? savedFeed() : homeFeed()),
     enabled: viewer.ready,
   });
 
-  const posts = data?.items ?? [];
+  const items = data?.items ?? [];
 
   return (
     <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 lg:grid-cols-[minmax(0,1fr)_20rem]">
@@ -174,7 +197,7 @@ export function Feed() {
                     : "text-ink-soft hover:text-ink",
                 )}
               >
-                {value === "all" ? "Recent work" : "Saved"}
+                {value === "all" ? "For you" : "Saved"}
               </button>
             ))}
           </div>
@@ -192,7 +215,7 @@ export function Feed() {
           <div className="space-y-5">
             <CardSkeleton count={3} />
           </div>
-        ) : posts.length === 0 ? (
+        ) : items.length === 0 ? (
           tab === "saved" ? (
             <EmptyState
               title="Nothing saved yet"
@@ -201,18 +224,24 @@ export function Feed() {
             />
           ) : (
             <EmptyState
-              title="No work posted yet"
-              description="When artists share pieces they have finished, they appear here."
+              title="Nothing here yet"
+              description="Work that artists share and requests that clients post appear here."
               action={{ label: "Browse craft requests", to: "/postings" }}
             />
           )
         ) : (
           <ul className="stagger space-y-5">
-            {posts.map((post) => (
-              <li key={post.share?.id ?? post.id}>
-                <FeedPost post={post} />
-              </li>
-            ))}
+            {items.map((item) =>
+              item.kind === "request" ? (
+                <li key={`request-${item.id}`}>
+                  <FeedRequestCard request={item} />
+                </li>
+              ) : (
+                <li key={item.share?.id ?? item.id}>
+                  <FeedPost post={item} />
+                </li>
+              ),
+            )}
           </ul>
         )}
       </div>

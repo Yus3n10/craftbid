@@ -11,6 +11,7 @@ import {
 } from "@craftbid/shared";
 import { bufToUuid, newId, uuidToBuf } from "../../db/ids.js";
 import { DbError, withTransaction } from "../../db/query.js";
+import { recordInterest } from "../interests/interests.service.js";
 import { badRequest, conflict, forbidden, notFound } from "../../lib/errors.js";
 import * as commissionsRepo from "../commissions/commissions.repository.js";
 import * as notifications from "../notifications/notifications.repository.js";
@@ -93,6 +94,7 @@ export async function apply(
     }
     throw error;
   }
+  await recordInterest(artistId, "bid", { postingId });
 
   const application = await repo.findById(id);
   if (!application) throw notFound();

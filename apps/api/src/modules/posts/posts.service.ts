@@ -141,7 +141,7 @@ export async function feed(
  * given. Each post is loaded and decorated once however many shares of it the
  * page holds, so a post shared five times costs the same as one.
  */
-async function assembleFeed(
+export async function assembleFeed(
   entries: { postId: string; shareId: string | null }[],
   viewerId: string | null,
 ): Promise<FeedItemDto[]> {

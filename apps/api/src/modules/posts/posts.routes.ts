@@ -11,6 +11,7 @@ import {
 } from "@craftbid/shared";
 import { z } from "zod";
 import * as service from "./posts.service.js";
+import { noteBrowsing } from "../interests/interests.service.js";
 
 export const postRoutes: FastifyPluginAsync = async (fastify) => {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
@@ -20,7 +21,10 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
   app.get(
     "/posts",
     { schema: { querystring: artistPostListQuerySchema } },
-    async (request) => service.listPosts(request.query, request.user?.id ?? null),
+    async (request) => {
+      await noteBrowsing(request.user?.id, request.query.category, request.query.offset);
+      return service.listPosts(request.query, request.user?.id ?? null);
+    },
   );
 
   /**

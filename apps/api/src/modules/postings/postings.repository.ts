@@ -154,6 +154,30 @@ export async function findById(
   return mapPosting(row, images.get(id) ?? []);
 }
 
+/** Several postings by id, keyed by id. Missing ids are simply absent. */
+export async function findManyByIds(
+  ids: string[],
+  q: Queryable = db,
+): Promise<Map<string, PostingDto>> {
+  const result = new Map<string, PostingDto>();
+  if (ids.length === 0) return result;
+  const binds: Record<string, BindValue> = {};
+  const placeholders = ids.map((id, index) => {
+    binds[`id${index}`] = uuidToBuf(id);
+    return `:id${index}`;
+  });
+  const rows = await q.many<PostingRow>(
+    `${POSTING_SELECT} WHERE p.id IN (${placeholders.join(", ")})`,
+    binds,
+  );
+  const images = await imagesForPostings(rows.map((row) => bufToUuid(row.id)!), q);
+  for (const row of rows) {
+    const id = bufToUuid(row.id)!;
+    result.set(id, mapPosting(row, images.get(id) ?? []));
+  }
+  return result;
+}
+
 /** The bare row, for ownership and state checks that do not need the full DTO. */
 export async function findOwnership(
   id: string,
@@ -181,7 +205,13 @@ export interface PostingListResult {
 }
 
 export async function list(
-  query: PostingListQuery & { clientId?: string },
+  query: PostingListQuery & {
+    clientId?: string;
+    /** Any of these statuses, instead of the single `status` filter. */
+    statuses?: PostingStatus[];
+    /** Leave out requests staff removed. */
+    excludeRemoved?: boolean;
+  },
   q: Queryable = db,
 ): Promise<PostingListResult> {
   const where: string[] = [];
@@ -190,6 +220,17 @@ export async function list(
   if (query.status) {
     where.push("p.status = :status");
     binds.status = query.status;
+  }
+  if (query.statuses && query.statuses.length > 0) {
+    // Statuses come from the caller's code, never the request; bound anyway.
+    const placeholders = query.statuses.map((status, index) => {
+      binds[`st${index}`] = status;
+      return `:st${index}`;
+    });
+    where.push(`p.status IN (${placeholders.join(", ")})`);
+  }
+  if (query.excludeRemoved) {
+    where.push("p.removed_at IS NULL");
   }
   if (query.category) {
     where.push("c.slug = :category");

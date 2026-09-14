@@ -188,6 +188,15 @@ export interface FeedItemDto extends ArtistPostDto {
   share?: ShareDto;
 }
 
+/**
+ * An open craft request as the home feed shows it. Without the bid count or
+ * the commission: a request in a public feed must say nothing about bidding.
+ */
+export type HomeRequestDto = Omit<PostingDto, "applicationCount" | "commissionId">;
+
+/** One card in the home feed: a post (or a share of one), or an open request. */
+export type HomeItemDto = ({ kind: "post" } & FeedItemDto) | ({ kind: "request" } & HomeRequestDto);
+
 export const ACTIVITY_KINDS = ["reaction", "comment", "save", "share"] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 

@@ -33,6 +33,7 @@ import { communityRoutes } from "./modules/community.routes.js";
 import { adminRoutes } from "./modules/admin/admin.routes.js";
 import { bugReportRoutes } from "./modules/bug-reports/bug-reports.routes.js";
 import { chatRoutes } from "./modules/chat/chat.routes.js";
+import { homeRoutes } from "./modules/home/home.routes.js";
 
 /** One entry of Fastify's `error.validation` array. */
 interface ValidationEntry {
@@ -368,6 +369,7 @@ export async function buildApp(
   await app.register(adminRoutes);
   await app.register(bugReportRoutes);
   await app.register(chatRoutes);
+  await app.register(homeRoutes);
 
   return app;
 }

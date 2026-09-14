@@ -5,11 +5,15 @@ import {
   createApplicationSchema,
   createPostingSchema,
   idParamSchema,
+  paginationSchema,
   postingListQuerySchema,
   updatePostingSchema,
+  usernameSchema,
 } from "@craftbid/shared";
+import { z } from "zod";
 import * as applications from "../applications/applications.service.js";
 import * as service from "./postings.service.js";
+import { noteBrowsing } from "../interests/interests.service.js";
 
 export const postingRoutes: FastifyPluginAsync = async (fastify) => {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
@@ -19,15 +23,29 @@ export const postingRoutes: FastifyPluginAsync = async (fastify) => {
   app.get(
     "/postings",
     { schema: { querystring: postingListQuerySchema } },
-    async (request) =>
-      service.listPostings({
+    async (request) => {
+      await noteBrowsing(request.user?.id, request.query.category, request.query.offset);
+      return service.listPostings({
         ...request.query,
         // Scoped from the token rather than a client id in the query string,
         // so `mine` cannot be aimed at another user's postings.
         ...(request.query.mine && request.user
           ? { clientId: request.user.id }
           : {}),
-      }),
+      });
+    },
+  );
+
+  // Public, like the request list: the requests on someone's profile.
+  app.get(
+    "/users/:username/postings",
+    {
+      schema: {
+        params: z.object({ username: usernameSchema }),
+        querystring: paginationSchema,
+      },
+    },
+    async (request) => service.listForUser(request.params.username, request.query),
   );
 
   app.get(
