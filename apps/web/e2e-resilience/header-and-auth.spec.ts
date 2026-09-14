@@ -290,7 +290,7 @@ test.describe("signing in", () => {
 
   async function signIn(page: Page, remember: boolean) {
     await page.getByLabel("Email").fill("nena@example.com");
-    await page.getByLabel("Password").fill("a sufficiently long password");
+    await page.getByRole("textbox", { name: "Password", exact: true }).fill("a sufficiently long password");
     if (remember) await page.getByRole("checkbox", { name: "Keep me logged in" }).check();
     await page.getByRole("button", { name: "Sign in" }).click();
   }

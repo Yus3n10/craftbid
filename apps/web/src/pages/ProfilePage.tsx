@@ -15,7 +15,8 @@ import { Page } from "../components/layout/Shell.js";
 import { ButtonLink } from "../components/ui/Button.js";
 import { PlatformLogo, platformLabel } from "../components/ui/PlatformLogos.js";
 import { Stars } from "../components/ui/Stars.js";
-import { Avatar, Card, Tag, ThreadRule } from "../components/ui/Primitives.js";
+import { Avatar, Card, RoleBadge, Tag, ThreadRule } from "../components/ui/Primitives.js";
+import { ProfileChecklist } from "../components/ProfileChecklist.js";
 import {
   CardSkeleton,
   EmptyState,
@@ -254,7 +255,10 @@ export function ProfilePage() {
             </span>
             <div className="pb-1">
               <h1 className="font-display text-3xl">{profile.displayName}</h1>
-              <p className="text-ink-faint">@{profile.username}</p>
+              <p className="flex flex-wrap items-center gap-2 text-ink-faint">
+                <span>@{profile.username}</span>
+                <RoleBadge role={profile.role} />
+              </p>
             </div>
           </div>
 
@@ -274,6 +278,8 @@ export function ProfilePage() {
 
         <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_18rem]">
           <div className="min-w-0 space-y-10">
+            {isSelf && user && <ProfileChecklist me={user} />}
+
             {profile.artist?.headline && (
               <p className="font-display text-xl text-ink-soft">
                 {profile.artist.headline}

@@ -16,6 +16,7 @@ import { CRAFT_CATEGORIES, UPLOAD } from "@craftbid/shared";
 import { config } from "./config.js";
 import { DbError } from "./db/query.js";
 import { AppError } from "./lib/errors.js";
+import { ACCESS_COOKIE, REFRESH_COOKIE } from "./lib/tokens.js";
 import { localStorageRoot } from "./lib/storage/local.js";
 import authPlugin from "./plugins/auth.plugin.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
@@ -187,16 +188,25 @@ export async function buildApp(
    * visitor. So anything answered to a signed-in caller is private and stored
    * nowhere, and only genuinely anonymous reads are shareable.
    *
-   * stale-while-revalidate is what makes this worth doing on a free tier: a
-   * returning visitor gets the previous copy instantly while the refresh
-   * happens behind them, which hides both the network and a waking server.
+   * Everything people write (the feed, requests, posts, profiles) is sent
+   * `no-cache`: the browser may keep it but must ask the server before showing
+   * it again. It used to be max-age=30 with five minutes of
+   * stale-while-revalidate, and a reload's fetch was then answered from the
+   * browser's own copy, so new posts and requests did not appear on refresh.
+   * Only things that do not change when users act keep a real lifetime.
    */
   app.addHook("onSend", async (request, reply) => {
     if (request.method !== "GET") return;
     if (reply.statusCode >= 400) return;
 
+    // A session cookie counts even when its access token has lapsed or does
+    // not verify. The first requests of a page go out before the refresh
+    // renews it, and answered as anonymous they were stored and replayed.
     const authenticated =
-      Boolean(request.headers.authorization) || Boolean(request.user);
+      Boolean(request.headers.authorization) ||
+      Boolean(request.user) ||
+      Boolean(request.cookies?.[ACCESS_COOKIE]) ||
+      Boolean(request.cookies?.[REFRESH_COOKIE]);
 
     if (authenticated) {
       reply.header("Cache-Control", "private, no-store");
@@ -222,7 +232,7 @@ export async function buildApp(
       return;
     }
 
-    reply.header("Cache-Control", "public, max-age=30, stale-while-revalidate=300");
+    reply.header("Cache-Control", "public, no-cache");
   });
 
   await app.register(multipart, {

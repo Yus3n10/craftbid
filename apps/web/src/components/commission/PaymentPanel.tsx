@@ -351,12 +351,29 @@ function DecisionCard({ commissionId, payment }: { commissionId: string; payment
   );
 }
 
+/**
+ * How the client will pay the second half.
+ *
+ * Choosing used to save on the click with nothing to say it had, so it looked
+ * as if the choice went nowhere. Now a choice is a draft until Save changes,
+ * which appears only when the draft differs from what is saved, and saving
+ * says so and tells the artist.
+ */
 function BalanceMethodPicker({ commissionId, current }: { commissionId: string; current: BalanceMethod }) {
   const refresh = useRefresh(commissionId);
+  const [selected, setSelected] = useState<BalanceMethod>(current);
+  const dirty = selected !== current;
+  useUnsavedChanges(dirty);
+
   const choose = useMutation({
     mutationFn: (method: BalanceMethod) => api.put(`/commissions/${commissionId}/balance-method`, { method }),
     onSuccess: refresh,
   });
+
+  // A save that lands, or a change made elsewhere, becomes the new baseline.
+  useEffect(() => {
+    setSelected(current);
+  }, [current]);
 
   return (
     <fieldset className="space-y-2">
@@ -366,16 +383,19 @@ function BalanceMethodPicker({ commissionId, current }: { commissionId: string; 
           key={option.value}
           className={cx(
             "flex cursor-pointer gap-3 rounded-md border px-3 py-2.5 text-sm",
-            current === option.value ? "border-indigo bg-indigo-wash" : "border-fiber bg-paper-raised",
+            selected === option.value ? "border-indigo bg-indigo-wash" : "border-fiber bg-paper-raised",
           )}
         >
           <input
             type="radio"
             name="balance-method"
             className="mt-1"
-            checked={current === option.value}
+            checked={selected === option.value}
             disabled={choose.isPending}
-            onChange={() => choose.mutate(option.value)}
+            onChange={() => {
+              choose.reset();
+              setSelected(option.value);
+            }}
           />
           <span>
             <span className="block font-medium text-ink">{option.title}</span>
@@ -384,6 +404,16 @@ function BalanceMethodPicker({ commissionId, current }: { commissionId: string; 
         </label>
       ))}
       <FormError error={choose.error} />
+      <div className="flex min-h-9 flex-wrap items-center gap-3 pt-1" aria-live="polite">
+        {dirty && (
+          <Button type="button" size="sm" loading={choose.isPending} onClick={() => choose.mutate(selected)}>
+            Save changes
+          </Button>
+        )}
+        {!dirty && choose.isSuccess && (
+          <span className="text-sm text-sage">Saved. The artist has been notified.</span>
+        )}
+      </div>
     </fieldset>
   );
 }
@@ -599,6 +629,15 @@ function CurrentStep({ commission, isClient }: { commission: CommissionDto; isCl
         return (
           <div className="space-y-3">
             <WaitingNote>Waiting for the client to send the down payment of {down}.</WaitingNote>
+            <p className="text-sm text-ink-soft">
+              {/* Starts as "after photos" until the client picks, so this
+                  names the current option rather than claiming a choice. */}
+              How the balance will be paid:{" "}
+              <strong className="text-ink">
+                {BALANCE_OPTIONS.find((option) => option.value === tracking.balanceMethod)?.title}
+              </strong>
+              . The client can change this until you confirm the down payment, and you will be notified if they do.
+            </p>
             {tracking.payTo.length === 0 && (
               <p className="text-sm text-rust">
                 The client cannot pay you yet.{" "}

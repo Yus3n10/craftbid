@@ -482,15 +482,40 @@ describe("cache headers", () => {
     }
   });
 
-  it("allows an anonymous read to be cached briefly", async () => {
+  /**
+   * A reload has to show what was posted since the last one. A browser holding
+   * a feed under max-age or stale-while-revalidate answers the reload's fetch
+   * from its own copy, which was measured on production in Chromium: three
+   * loads, one server response.
+   */
+  it("makes the browser check with the server before reusing an anonymous read", async () => {
     const app = await getTestApp();
-    const response = await app.inject({ method: "GET", url: "/feed" });
 
-    expect(response.headers["cache-control"]).toContain("public");
-    expect(response.headers["cache-control"]).toContain("stale-while-revalidate");
-    // Without Vary, a cache could hand this anonymous copy to a signed-in
-    // reader on the same URL.
-    expect(String(response.headers["vary"])).toContain("Authorization");
+    for (const url of ["/feed", "/posts", "/postings?status=open", `/users/${artist.username}`]) {
+      const response = await app.inject({ method: "GET", url });
+      const header = String(response.headers["cache-control"]);
+      expect(header, url).toContain("no-cache");
+      expect(header, url).not.toContain("max-age");
+      expect(header, url).not.toContain("stale-while-revalidate");
+      // Without Vary, a cache could hand this anonymous copy to a signed-in
+      // reader on the same URL.
+      expect(String(response.headers["vary"]), url).toContain("Authorization");
+    }
+  });
+
+  /**
+   * A signed-in reader whose 15-minute access token has lapsed still sends it
+   * with the first requests of a page, before the refresh renews it. Treated as
+   * anonymous, that feed was stored and shown again on the next reload.
+   */
+  it("never stores a read sent with a session cookie, even an expired one", async () => {
+    const app = await getTestApp();
+
+    for (const cookie of ["craftbid_at=expired.or.forged", "craftbid_rt=some-refresh-token"]) {
+      const response = await app.inject({ method: "GET", url: "/feed", headers: { cookie } });
+      expect(response.statusCode, cookie).toBe(200);
+      expect(response.headers["cache-control"], cookie).toBe("private, no-store");
+    }
   });
 
   it("caches the craft categories for far longer than a feed", async () => {

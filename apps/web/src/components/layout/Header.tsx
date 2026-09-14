@@ -54,6 +54,29 @@ const ICON_BUTTON =
   "relative flex size-11 items-center justify-center rounded-sm text-ink-soft transition-colors hover:bg-paper-sunk hover:text-ink";
 
 /**
+ * The bell, with the unread count on it.
+ *
+ * On phones it used to live only inside the menu, so the only way to find out
+ * whether anything had happened was to open the menu and look. It sits in the
+ * bar itself at every width now.
+ */
+function NotificationsLink() {
+  return (
+    <Link to="/notifications" className={ICON_BUTTON} aria-label="Notifications">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path
+          d="M10 2.5a5 5 0 0 0-5 5v3l-1.5 2.5h13L15 10.5v-3a5 5 0 0 0-5-5ZM8 16a2 2 0 0 0 4 0"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinejoin="round"
+        />
+      </svg>
+      <UnreadDot />
+    </Link>
+  );
+}
+
+/**
  * The site header.
  *
  * On a phone this used to be a 64px sticky bar whose menu opened inside it:
@@ -221,17 +244,7 @@ export function Header() {
 
           {user ? (
             <>
-              <Link to="/notifications" className={ICON_BUTTON} aria-label="Notifications">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                  <path
-                    d="M10 2.5a5 5 0 0 0-5 5v3l-1.5 2.5h13L15 10.5v-3a5 5 0 0 0-5-5ZM8 16a2 2 0 0 0 4 0"
-                    stroke="currentColor"
-                    strokeWidth="1.4"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <UnreadDot />
-              </Link>
+              <NotificationsLink />
 
               {/* Settings, saved posts and history were reachable only through
                   the profile page. The cog opens all of them, and Sign out. */}
@@ -265,6 +278,7 @@ export function Header() {
 
         <div className="ml-auto flex items-center gap-1 lg:hidden">
           {searchToggle}
+          {user && <NotificationsLink />}
           <button
             ref={menuButtonRef}
             type="button"

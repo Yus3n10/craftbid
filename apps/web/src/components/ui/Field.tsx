@@ -1,10 +1,11 @@
-import { useId, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import type {
   InputHTMLAttributes,
   SelectHTMLAttributes,
   TextareaHTMLAttributes,
 } from "react";
 import { cx } from "../../lib/cx.js";
+import { EyeIcon, EyeOffIcon } from "./Icons.js";
 
 const CONTROL =
   "rounded-md border bg-paper-raised px-3 py-2 text-ink " +
@@ -101,6 +102,47 @@ export function TextInput({
       aria-invalid={invalid || undefined}
       {...rest}
     />
+  );
+}
+
+/**
+ * A password box with a button that shows what was typed.
+ *
+ * On a phone keyboard a mistyped password is the most common reason a sign-in
+ * fails, and dots give no way to see which letter went wrong. The button is a
+ * real button with a name that says what it will do, and aria-pressed says
+ * whether the password is currently showing. It never submits the form.
+ */
+export function PasswordInput({
+  invalid,
+  className,
+  ...rest
+}: Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & { invalid?: boolean }) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <div className="relative">
+      <input
+        type={visible ? "text" : "password"}
+        // Off while showing, so a phone does not learn the password as a word
+        // and offer it back as a suggestion in some other app.
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
+        className={control(className, "pr-11", invalid ? "border-rust" : "border-fiber-strong")}
+        aria-invalid={invalid || undefined}
+        {...rest}
+      />
+      <button
+        type="button"
+        onClick={() => setVisible((current) => !current)}
+        aria-label={visible ? "Hide password" : "Show password"}
+        aria-pressed={visible}
+        className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-md text-ink-faint transition-colors hover:text-ink focus-visible:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo/30"
+      >
+        {visible ? <EyeOffIcon /> : <EyeIcon />}
+      </button>
+    </div>
   );
 }
 

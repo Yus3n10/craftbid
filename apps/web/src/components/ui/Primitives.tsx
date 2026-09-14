@@ -102,6 +102,25 @@ export function StatusBadge({ status }: { status: string }) {
   );
 }
 
+/**
+ * Whether an account commissions work or makes it.
+ *
+ * Indigo for artists and sage for clients: clay stays reserved for money, and
+ * the two need to be told apart at a glance on a profile.
+ */
+export function RoleBadge({ role }: { role: "client" | "artist" }) {
+  return (
+    <span
+      className={cx(
+        "inline-flex items-center rounded-sm px-2 py-0.5 text-xs font-semibold",
+        role === "artist" ? "bg-indigo-wash text-indigo" : "bg-sage-wash text-sage",
+      )}
+    >
+      {role === "artist" ? "Artist" : "Client"}
+    </span>
+  );
+}
+
 export function Tag({ children }: { children: ReactNode }) {
   return (
     <span className="inline-flex items-center rounded-sm border border-fiber bg-paper px-2 py-0.5 text-xs text-ink-soft">

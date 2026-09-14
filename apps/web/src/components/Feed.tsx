@@ -10,6 +10,7 @@ import {
 } from "@craftbid/shared";
 import { api } from "../lib/api.js";
 import { useAuth } from "../lib/auth.js";
+import { mayHaveSession } from "../lib/session.js";
 import { cx } from "../lib/cx.js";
 import { materialColor } from "../lib/materials.js";
 import { ButtonLink } from "./ui/Button.js";
@@ -20,6 +21,26 @@ import { FeedPost } from "./FeedPost.js";
 type Tab = "all" | "saved";
 
 /**
+ * Who the feed is being fetched for, once that is known.
+ *
+ * Someone who may have a session waits for it to be confirmed (and renewed,
+ * if the 15-minute access token lapsed) before the feed is asked for. Asked
+ * for at the same moment, it went out with the lapsed token, came back as a
+ * stranger's feed without their saves or reactions, and was what the next
+ * reload showed. A first-time visitor has nothing to wait for.
+ *
+ * The viewer is part of the query key so signing in or out never reuses the
+ * other person's copy.
+ */
+function useSettledViewer(): { ready: boolean; key: string } {
+  const { user, isLoading } = useAuth();
+  return {
+    ready: !isLoading || !mayHaveSession(),
+    key: user?.id ?? "anonymous",
+  };
+}
+
+/**
  * Open craft requests, alongside the feed rather than inside it.
  *
  * A request is the start of a private negotiation and a post is public work.
@@ -28,10 +49,12 @@ type Tab = "all" | "saved";
  * between the client and each artist separately.
  */
 function OpenRequests() {
-  const { data, isLoading } = useQuery({
-    queryKey: ["postings", "sidebar"],
+  const viewer = useSettledViewer();
+  const { data, isPending: isLoading } = useQuery({
+    queryKey: ["postings", "sidebar", viewer.key],
     queryFn: () =>
       api.get<Paginated<PostingDto>>("/postings?status=open&limit=4&sort=newest"),
+    enabled: viewer.ready,
   });
 
   const items = data?.items ?? [];
@@ -116,14 +139,19 @@ function CategoryList() {
  */
 export function Feed() {
   const { user } = useAuth();
+  const viewer = useSettledViewer();
   const [tab, setTab] = useState<Tab>("all");
 
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["feed", tab],
+  // isPending rather than isLoading: while waiting for the session the query
+  // is disabled, and a disabled query is not "loading", which would flash
+  // "No work posted yet" at someone whose feed is about to arrive.
+  const { data, isPending: isLoading, error, refetch } = useQuery({
+    queryKey: ["feed", tab, viewer.key],
     queryFn: () =>
       api.get<Paginated<FeedItemDto>>(
         `/feed?limit=12${tab === "saved" ? "&saved=true" : ""}`,
       ),
+    enabled: viewer.ready,
   });
 
   const posts = data?.items ?? [];

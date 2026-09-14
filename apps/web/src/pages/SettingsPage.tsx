@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUnsavedChanges } from "../lib/unsavedChanges.js";
 import {
@@ -17,29 +18,36 @@ import { Page } from "../components/layout/Shell.js";
 import { Button } from "../components/ui/Button.js";
 import { PlatformLogo, platformLabel } from "../components/ui/PlatformLogos.js";
 import { Field, Select, TextArea, TextInput } from "../components/ui/Field.js";
-import { Card, ThreadRule } from "../components/ui/Primitives.js";
+import { Card, RoleBadge, ThreadRule } from "../components/ui/Primitives.js";
+import { ProfileChecklist } from "../components/ProfileChecklist.js";
 import { FormError, PageHeading } from "../components/ui/States.js";
 import { PayoutAccountsForm } from "../components/commission/PayoutAccountsForm.js";
 import { ImageUploader, type UploadedImage } from "../components/ImageUploader.js";
 
 function Section({
+  id,
   title,
   description,
   children,
 }: {
+  /** The anchor the profile checklist links to. */
+  id: string;
   title: string;
   description?: string;
   children: React.ReactNode;
 }) {
   return (
-    <Card className="p-6">
-      <div className="pl-3">
-        <h2 className="font-display text-xl">{title}</h2>
-        {description && <p className="mt-1 text-sm text-ink-soft">{description}</p>}
-        <ThreadRule className="my-4 w-14" />
-        {children}
-      </div>
-    </Card>
+    // scroll-mt clears the sticky header when a checklist link jumps here.
+    <section id={id} className="scroll-mt-24">
+      <Card className="p-6">
+        <div className="pl-3">
+          <h2 className="font-display text-xl">{title}</h2>
+          {description && <p className="mt-1 text-sm text-ink-soft">{description}</p>}
+          <ThreadRule className="my-4 w-14" />
+          {children}
+        </div>
+      </Card>
+    </section>
   );
 }
 
@@ -129,6 +137,14 @@ export function SettingsPage() {
     onSuccess: onSaved,
   });
 
+  // React Router does not scroll to a #section on its own, and the checklist
+  // links straight to the part of this page that fixes each item.
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (!hash) return;
+    document.getElementById(hash.slice(1))?.scrollIntoView({ block: "start" });
+  }, [hash]);
+
   if (!user) return null;
 
   const profileFields =
@@ -139,10 +155,14 @@ export function SettingsPage() {
       <PageHeading
         title="Your profile"
         description="This is what clients and artists see when they look you up."
+        actions={<RoleBadge role={user.role} />}
       />
 
       <div className="space-y-6">
+        <ProfileChecklist me={user} />
+
         <Section
+          id="basics"
           title="Basics"
           description="Location stays coarse: region and city only, never a street address."
         >
@@ -248,6 +268,7 @@ export function SettingsPage() {
 
         {user.role === "artist" && (
           <Section
+            id="craft"
             title="Your craft"
             description="What you make. Clients filter by these, so keep them accurate."
           >
@@ -348,6 +369,7 @@ export function SettingsPage() {
 
         {user.role === "artist" && (
           <Section
+            id="payout"
             title="Where clients pay you"
             description="Clients see these only after they choose you for a commission, never on your public profile. They pay you directly, and you confirm each payment when it arrives."
           >
@@ -356,6 +378,7 @@ export function SettingsPage() {
         )}
 
         <Section
+          id="links"
           title="Where else to find you"
           description="Paste a link and the platform is worked out from it. Clients use these to reach you directly, so a Messenger, WhatsApp or Viber link is often more useful than a website."
         >

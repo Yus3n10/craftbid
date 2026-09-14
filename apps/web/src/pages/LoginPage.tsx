@@ -6,7 +6,7 @@ import { BEARER_MODE } from "../lib/session.js";
 import { RememberMe } from "../components/RememberMe.js";
 import { Page } from "../components/layout/Shell.js";
 import { Button } from "../components/ui/Button.js";
-import { Field, TextInput } from "../components/ui/Field.js";
+import { Field, PasswordInput, TextInput } from "../components/ui/Field.js";
 import { FormError } from "../components/ui/States.js";
 import { ThreadRule } from "../components/ui/Primitives.js";
 
@@ -67,9 +67,8 @@ export function LoginPage() {
 
           <Field label="Password" error={fields.password} required>
             {({ id, describedBy, invalid }) => (
-              <TextInput
+              <PasswordInput
                 id={id}
-                type="password"
                 autoComplete="current-password"
                 aria-describedby={describedBy}
                 invalid={invalid}

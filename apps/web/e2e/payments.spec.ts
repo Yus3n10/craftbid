@@ -83,7 +83,7 @@ async function register(page: Page, role: "client" | "artist"): Promise<void> {
   await page.getByLabel("Display name").fill(`Pay ${role}`);
   await page.getByLabel("Username").fill(username);
   await page.getByLabel("Email").fill(`${username}@example.com`);
-  await page.getByLabel("Password").fill(PASSWORD);
+  await page.getByRole("textbox", { name: "Password", exact: true }).fill(PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
   await confirmEmail(page, `${username}@example.com`);
   await page.goto(role === "artist" ? "/settings" : "/postings");

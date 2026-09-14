@@ -250,7 +250,7 @@ test.describe("email verification", () => {
     await page.getByLabel("Display name").fill("New Person");
     await page.getByLabel("Username").fill("newperson");
     await page.getByLabel("Email").fill("new@example.com");
-    await page.getByLabel("Password").fill("a sufficiently long password");
+    await page.getByRole("textbox", { name: "Password", exact: true }).fill("a sufficiently long password");
     await page.getByRole("button", { name: "Create account" }).click();
     await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
     await expect(page.getByText("new@example.com")).toBeVisible();

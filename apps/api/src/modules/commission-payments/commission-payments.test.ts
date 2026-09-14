@@ -407,6 +407,30 @@ describe("the work and the balance", () => {
     expect((await tracking(artist, commissionId)).payments[0]!.method).toBe("cash");
   });
 
+  it("tells the artist which balance option the client chose, only when it changes", async () => {
+    const commissionId = await startCommission(client, artist);
+    const current = (await tracking(client, commissionId)).balanceMethod;
+    const other = current === "cod" ? "meetup" : "cod";
+
+    const chosen = async () => {
+      const response = await inject(artist, "GET", "/notifications?limit=50");
+      return (response.json() as { items: { type: string; payload: { method?: string } }[] }).items.filter(
+        (item) => item.type === "balance_method_chosen",
+      );
+    };
+
+    // Saving what is already saved is not news to the artist.
+    expect((await inject(client, "PUT", `/commissions/${commissionId}/balance-method`, { method: current })).statusCode).toBe(204);
+    expect(await chosen()).toHaveLength(0);
+
+    expect((await inject(client, "PUT", `/commissions/${commissionId}/balance-method`, { method: other })).statusCode).toBe(204);
+    const notices = await chosen();
+    expect(notices).toHaveLength(1);
+    expect(notices[0]!.payload).toMatchObject({ commissionId, method: other });
+    // The client made the choice, so the client is not told about it.
+    expect(await notificationTypes(client)).not.toContain("balance_method_chosen");
+  });
+
   it("fixes the balance option once the artist has confirmed the down payment", async () => {
     const commissionId = await startCommission(client, artist);
     expect((await inject(artist, "PUT", `/commissions/${commissionId}/balance-method`, { method: "cod" })).statusCode).toBe(403);

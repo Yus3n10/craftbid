@@ -22,6 +22,7 @@ const COPY: Record<NotificationType, string> = {
   post_reaction: "Someone reacted to your work.",
   post_comment: "Someone commented on your work.",
   post_shared: "Someone shared your work to their profile.",
+  balance_method_chosen: "The client chose how they will pay the balance.",
   payment_submitted: "The client recorded a payment. Check that you received it.",
   payment_confirmed: "A payment was confirmed as received.",
   payment_rejected: "The artist says a payment did not arrive. Check the details.",
@@ -41,7 +42,18 @@ const REACTION_COPY: Record<string, string> = {
   like: "Someone liked a piece of your work.",
 };
 
+/** Says which option, since it changes what the artist does next. */
+const BALANCE_METHOD_COPY: Record<string, string> = {
+  transfer: "The client will pay the balance after seeing photos of the finished piece. Ship once it arrives.",
+  cod: "The client will pay the balance cash on delivery, to the courier.",
+  meetup: "The client will pay the balance in cash when you meet.",
+};
+
 function describe(notification: NotificationDto): string {
+  if (notification.type === "balance_method_chosen") {
+    const method = (notification.payload as { method?: string }).method;
+    return (method && BALANCE_METHOD_COPY[method]) ?? COPY.balance_method_chosen;
+  }
   if (notification.type === "post_reaction") {
     const kind = (notification.payload as { kind?: string }).kind;
     return (kind && REACTION_COPY[kind]) ?? COPY.post_reaction;

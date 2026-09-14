@@ -11,7 +11,7 @@ import { useUnsavedChanges } from "../lib/unsavedChanges.js";
 import { cx } from "../lib/cx.js";
 import { Page } from "../components/layout/Shell.js";
 import { Button } from "../components/ui/Button.js";
-import { Field, TextInput } from "../components/ui/Field.js";
+import { Field, PasswordInput, TextInput } from "../components/ui/Field.js";
 import { FormError } from "../components/ui/States.js";
 import { ThreadRule } from "../components/ui/Primitives.js";
 
@@ -193,9 +193,8 @@ export function RegisterPage() {
           required
         >
           {({ id, describedBy, invalid }) => (
-            <TextInput
+            <PasswordInput
               id={id}
-              type="password"
               autoComplete="new-password"
               aria-describedby={describedBy}
               invalid={invalid}

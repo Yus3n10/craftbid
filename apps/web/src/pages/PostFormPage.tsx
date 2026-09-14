@@ -64,6 +64,7 @@ export function PostFormPage() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["posts"] });
+      void queryClient.invalidateQueries({ queryKey: ["feed"] });
       leaveWithoutPrompt();
       navigate(`/artists/${user!.username}`);
     },

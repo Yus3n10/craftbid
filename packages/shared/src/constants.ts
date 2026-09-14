@@ -66,6 +66,7 @@ export const NOTIFICATION_TYPES = [
   "problem_reported",
   "problem_closed",
   "post_shared",
+  "balance_method_chosen",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

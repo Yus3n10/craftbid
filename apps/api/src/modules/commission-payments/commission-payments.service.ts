@@ -258,7 +258,14 @@ export async function setBalanceMethod(
         "The down payment is already confirmed, so the balance option is fixed. Agree any change with the artist directly.",
       );
     }
+    if (context.balanceMethod === method) return;
     await repo.setBalanceMethod(commissionId, method, tx);
+    // It decides whether the artist ships before or after the balance, so the
+    // artist hears about it rather than finding out by opening the commission.
+    await notifications.notify(
+      { userId: context.artistId, type: "balance_method_chosen", payload: { commissionId, method } },
+      tx,
+    );
   });
 }
 

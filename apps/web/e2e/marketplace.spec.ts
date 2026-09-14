@@ -27,7 +27,7 @@ async function register(
   await page.getByLabel("Display name").fill(`Test ${role}`);
   await page.getByLabel("Username").fill(username);
   await page.getByLabel("Email").fill(`${username}@example.com`);
-  await page.getByLabel("Password").fill(PASSWORD);
+  await page.getByRole("textbox", { name: "Password", exact: true }).fill(PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
 
   // The account is confirmed through the emailed link, which lands on the
