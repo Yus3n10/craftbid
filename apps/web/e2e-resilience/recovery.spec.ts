@@ -147,8 +147,11 @@ test.describe("an API that accepts a request and never answers", () => {
     let attempts = 0;
     // Accepted, then never answered. Playwright holds the route open by simply
     // never resolving it, which is the socket-level shape of the original bug.
+    // /home is what the home page asks for first; /feed only after a 404, which
+    // a hung request never gives. Both are held, so the test cannot pass or fail
+    // on whatever an unstubbed call happens to reach on the machine running it.
     await page.route(
-      (url) => isApiCall(url, /^\/feed$/),
+      (url) => isApiCall(url, /^\/(home|feed)$/),
       () => {
         attempts += 1;
       },
