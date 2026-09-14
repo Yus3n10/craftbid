@@ -44,7 +44,7 @@ const optionalRefreshTokenBody = z.preprocess(
  * had closed the browser on a shared phone, which is exactly the case the
  * unticked box exists for.
  */
-function setSession(reply: FastifyReply, tokens: service.SessionTokens): void {
+export function setSession(reply: FastifyReply, tokens: service.SessionTokens): void {
   reply.setCookie(
     ACCESS_COOKIE,
     tokens.accessToken,

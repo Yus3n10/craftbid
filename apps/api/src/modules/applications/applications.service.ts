@@ -16,6 +16,7 @@ import * as commissionsRepo from "../commissions/commissions.repository.js";
 import * as notifications from "../notifications/notifications.repository.js";
 import * as postingsRepo from "../postings/postings.repository.js";
 import * as repo from "./applications.repository.js";
+import * as users from "../users/users.repository.js";
 
 /**
  * Submits a bid.
@@ -40,6 +41,13 @@ export async function apply(
 
       if (posting.status !== "open") {
         throw badRequest("This posting is no longer accepting applications.");
+      }
+
+      // A suspended client's request stays up but takes no bids until the
+      // suspension is lifted.
+      const owner = await users.findById(posting.clientId, tx);
+      if (owner?.status !== "active") {
+        throw badRequest("This request is paused and is not taking bids right now.");
       }
 
       if (input.proposedPriceCentavos < posting.minBudgetCentavos) {
@@ -124,6 +132,11 @@ export async function accept(
   }
   if (context.postingStatus !== "open") {
     throw badRequest("An artist has already been selected for this posting.");
+  }
+
+  const bidder = await users.findById(context.artistId);
+  if (bidder?.status !== "active") {
+    throw badRequest("This artist's account is paused, so their bid cannot be accepted right now.");
   }
 
   try {

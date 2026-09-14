@@ -2,11 +2,15 @@ import type { FastifyPluginAsync } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import {
+  roleSwitchSchema,
   updateArtistProfileSchema,
   updateExternalLinksSchema,
   updateProfileSchema,
   usernameSchema,
 } from "@craftbid/shared";
+import { REFRESH_COOKIE } from "../../lib/tokens.js";
+import { setSession } from "../auth/auth.routes.js";
+import * as roleSwitch from "./role-switch.service.js";
 import * as service from "./users.service.js";
 
 export const userRoutes: FastifyPluginAsync = async (fastify) => {
@@ -47,5 +51,33 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
       schema: { body: updateExternalLinksSchema },
     },
     async (request) => service.setExternalLinks(request.user!.id, request.body.links),
+  );
+
+  app.get(
+    "/me/role-switch",
+    { preHandler: fastify.requireAuth },
+    async (request) => roleSwitch.getRoleSwitchStatus(request.user!.id),
+  );
+
+  app.post(
+    "/me/role",
+    {
+      preHandler: fastify.requireAuth,
+      schema: { body: roleSwitchSchema.extend({ refreshToken: z.string().optional() }) },
+      config: { rateLimit: { max: 5, timeWindow: "1 hour" } },
+    },
+    async (request, reply) => {
+      const tokens = await roleSwitch.switchRole(
+        request.user!.id,
+        request.body.role,
+        request.cookies?.[REFRESH_COOKIE] ?? request.body.refreshToken,
+      );
+      setSession(reply, tokens);
+      return reply.send({
+        user: await service.getMe(tokens.userId),
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      });
+    },
   );
 };

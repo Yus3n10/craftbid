@@ -10,6 +10,7 @@ import { Avatar } from "./ui/Primitives.js";
 import { Button } from "./ui/Button.js";
 import { FormError, RowSkeleton } from "./ui/States.js";
 import { TrashIcon } from "./ui/Icons.js";
+import { ReportButton } from "./ReportButton.js";
 
 function timeAgo(iso: string): string {
   const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -77,6 +78,7 @@ function Comment({
               {comment.mine ? "Delete" : "Remove"}
             </button>
           )}
+          {!comment.mine && <ReportButton targetType="comment" targetId={comment.id} className="hover:text-rust" />}
         </div>
       </div>
     </li>

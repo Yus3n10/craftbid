@@ -8,4 +8,5 @@ export * from "./schemas/application.js";
 export * from "./schemas/post.js";
 export * from "./schemas/review.js";
 export * from "./schemas/payments.js";
+export * from "./schemas/moderation.js";
 export * from "./types.js";

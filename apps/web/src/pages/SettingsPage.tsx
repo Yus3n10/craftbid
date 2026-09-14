@@ -20,6 +20,7 @@ import { PlatformLogo, platformLabel } from "../components/ui/PlatformLogos.js";
 import { Field, Select, TextArea, TextInput } from "../components/ui/Field.js";
 import { Card, RoleBadge, ThreadRule } from "../components/ui/Primitives.js";
 import { ProfileChecklist } from "../components/ProfileChecklist.js";
+import { AccountTypeSection } from "../components/AccountTypeSection.js";
 import { FormError, PageHeading } from "../components/ui/States.js";
 import { PayoutAccountsForm } from "../components/commission/PayoutAccountsForm.js";
 import { ImageUploader, type UploadedImage } from "../components/ImageUploader.js";
@@ -490,6 +491,8 @@ export function SettingsPage() {
             )}
           </form>
         </Section>
+
+        <AccountTypeSection me={user} />
       </div>
     </Page>
   );

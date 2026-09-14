@@ -4,6 +4,7 @@ import type { ApplicationDto, Paginated, PostingDto } from "@craftbid/shared";
 import { formatPeso } from "@craftbid/shared";
 import { api } from "../lib/api.js";
 import { Page } from "../components/layout/Shell.js";
+import { ReportButton } from "../components/ReportButton.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
 import { Stars } from "../components/ui/Stars.js";
 import {
@@ -64,7 +65,10 @@ function ApplicationRow({
       <div className="space-y-4 pl-3">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1.5">
-            <UserChip user={application.artist} size={40} />
+            <div className="flex flex-wrap items-center gap-3">
+              <UserChip user={application.artist} size={40} />
+              <ReportButton targetType="application" targetId={application.id} />
+            </div>
             <RatingSummary
               average={application.artistRating.average}
               count={application.artistRating.count}

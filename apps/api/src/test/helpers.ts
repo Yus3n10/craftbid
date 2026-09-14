@@ -1,6 +1,6 @@
 import type { FastifyInstance, LightMyRequestResponse } from "fastify";
 import { buildApp } from "../app.js";
-import { newId } from "../db/ids.js";
+import { newId, uuidToBuf } from "../db/ids.js";
 import { db } from "../db/query.js";
 import { setStorage, type ObjectStorage } from "../lib/storage/index.js";
 
@@ -96,6 +96,8 @@ export async function resetData(): Promise<void> {
     `DELETE FROM artist_post_images`,
     `DELETE FROM artist_posts`,
     `DELETE FROM notifications`,
+    `DELETE FROM moderation_actions`,
+    `DELETE FROM bug_reports`,
     `DELETE FROM reports`,
     `DELETE FROM external_links`,
     `DELETE FROM artist_skills`,
@@ -493,4 +495,12 @@ export async function completeCommission(
     headers: authHeaders(client),
   });
   return { postingId: (detail.json() as { posting: { id: string } }).posting.id, commissionId };
+}
+
+export async function setStatus(userId: string, status: "active" | "suspended" | "deleted"): Promise<void> {
+  await db.run(`UPDATE users SET status = :status WHERE id = :id`, { status, id: uuidToBuf(userId) });
+}
+
+export async function makeStaff(userId: string): Promise<void> {
+  await db.run(`UPDATE users SET is_staff = 1 WHERE id = :id`, { id: uuidToBuf(userId) });
 }

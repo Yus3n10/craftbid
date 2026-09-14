@@ -34,6 +34,8 @@ const SettingsPage = lazy(async () => ({ default: (await import("./pages/Setting
 const VerifyEmailPage = lazy(async () => ({ default: (await import("./pages/VerifyEmailPage.js")).VerifyEmailPage }));
 const SavedPostsPage = lazy(async () => ({ default: (await import("./pages/SavedPostsPage.js")).SavedPostsPage }));
 const ActivityPage = lazy(async () => ({ default: (await import("./pages/ActivityPage.js")).ActivityPage }));
+const AdminPage = lazy(async () => ({ default: (await import("./pages/admin/AdminPage.js")).AdminPage }));
+const AdminUserDetail = lazy(async () => ({ default: (await import("./pages/admin/AdminUserDetail.js")).AdminUserDetail }));
 
 /**
  * Shown while a route chunk is still arriving.
@@ -105,6 +107,30 @@ function RequireAuth({
     );
   }
 
+  return <>{children}</>;
+}
+
+function NotFound() {
+  return (
+    <Page>
+      <EmptyState
+        title="That page does not exist"
+        description="The link may be out of date, or the item was removed by its owner."
+        action={{ label: "Browse craft requests", to: "/postings" }}
+      />
+    </Page>
+  );
+}
+
+/**
+ * The admin screen. Anyone who is not staff gets the ordinary not-found page,
+ * so the route does not announce itself. The API refuses them regardless.
+ */
+function RequireStaff({ children }: { children: ReactNode }) {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return <Page><RowSkeleton count={3} /></Page>;
+  // Anyone else sees the ordinary not-found page, not a "staff only" notice.
+  if (!user?.isStaff) return <NotFound />;
   return <>{children}</>;
 }
 
@@ -233,17 +259,23 @@ export function App() {
         />
 
         <Route
-          path="*"
+          path="admin"
           element={
-            <Page>
-              <EmptyState
-                title="That page does not exist"
-                description="The link may be out of date, or the item was removed by its owner."
-                action={{ label: "Browse craft requests", to: "/postings" }}
-              />
-            </Page>
+            <RequireStaff>
+              <AdminPage />
+            </RequireStaff>
           }
         />
+        <Route
+          path="admin/users/:id"
+          element={
+            <RequireStaff>
+              <AdminUserDetail />
+            </RequireStaff>
+          }
+        />
+
+        <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
     </Suspense>

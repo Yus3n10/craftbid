@@ -23,6 +23,7 @@ export function accountLinks(user: MeDto) {
     { to: "/saved", label: "Saved posts" },
     { to: "/activity", label: "Activity history" },
     { to: "/notifications", label: "Notifications" },
+    ...(user.isStaff ? [{ to: "/admin", label: "Admin" }] : []),
   ];
 }
 
@@ -37,7 +38,15 @@ export function accountLinks(user: MeDto) {
  * Closes on a choice, a change of page, Escape (returning focus to the cog),
  * or a click anywhere else.
  */
-export function AccountMenu({ user, onSignOut }: { user: MeDto; onSignOut: () => void }) {
+export function AccountMenu({
+  user,
+  onSignOut,
+  onReportBug,
+}: {
+  user: MeDto;
+  onSignOut: () => void;
+  onReportBug: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const wrapper = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
@@ -108,6 +117,16 @@ export function AccountMenu({ user, onSignOut }: { user: MeDto; onSignOut: () =>
             ))}
           </ul>
           <div className="border-t border-fiber py-1">
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onReportBug();
+              }}
+              className="block w-full px-4 py-2.5 text-left text-sm text-ink-soft transition-colors hover:bg-paper-sunk hover:text-ink"
+            >
+              Report a problem with the site
+            </button>
             <button
               type="button"
               onClick={() => {

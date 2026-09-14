@@ -7,6 +7,7 @@ import { cx } from "../../lib/cx.js";
 import { useHideOnScroll } from "../../lib/useHideOnScroll.js";
 import { Avatar } from "../ui/Primitives.js";
 import { Dialog } from "../ui/Dialog.js";
+import { BugReportDialog } from "../BugReportDialog.js";
 import { useUnsavedChangesState } from "../../lib/unsavedChanges.js";
 import { AccountMenu, accountLinks } from "./AccountMenu.js";
 import { Button, ButtonLink } from "../ui/Button.js";
@@ -107,6 +108,7 @@ function NotificationsLink() {
  */
 export function Header() {
   const { user, logout } = useAuth();
+  const [reportingBug, setReportingBug] = useState(false);
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const onAuthPage = AUTH_PAGES.test(pathname);
@@ -248,7 +250,7 @@ export function Header() {
 
               {/* Settings, saved posts and history were reachable only through
                   the profile page. The cog opens all of them, and Sign out. */}
-              <AccountMenu user={user} onSignOut={askToSignOut} />
+              <AccountMenu user={user} onSignOut={askToSignOut} onReportBug={() => setReportingBug(true)} />
 
               {user.role === "client" && (
                 <ButtonLink to="/postings/new" size="sm">
@@ -350,6 +352,16 @@ export function Header() {
                       {link.label}
                     </ButtonLink>
                   ))}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setReportingBug(true);
+                    }}
+                  >
+                    Report a problem with the site
+                  </Button>
                   <Button variant="ghost" size="sm" onClick={askToSignOut} className="text-rust">
                     Sign out
                   </Button>
@@ -393,6 +405,8 @@ export function Header() {
           <p>You will need your email and password to sign back in.</p>
         )}
       </Dialog>
+
+      <BugReportDialog open={reportingBug} onClose={() => setReportingBug(false)} />
     </header>
   );
 }

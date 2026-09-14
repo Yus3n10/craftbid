@@ -34,10 +34,10 @@ const COMMISSION_SELECT = `
   SELECT cm.id, cm.agreed_price_centavos, cm.status, cm.started_at, cm.completed_at,
          p.id AS posting_id, p.title AS posting_title, p.status AS posting_status,
          cl.id AS client_id, cl.username AS client_username,
-         cl.display_name AS client_display_name,
+         CASE WHEN cl.status = 'deleted' THEN 'Removed account' ELSE cl.display_name END AS client_display_name,
          cav.id AS client_avatar_id, cav.object_key AS client_avatar_key,
          ar.id AS artist_id, ar.username AS artist_username,
-         ar.display_name AS artist_display_name,
+         CASE WHEN ar.status = 'deleted' THEN 'Removed account' ELSE ar.display_name END AS artist_display_name,
          aav.id AS artist_avatar_id, aav.object_key AS artist_avatar_key
     FROM commissions cm
     JOIN postings p ON p.id = cm.posting_id
@@ -86,14 +86,17 @@ async function reviewsFor(
     reviewerUsername: string;
     reviewerDisplayName: string;
     reviewerRole: UserRole;
+    reviewerRoleInCommission: UserRole;
     reviewerAvatarId: Buffer | null;
     reviewerAvatarKey: string | null;
   }>(
     `SELECT r.id, r.reviewee_id, r.rating, r.body, r.created_at,
             u.id AS reviewer_id, u.username AS reviewer_username,
-            u.display_name AS reviewer_display_name, u.role AS reviewer_role,
+            CASE WHEN u.status = 'deleted' THEN 'Removed account' ELSE u.display_name END AS reviewer_display_name, u.role AS reviewer_role,
+            CASE WHEN cm.client_id = r.reviewer_id THEN 'client' ELSE 'artist' END AS reviewer_role_in_commission,
             av.id AS reviewer_avatar_id, av.object_key AS reviewer_avatar_key
        FROM reviews r
+       JOIN commissions cm ON cm.id = r.commission_id
        JOIN users u ON u.id = r.reviewer_id
        LEFT JOIN images av ON av.id = u.avatar_image_id
       WHERE r.commission_id = :id
@@ -113,6 +116,7 @@ async function reviewsFor(
       row.reviewerAvatarKey,
     ),
     revieweeId: bufToUuid(row.revieweeId)!,
+    reviewerRoleInCommission: row.reviewerRoleInCommission,
     rating: Number(row.rating),
     createdAt: row.createdAt.toISOString(),
     ...(row.body ? { body: row.body } : {}),

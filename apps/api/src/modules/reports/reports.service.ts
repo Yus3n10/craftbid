@@ -4,18 +4,15 @@ import { DbError, db } from "../../db/query.js";
 import { badRequest, conflict, notFound } from "../../lib/errors.js";
 
 /**
- * Somewhere for abuse reports to land.
- *
- * Deliberately not a moderation system: there is no queue tooling, no
- * automated action, and no appeals flow. The brief asked for sensible
- * extension points rather than an anti-fraud platform, and a table plus an
- * endpoint is what a human reviewer needs to start from.
+ * Where reports land. Staff work through them on the admin screen
+ * (modules/admin), and every action taken is recorded by modules/moderation.
  */
 const TARGET_TABLES: Record<ReportTargetType, string> = {
   posting: "postings",
   user: "users",
   artist_post: "artist_posts",
   application: "applications",
+  comment: "post_comments",
 };
 
 export async function createReport(
@@ -36,6 +33,28 @@ export async function createReport(
 
   if (input.targetType === "user" && input.targetId === reporterId) {
     throw badRequest("You cannot report yourself.");
+  }
+
+  // Reporting your own work is not a report. The column name is one of two
+  // literals, never taken from the request.
+  if (input.targetType === "comment" || input.targetType === "artist_post") {
+    const ownerColumn = input.targetType === "comment" ? "author_id" : "artist_id";
+    const own = await db.one<{ cnt: number }>(
+      `SELECT COUNT(*) AS cnt FROM ${table} WHERE id = :id AND ${ownerColumn} = :reporterId`,
+      { id: uuidToBuf(input.targetId), reporterId: uuidToBuf(reporterId) },
+    );
+    if (Number(own?.cnt ?? 0) > 0) throw badRequest("You cannot report your own post or comment.");
+  }
+
+  // A bid is visible only to the client it went to; anyone else is told it
+  // does not exist, exactly as the bid routes do.
+  if (input.targetType === "application") {
+    const receiver = await db.one<{ cnt: number }>(
+      `SELECT COUNT(*) AS cnt FROM applications a JOIN postings p ON p.id = a.posting_id
+        WHERE a.id = :id AND p.client_id = :reporterId`,
+      { id: uuidToBuf(input.targetId), reporterId: uuidToBuf(reporterId) },
+    );
+    if (Number(receiver?.cnt ?? 0) === 0) throw notFound("That item does not exist.");
   }
 
   const id = newId();

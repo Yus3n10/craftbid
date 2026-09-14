@@ -26,6 +26,7 @@ import {
 } from "../components/ui/Primitives.js";
 import { ErrorState, FormError, RowSkeleton } from "../components/ui/States.js";
 import { Lightbox } from "../components/Lightbox.js";
+import { ReportButton } from "../components/ReportButton.js";
 
 function Gallery({ posting }: { posting: PostingDto }) {
   const [active, setActive] = useState(0);
@@ -323,6 +324,7 @@ export function PostingDetailPage() {
             <div className="flex flex-wrap items-center gap-3">
               <span className="eyebrow">{posting.category.name}</span>
               <StatusBadge status={posting.status} />
+              {!isOwner && <ReportButton targetType="posting" targetId={posting.id} className="ml-auto text-sm text-ink-faint hover:text-rust hover:underline" />}
             </div>
             <h1 className="mt-3 font-display text-3xl sm:text-4xl">{posting.title}</h1>
             <ThreadRule className="mt-5 w-20" />

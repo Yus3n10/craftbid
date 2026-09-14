@@ -30,6 +30,8 @@ import { postRoutes } from "./modules/posts/posts.routes.js";
 import { socialRoutes } from "./modules/social/social.routes.js";
 import { searchRoutes } from "./modules/search.routes.js";
 import { communityRoutes } from "./modules/community.routes.js";
+import { adminRoutes } from "./modules/admin/admin.routes.js";
+import { bugReportRoutes } from "./modules/bug-reports/bug-reports.routes.js";
 
 /** One entry of Fastify's `error.validation` array. */
 interface ValidationEntry {
@@ -362,6 +364,8 @@ export async function buildApp(
   await app.register(socialRoutes);
   await app.register(searchRoutes);
   await app.register(communityRoutes);
+  await app.register(adminRoutes);
+  await app.register(bugReportRoutes);
 
   return app;
 }

@@ -15,7 +15,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "purge:accounts": "tsx src/db/purge-accounts.ts",
-    "problems": "tsx src/modules/commission-payments/problems-cli.ts"
+    "problems": "tsx src/modules/commission-payments/problems-cli.ts",
+    "staff": "tsx src/modules/admin/staff-cli.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",

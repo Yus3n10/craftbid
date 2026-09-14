@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { NotificationDto, NotificationType } from "@craftbid/shared";
+import { MODERATION_RULE_COPY, type ModerationRule, type NotificationDto, type NotificationType } from "@craftbid/shared";
 import { api } from "../lib/api.js";
 import { cx } from "../lib/cx.js";
 import { Page } from "../components/layout/Shell.js";
@@ -23,6 +23,8 @@ const COPY: Record<NotificationType, string> = {
   post_comment: "Someone commented on your work.",
   post_shared: "Someone shared your work to their profile.",
   balance_method_chosen: "The client chose how they will pay the balance.",
+  account_warning: "A warning from Craftbid.",
+  content_removed: "Craftbid removed something you posted.",
   payment_submitted: "The client recorded a payment. Check that you received it.",
   payment_confirmed: "A payment was confirmed as received.",
   payment_rejected: "The artist says a payment did not arrive. Check the details.",
@@ -50,6 +52,16 @@ const BALANCE_METHOD_COPY: Record<string, string> = {
 };
 
 function describe(notification: NotificationDto): string {
+  if (notification.type === "account_warning" || notification.type === "content_removed") {
+    const payload = notification.payload as { rule?: ModerationRule; note?: string | null; kind?: string; excerpt?: string };
+    const rule = payload.rule ? MODERATION_RULE_COPY[payload.rule] : null;
+    const what = { post: "post", posting: "request", comment: "comment" }[payload.kind ?? ""] ?? "post";
+    const head =
+      notification.type === "account_warning"
+        ? `Warning from Craftbid${rule ? `: ${rule.label}.` : "."}`
+        : `We removed your ${what}${payload.excerpt ? ` "${payload.excerpt}"` : ""}${rule ? `: ${rule.label}.` : "."}`;
+    return [head, rule?.sentence, payload.note].filter(Boolean).join(" ");
+  }
   if (notification.type === "balance_method_chosen") {
     const method = (notification.payload as { method?: string }).method;
     return (method && BALANCE_METHOD_COPY[method]) ?? COPY.balance_method_chosen;
@@ -69,6 +81,8 @@ function linkFor(notification: NotificationDto): string {
   };
   if (payload.commissionId) return `/commissions/${payload.commissionId}`;
   if (payload.postingId) return `/postings/${payload.postingId}`;
+  // A warning or a removal has nothing to open; its text is the message.
+  if (notification.type === "account_warning" || notification.type === "content_removed") return "/notifications";
   // A reaction or comment leads to the piece it was about.
   if (payload.postId) return `/posts/${payload.postId}`;
   return "/commissions";

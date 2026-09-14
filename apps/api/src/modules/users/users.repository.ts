@@ -17,6 +17,8 @@ export interface UserRecord {
   status: UserStatus;
   createdAt: Date;
   emailVerifiedAt: Date | null;
+  isStaff: boolean;
+  roleChangedAt: Date | null;
 }
 
 interface UserRow {
@@ -34,6 +36,8 @@ interface UserRow {
   status: UserStatus;
   createdAt: Date;
   emailVerifiedAt: Date | null;
+  isStaff: number;
+  roleChangedAt: Date | null;
 }
 
 function mapUser(row: UserRow): UserRecord {
@@ -52,13 +56,15 @@ function mapUser(row: UserRow): UserRecord {
     status: row.status,
     createdAt: row.createdAt,
     emailVerifiedAt: row.emailVerifiedAt,
+    isStaff: row.isStaff === 1,
+    roleChangedAt: row.roleChangedAt,
   };
 }
 
 const SELECT_USER = `
   SELECT id, email, username, password_hash, role, display_name, bio,
          region, city, avatar_image_id, cover_image_id, status, created_at,
-         email_verified_at
+         email_verified_at, is_staff, role_changed_at
     FROM users
 `;
 

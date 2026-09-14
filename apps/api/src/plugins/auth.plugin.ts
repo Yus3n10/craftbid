@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 import fp from "fastify-plugin";
 import type { UserRole } from "@craftbid/shared";
-import { AppError, forbidden, unauthorized } from "../lib/errors.js";
+import { AppError, forbidden, notFound, unauthorized } from "../lib/errors.js";
 import { emailVerificationEnabled } from "../lib/mail/index.js";
 import { findById } from "../modules/users/users.repository.js";
 import { ACCESS_COOKIE, verifyAccessToken } from "../lib/tokens.js";
@@ -22,6 +22,7 @@ declare module "fastify" {
       role: UserRole,
     ) => (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
     requireVerified: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    requireStaff: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   }
 }
 
@@ -50,6 +51,23 @@ const authPlugin: FastifyPluginAsync = async (app) => {
     const claims = await verifyAccessToken(token);
     if (claims) {
       request.user = { id: claims.sub, role: claims.role };
+
+      // Writes check the account is still active. The token cannot say: it
+      // was issued before any suspension and stays valid for 15 minutes.
+      // Signing out is always allowed.
+      const writing = !["GET", "HEAD", "OPTIONS"].includes(request.method);
+      if (writing && request.url !== "/auth/logout") {
+        const account = await findById(claims.sub);
+        if (!account || account.status !== "active") {
+          throw new AppError(403, "account_inactive", "This account cannot do that right now.");
+        }
+        // A token minted before a switch between artist and client still
+        // carries the old role. A 401 makes the web app refresh, and the
+        // refreshed token carries the role the account has now.
+        if (account.role !== claims.role) {
+          throw unauthorized("Your account changed. Please sign in again.");
+        }
+      }
     }
   });
 
@@ -66,6 +84,17 @@ const authPlugin: FastifyPluginAsync = async (app) => {
    * the address in one browser takes effect in every other one immediately,
    * not when their token next rotates.
    */
+  /**
+   * The admin screen. Read from the database every time, so taking staff
+   * access away, or suspending a staff account, applies to the next request.
+   * A 404 rather than a 403: nothing tells a stranger the admin API exists.
+   */
+  app.decorate("requireStaff", async (request: FastifyRequest) => {
+    if (!request.user) throw notFound();
+    const account = await findById(request.user.id);
+    if (!account?.isStaff || account.status !== "active") throw notFound();
+  });
+
   app.decorate("requireVerified", async (request: FastifyRequest) => {
     if (!request.user) throw unauthorized();
     if (!emailVerificationEnabled()) return;

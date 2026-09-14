@@ -44,6 +44,7 @@ export const REPORT_TARGET_TYPES = [
   "user",
   "artist_post",
   "application",
+  "comment",
 ] as const;
 export type ReportTargetType = (typeof REPORT_TARGET_TYPES)[number];
 
@@ -67,6 +68,8 @@ export const NOTIFICATION_TYPES = [
   "problem_closed",
   "post_shared",
   "balance_method_chosen",
+  "account_warning",
+  "content_removed",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -345,3 +348,81 @@ export const BRAND = {
   name: "Craftbid",
   tagline: "Commission handmade work from Filipino artists.",
 } as const;
+
+/**
+ * Site rules staff act on. One list for warnings, removals and suspensions,
+ * so a person is always told which rule, in the same words.
+ *
+ * The sentences are placeholders until the client supplies Craftbid's rules.
+ */
+export const MODERATION_RULES = [
+  "bullying_harassment",
+  "sexual_content",
+  "hate_speech",
+  "violence_threats",
+  "scam_fraud",
+  "spam",
+  "stolen_work",
+  "impersonation",
+  "other",
+] as const;
+export type ModerationRule = (typeof MODERATION_RULES)[number];
+
+export const MODERATION_RULE_COPY: Record<ModerationRule, { label: string; sentence: string }> = {
+  bullying_harassment: {
+    label: "Bullying or harassment",
+    sentence: "Craftbid does not allow insulting, threatening or targeting other people.",
+  },
+  sexual_content: {
+    label: "Sexual content",
+    sentence: "Craftbid does not allow sexual or explicit content.",
+  },
+  hate_speech: {
+    label: "Hate speech",
+    sentence: "Craftbid does not allow attacks on people for who they are.",
+  },
+  violence_threats: {
+    label: "Violence or threats",
+    sentence: "Craftbid does not allow threats or content that promotes violence.",
+  },
+  scam_fraud: {
+    label: "Scam or fraud",
+    sentence: "Craftbid does not allow misleading people about work or payments.",
+  },
+  spam: {
+    label: "Spam",
+    sentence: "Craftbid does not allow repeated, irrelevant or promotional posting.",
+  },
+  stolen_work: {
+    label: "Stolen work",
+    sentence: "Only post work you made yourself or have the right to share.",
+  },
+  impersonation: {
+    label: "Impersonation",
+    sentence: "Craftbid does not allow pretending to be someone else.",
+  },
+  other: {
+    label: "Breaking Craftbid's rules",
+    sentence: "This goes against how Craftbid is meant to be used.",
+  },
+};
+
+export const MODERATION_ACTIONS = [
+  "warn",
+  "suspend",
+  "unsuspend",
+  "remove_account",
+  "remove_post",
+  "remove_posting",
+  "remove_comment",
+  "resolve_report",
+  "dismiss_report",
+  "resolve_bug",
+] as const;
+export type ModerationAction = (typeof MODERATION_ACTIONS)[number];
+
+export const BUG_REPORT_STATUSES = ["open", "resolved"] as const;
+export type BugReportStatus = (typeof BUG_REPORT_STATUSES)[number];
+
+/** How long an account waits between switching artist and client. */
+export const ROLE_SWITCH_COOLDOWN_DAYS = 30;

@@ -45,6 +45,11 @@ async function issueTokens(
   };
 }
 
+/** A new session for an account whose details just changed. */
+export function startSession(userId: string, role: UserRole, persistent: boolean): Promise<SessionTokens> {
+  return issueTokens(userId, role, persistent);
+}
+
 /**
  * Creates the account. With email verification on, nobody is signed in yet:
  * a link goes to the address, and following it is what starts the session.
@@ -222,6 +227,14 @@ export async function login(input: LoginInput): Promise<SessionTokens> {
     throw unauthorized("Email or password is incorrect.");
   }
 
+  // Said only after the right password, so it reveals nothing to a stranger.
+  if (user.status === "suspended") {
+    throw new AppError(
+      403,
+      "account_suspended",
+      "This account is suspended for breaking Craftbid's rules. If you think this is a mistake, contact Craftbid.",
+    );
+  }
   if (user.status !== "active") {
     throw unauthorized("This account is not active.");
   }

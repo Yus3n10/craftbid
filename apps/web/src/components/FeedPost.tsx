@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { FeedItemDto } from "@craftbid/shared";
 import { api } from "../lib/api.js";
+import { useAuth } from "../lib/auth.js";
 import { useRequireAccount } from "../lib/authPrompt.js";
 import { cx } from "../lib/cx.js";
 import { Avatar, Card } from "./ui/Primitives.js";
@@ -11,6 +12,7 @@ import { ShareMenu } from "./ShareMenu.js";
 import { ReactionBar, ReactionSummaryLine } from "./ReactionBar.js";
 import { CommentThread } from "./CommentThread.js";
 import { Lightbox } from "./Lightbox.js";
+import { ReportDialog } from "./ReportButton.js";
 
 function postedAgo(iso: string): string {
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
@@ -31,7 +33,47 @@ function postedAgo(iso: string): string {
  * everything else is arranged around it: who made it above, what people made
  * of it below.
  */
+/** The "..." on a post. Only Report lives here for now. */
+function PostMoreMenu({ postId }: { postId: string }) {
+  const [open, setOpen] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const requireAccount = useRequireAccount();
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        aria-label="More options for this post"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        className="press rounded-md p-2 text-ink-faint transition-colors hover:bg-paper-sunk hover:text-ink"
+      >
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" fill="currentColor">
+          <circle cx="4" cy="9" r="1.4" />
+          <circle cx="9" cy="9" r="1.4" />
+          <circle cx="14" cy="9" r="1.4" />
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-20 mt-1 w-40 overflow-hidden rounded-md border border-fiber bg-paper-raised shadow-lift">
+          <button
+            type="button"
+            className="block w-full px-3 py-2 text-left text-sm text-rust hover:bg-rust-wash"
+            onClick={() => {
+              setOpen(false);
+              if (requireAccount("report something")) setReporting(true);
+            }}
+          >
+            Report
+          </button>
+        </div>
+      )}
+      <ReportDialog open={reporting} onClose={() => setReporting(false)} targetType="artist_post" targetId={postId} />
+    </div>
+  );
+}
+
 export function FeedPost({ post }: { post: FeedItemDto }) {
+  const { user } = useAuth();
   const requireAccount = useRequireAccount();
   const queryClient = useQueryClient();
 
@@ -123,6 +165,7 @@ export function FeedPost({ post }: { post: FeedItemDto }) {
           >
             <BookmarkIcon filled={saved} />
           </button>
+          {user?.id !== post.artist.id && <PostMoreMenu postId={post.id} />}
         </header>
 
         {justSaved && (

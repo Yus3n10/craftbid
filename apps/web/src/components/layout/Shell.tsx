@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation, useNavigationType } from "react-router-dom";
 import { BRAND } from "@craftbid/shared";
 import { Header } from "./Header.js";
@@ -6,8 +6,12 @@ import { AccountNotices } from "./AccountNotices.js";
 import { Logo } from "./Logo.js";
 import { ErrorBoundary } from "../ErrorBoundary.js";
 import { reloadIfUpdateWaiting } from "../../lib/appUpdates.js";
+import { useAuth } from "../../lib/auth.js";
+import { BugReportDialog } from "../BugReportDialog.js";
 
 export function Shell() {
+  const { user } = useAuth();
+  const [reportingBug, setReportingBug] = useState(false);
   const { pathname } = useLocation();
   const navigationType = useNavigationType();
 
@@ -103,6 +107,18 @@ export function Shell() {
                   </li>
                 </ul>
               </div>
+              {user && (
+                <div>
+                  <h2 className="eyebrow mb-3">Help</h2>
+                  <ul className="space-y-2 text-ink-soft">
+                    <li>
+                      <button type="button" className="hover:text-ink hover:underline" onClick={() => setReportingBug(true)}>
+                        Report a problem with the site
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              )}
             </nav>
           </div>
 
@@ -112,6 +128,7 @@ export function Shell() {
           </p>
         </div>
       </footer>
+      <BugReportDialog open={reportingBug} onClose={() => setReportingBug(false)} />
     </div>
   );
 }

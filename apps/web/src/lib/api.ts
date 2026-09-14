@@ -289,14 +289,31 @@ export async function uploadCommissionFile(
  * caller revokes the URL when the image goes away.
  */
 export async function loadPrivateImage(commissionId: string, fileId: string): Promise<string> {
+  return loadPrivateUrl(`/commissions/${commissionId}/files/${fileId}`);
+}
+
+/** Sends a multipart form the same way as an upload, and parses the answer. */
+export async function postForm<T>(path: string, form: FormData): Promise<T> {
   const accessToken = getAccessToken();
-  const response = await fetch(`${API_URL}/commissions/${commissionId}/files/${fileId}`, {
+  const response = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    credentials: "include",
+    ...(accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : {}),
+    body: form,
+  });
+  const text = await response.text();
+  if (!response.ok) throw new ApiError(response.status, text ? (JSON.parse(text) as ApiErrorDto) : null);
+  return (text ? JSON.parse(text) : null) as T;
+}
+
+/** Any private image the API streams (receipts, bug screenshots), as an object URL. */
+export async function loadPrivateUrl(path: string): Promise<string> {
+  const accessToken = getAccessToken();
+  const response = await fetch(`${API_URL}${path}`, {
     credentials: "include",
     cache: "no-store",
     ...(accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : {}),
   });
-  if (!response.ok) {
-    throw new ApiError(response.status, null);
-  }
+  if (!response.ok) throw new ApiError(response.status, null);
   return URL.createObjectURL(await response.blob());
 }

@@ -21,6 +21,7 @@ export interface ProfileRow {
   city: string | null;
   createdAt: Date;
   emailVerifiedAt: Date | null;
+  isStaff: number;
   avatarId: Buffer | null;
   avatarKey: string | null;
   avatarWidth: number | null;
@@ -35,7 +36,7 @@ export interface ProfileRow {
 
 const PROFILE_SELECT = `
   SELECT u.id, u.email, u.username, u.display_name, u.role, u.bio, u.region,
-         u.city, u.created_at, u.email_verified_at,
+         u.city, u.created_at, u.email_verified_at, u.is_staff,
          av.id AS avatar_id, av.object_key AS avatar_key,
          av.width AS avatar_width, av.height AS avatar_height,
          cv.id AS cover_id, cv.object_key AS cover_key,
@@ -67,7 +68,7 @@ export async function findProfileByUsername(
   q: Queryable = db,
 ): Promise<ProfileRow | null> {
   return q.one<ProfileRow>(
-    `${PROFILE_SELECT} WHERE u.username = :username AND u.status = 'active'`,
+    `${PROFILE_SELECT} WHERE u.username = :username AND u.status IN ('active', 'suspended')`,
     { username: username.toLowerCase() },
   );
 }

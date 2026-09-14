@@ -50,14 +50,17 @@ export async function listForUser(
     reviewerUsername: string;
     reviewerDisplayName: string;
     reviewerRole: UserRole;
+    reviewerRoleInCommission: UserRole;
     avatarId: Buffer | null;
     avatarKey: string | null;
   }>(
     `SELECT r.id, r.commission_id, r.reviewee_id, r.rating, r.body, r.created_at,
             u.id AS reviewer_id, u.username AS reviewer_username,
-            u.display_name AS reviewer_display_name, u.role AS reviewer_role,
+            CASE WHEN u.status = 'deleted' THEN 'Removed account' ELSE u.display_name END AS reviewer_display_name, u.role AS reviewer_role,
+            CASE WHEN cm.client_id = r.reviewer_id THEN 'client' ELSE 'artist' END AS reviewer_role_in_commission,
             av.id AS avatar_id, av.object_key AS avatar_key
        FROM reviews r
+       JOIN commissions cm ON cm.id = r.commission_id
        JOIN users u ON u.id = r.reviewer_id
        LEFT JOIN images av ON av.id = u.avatar_image_id
       WHERE r.reviewee_id = :userId
@@ -87,6 +90,7 @@ export async function listForUser(
             : null,
       },
       revieweeId: bufToUuid(row.revieweeId)!,
+      reviewerRoleInCommission: row.reviewerRoleInCommission,
       rating: Number(row.rating),
       createdAt: row.createdAt.toISOString(),
       ...(row.body ? { body: row.body } : {}),

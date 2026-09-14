@@ -17,6 +17,7 @@ import { PlatformLogo, platformLabel } from "../components/ui/PlatformLogos.js";
 import { Stars } from "../components/ui/Stars.js";
 import { Avatar, Card, RoleBadge, Tag, ThreadRule } from "../components/ui/Primitives.js";
 import { ProfileChecklist } from "../components/ProfileChecklist.js";
+import { ReportButton } from "../components/ReportButton.js";
 import {
   CardSkeleton,
   EmptyState,
@@ -117,6 +118,10 @@ function Reviews({ username }: { username: string }) {
                   <div>
                     <span className="block text-sm font-medium">
                       {review.reviewer.displayName}
+                    </span>
+                    {/* The side they were on then, which may not be their role now. */}
+                    <span className="block text-xs text-ink-faint">
+                      {review.reviewerRoleInCommission === "client" ? "Client on this commission" : "Artist on this commission"}
                     </span>
                     <span className="block text-xs text-ink-faint">
                       {new Date(review.createdAt).toLocaleDateString("en-PH", {
@@ -258,6 +263,7 @@ export function ProfilePage() {
               <p className="flex flex-wrap items-center gap-2 text-ink-faint">
                 <span>@{profile.username}</span>
                 <RoleBadge role={profile.role} />
+                {!isSelf && <ReportButton targetType="user" targetId={profile.id} />}
               </p>
             </div>
           </div>

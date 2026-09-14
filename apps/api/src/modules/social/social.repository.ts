@@ -92,7 +92,7 @@ export async function commentCounts(
   const { sql, binds } = idList(postIds, "p");
   const rows = await q.many<{ postId: Buffer; cnt: number }>(
     `SELECT post_id, COUNT(*) AS cnt FROM post_comments
-      WHERE post_id IN (${sql}) GROUP BY post_id`,
+      WHERE post_id IN (${sql}) AND removed_at IS NULL GROUP BY post_id`,
     binds,
   );
   for (const row of rows) out.set(bufToUuid(row.postId)!, Number(row.cnt));
@@ -201,7 +201,7 @@ export async function listComments(
        FROM post_comments c
        JOIN users u ON u.id = c.author_id
        LEFT JOIN images av ON av.id = u.avatar_image_id
-      WHERE c.post_id = :postId
+      WHERE c.post_id = :postId AND c.removed_at IS NULL
       ORDER BY c.created_at`,
     { postId: uuidToBuf(postId) },
   );
@@ -254,7 +254,7 @@ export async function findComment(
   q: Queryable = db,
 ): Promise<{ authorId: string; postId: string } | null> {
   const row = await q.one<{ authorId: Buffer; postId: Buffer }>(
-    `SELECT author_id, post_id FROM post_comments WHERE id = :id`,
+    `SELECT author_id, post_id FROM post_comments WHERE id = :id AND removed_at IS NULL`,
     { id: uuidToBuf(id) },
   );
   return row
@@ -507,7 +507,7 @@ export async function activityForUser(
       FROM post_reactions r WHERE r.user_id = :userId
     UNION ALL
     SELECT 'comment', c.post_id, c.created_at, NULL, c.id, c.body, NULL
-      FROM post_comments c WHERE c.author_id = :userId
+      FROM post_comments c WHERE c.author_id = :userId AND c.removed_at IS NULL
     UNION ALL
     SELECT 'save', s.post_id, s.created_at, NULL, NULL, NULL, NULL
       FROM saved_posts s WHERE s.user_id = :userId

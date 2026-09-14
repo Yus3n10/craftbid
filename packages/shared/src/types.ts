@@ -3,14 +3,18 @@
  *
  * These describe only what is safe to expose publicly. Nothing here carries a
  * password hash, a token, or an email address: `email` appears on the
- * authenticated `MeDto` alone, never on a public profile.
+ * authenticated `MeDto` and the staff-only admin shapes, never on a public
+ * profile.
  */
 
 import type {
   ApplicationStatus,
   BalanceMethod,
+  BugReportStatus,
   CommissionStatus,
   LinkPlatform,
+  ModerationAction,
+  ModerationRule,
   NotificationType,
   PaymentKind,
   PaymentMethod,
@@ -19,8 +23,11 @@ import type {
   ProblemReason,
   ProblemStatus,
   ReactionKind,
+  ReportStatus,
+  ReportTargetType,
   TransferMethod,
   UserRole,
+  UserStatus,
 } from "./constants.js";
 
 export interface Paginated<T> {
@@ -90,6 +97,8 @@ export interface MeDto extends PublicProfileDto {
    * refused posting, bidding and the social actions until they verify.
    */
   emailVerified: boolean;
+  /** Staff can open the admin screen. Granted only from the command line. */
+  isStaff: boolean;
 }
 
 /** What /auth/register answers when the account must verify first. */
@@ -311,6 +320,8 @@ export interface ReviewDto {
   commissionId: string;
   reviewer: UserSummaryDto;
   revieweeId: string;
+  /** Which side the reviewer was on in that commission, whatever their role is now. */
+  reviewerRoleInCommission: UserRole;
   rating: number;
   body?: string;
   createdAt: string;
@@ -332,4 +343,92 @@ export interface ApiErrorDto {
     /** Field-level messages, keyed by dotted path, for form display. */
     fields?: Record<string, string>;
   };
+}
+
+export interface RoleSwitchStatusDto {
+  allowed: boolean;
+  /** Plain sentences, one per reason the switch is refused. */
+  blockers: string[];
+  /** When the cooldown ends, if it is the reason. */
+  nextAllowedAt: string | null;
+}
+
+export interface AdminOverviewDto {
+  openReports: number;
+  openBugReports: number;
+  suspendedAccounts: number;
+  unconfirmedAccounts: number;
+  actionsThisWeek: number;
+}
+
+export interface AdminUserRowDto {
+  id: string;
+  username: string;
+  displayName: string;
+  email: string;
+  role: UserRole;
+  status: UserStatus;
+  isStaff: boolean;
+  createdAt: string;
+  /** Null when the account never confirmed its email. */
+  emailConfirmedAt: string | null;
+}
+
+export interface ModerationActionDto {
+  id: string;
+  action: ModerationAction;
+  targetType: string;
+  targetId: string;
+  subjectUser: { id: string; username: string } | null;
+  staff: { id: string; username: string };
+  rule: ModerationRule | null;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface AdminContentItemDto {
+  id: string;
+  kind: "artist_post" | "posting" | "comment";
+  text: string;
+  createdAt: string;
+  removed: boolean;
+  /** Where it can be seen on the site, when it still can. */
+  href: string | null;
+}
+
+export interface AdminUserDetailDto extends AdminUserRowDto {
+  bio: string | null;
+  history: ModerationActionDto[];
+  reportsAgainst: { id: string; reason: string; status: ReportStatus; createdAt: string }[];
+  recentContent: AdminContentItemDto[];
+}
+
+export interface AdminReportDto {
+  id: string;
+  targetType: ReportTargetType;
+  targetId: string;
+  reason: string;
+  details: string | null;
+  status: ReportStatus;
+  createdAt: string;
+  reporter: { id: string; username: string };
+  /** What was reported, as it is now. Null when it no longer exists. */
+  target: {
+    text: string;
+    href: string | null;
+    removed: boolean;
+    owner: { id: string; username: string } | null;
+  } | null;
+  resolution: { note: string | null; at: string; by: string } | null;
+}
+
+export interface AdminBugReportDto {
+  id: string;
+  description: string;
+  pageUrl: string | null;
+  userAgent: string | null;
+  hasScreenshot: boolean;
+  status: BugReportStatus;
+  createdAt: string;
+  reporter: { id: string; username: string; email: string };
 }

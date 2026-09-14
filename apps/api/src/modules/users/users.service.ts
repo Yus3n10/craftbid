@@ -64,6 +64,7 @@ export async function getMe(userId: string): Promise<MeDto> {
     ...profile,
     email: row.email,
     emailVerified: !emailVerificationEnabled() || row.emailVerifiedAt !== null,
+    isStaff: row.isStaff === 1,
   };
 }
 
