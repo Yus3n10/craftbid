@@ -1,15 +1,20 @@
 import { z } from "zod";
 import { APPLICATION_STATUSES, LIMITS } from "../constants.js";
-import { paginationSchema, uuidSchema } from "./common.js";
+import { optionalText, paginationSchema, uuidSchema } from "./common.js";
 import { budgetCentavosSchema } from "./posting.js";
 
 export const createApplicationSchema = z.object({
   /**
-   * Must be at least the posting's minimum. The server re-reads the live
-   * posting inside the transaction rather than trusting anything sent here,
-   * and a CHECK constraint enforces it a second time at the database.
+   * May be below the client's starting budget. Whether it is, and so whether
+   * `belowBudgetReason` is required, is decided on the server against the
+   * posting read inside the transaction, never from anything sent here.
    */
   proposedPriceCentavos: budgetCentavosSchema,
+  /**
+   * Required when the price is below the starting budget, ignored otherwise.
+   * Blank or whitespace-only counts as missing.
+   */
+  belowBudgetReason: optionalText(LIMITS.belowBudgetReason.max),
   coverLetter: z
     .string()
     .trim()

@@ -54,6 +54,41 @@ function SearchIcon() {
 const ICON_BUTTON =
   "relative flex size-11 items-center justify-center rounded-sm text-ink-soft transition-colors hover:bg-paper-sunk hover:text-ink";
 
+function UnreadMessages() {
+  const { data } = useQuery({
+    queryKey: ["conversations", "unread"],
+    queryFn: () => api.get<{ unread: number }>("/conversations/unread"),
+    refetchInterval: 60_000,
+  });
+
+  if (!data?.unread) return null;
+  return (
+    <span
+      className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-indigo text-[10px] font-bold text-paper-raised"
+      aria-label={`${data.unread} unread conversations`}
+    >
+      {data.unread > 9 ? "9+" : data.unread}
+    </span>
+  );
+}
+
+/** Conversations, with how many have something unread. */
+function MessagesLink() {
+  return (
+    <Link to="/messages" className={ICON_BUTTON} aria-label="Messages">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path
+          d="M4 4.5h12a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5H9l-3.5 3v-3H4A1.5 1.5 0 0 1 2.5 13V6A1.5 1.5 0 0 1 4 4.5Z"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinejoin="round"
+        />
+      </svg>
+      <UnreadMessages />
+    </Link>
+  );
+}
+
 /**
  * The bell, with the unread count on it.
  *
@@ -226,7 +261,8 @@ export function Header() {
     >
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 xl:gap-4">
         <Link to="/" className="shrink-0" aria-label="Craftbid home">
-          <Logo />
+          {/* Below 360px the four icons need the wordmark's room; the mark stays. */}
+          <Logo wordmarkClassName="max-[359px]:hidden" />
         </Link>
 
         <nav className="hidden items-center gap-1 lg:flex" aria-label="Main">
@@ -246,6 +282,7 @@ export function Header() {
 
           {user ? (
             <>
+              <MessagesLink />
               <NotificationsLink />
 
               {/* Settings, saved posts and history were reachable only through
@@ -280,6 +317,7 @@ export function Header() {
 
         <div className="ml-auto flex items-center gap-1 lg:hidden">
           {searchToggle}
+          {user && <MessagesLink />}
           {user && <NotificationsLink />}
           <button
             ref={menuButtonRef}

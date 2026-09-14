@@ -132,6 +132,10 @@ export interface ApplicationDto {
   postingId: string;
   artist: UserSummaryDto;
   proposedPriceCentavos: number;
+  /** The client's starting budget when this bid was made. */
+  startingBudgetCentavos: number;
+  /** Present only when the bid is below the starting budget. */
+  belowBudgetReason?: string;
   coverLetter: string;
   status: ApplicationStatus;
   samples: ArtistPostSummaryDto[];
@@ -170,6 +174,10 @@ export interface ShareDto {
   user: UserSummaryDto;
   caption?: string;
   createdAt: string;
+  /** The share's own reactions, not the shared post's. */
+  reactions: ReactionSummary;
+  /** Comments on the share itself. */
+  commentCount: number;
 }
 
 /**
@@ -431,4 +439,34 @@ export interface AdminBugReportDto {
   status: BugReportStatus;
   createdAt: string;
   reporter: { id: string; username: string; email: string };
+}
+
+/** One conversation, as the person in it sees it. Never carries a bid's price. */
+export interface ConversationDto {
+  id: string;
+  posting: { id: string; title: string };
+  /** The other person in the conversation. */
+  otherParty: UserSummaryDto;
+  myRole: "client" | "artist";
+  /** Still a bid, or a commission with this artist. */
+  stage: "bidding" | "commission";
+  commissionId?: string;
+  /** False once the bid was declined or withdrawn, or the commission cancelled. */
+  canSend: boolean;
+}
+
+export interface MessageDto {
+  id: string;
+  body: string;
+  createdAt: string;
+  mine: boolean;
+}
+
+export interface ConversationSummaryDto {
+  id: string;
+  posting: { id: string; title: string };
+  otherParty: UserSummaryDto;
+  myRole: "client" | "artist";
+  lastMessage: { body: string; createdAt: string; mine: boolean };
+  unread: boolean;
 }

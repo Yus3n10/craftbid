@@ -125,8 +125,8 @@ export function Shell() {
           </div>
 
           <p className="mt-10 border-t border-fiber pt-6 text-xs text-ink-faint">
-            Prices are shown in Philippine pesos. Craftbid does not handle payment;
-            clients and artists agree terms directly.
+            Craftbid is new and improving every week. Your comments and bug reports
+            decide what we fix next.
           </p>
         </div>
       </footer>

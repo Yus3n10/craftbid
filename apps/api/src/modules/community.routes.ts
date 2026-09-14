@@ -3,6 +3,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import {
   createReportSchema,
+  markNotificationsReadSchema,
   paginationSchema,
   usernameSchema,
 } from "@craftbid/shared";
@@ -30,11 +31,12 @@ export const communityRoutes: FastifyPluginAsync = async (fastify) => {
       notifications.listForUser(request.user!.id, request.query),
   );
 
+  // Called by the notifications page as it opens, not by a button.
   app.post(
     "/notifications/read",
-    { preHandler: fastify.requireAuth },
+    { preHandler: fastify.requireAuth, schema: { body: markNotificationsReadSchema } },
     async (request) => {
-      const updated = await notifications.markAllRead(request.user!.id);
+      const updated = await notifications.markRead(request.user!.id, request.body.throughId);
       return { markedRead: updated };
     },
   );

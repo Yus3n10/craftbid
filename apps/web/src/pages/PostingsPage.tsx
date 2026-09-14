@@ -57,7 +57,7 @@ export function PostingsPage() {
       <PageHeading
         eyebrow="For artists"
         title="Craft requests"
-        description="Open commissions from clients looking for handmade work. Bid at or above the starting budget."
+        description="Open commissions from clients looking for handmade work. Each shows the client's starting budget."
         actions={
           user?.role === "client" ? (
             <ButtonLink to="/postings/new">Post a request</ButtonLink>

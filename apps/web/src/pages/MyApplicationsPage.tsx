@@ -5,6 +5,7 @@ import { api } from "../lib/api.js";
 import { Page } from "../components/layout/Shell.js";
 import { Button } from "../components/ui/Button.js";
 import { Card, Money, StatusBadge } from "../components/ui/Primitives.js";
+import { BelowBudgetNote } from "../components/BelowBudgetNote.js";
 import {
   EmptyState,
   ErrorState,
@@ -42,7 +43,7 @@ export function MyApplicationsPage() {
       ) : data?.items.length === 0 ? (
         <EmptyState
           title="You have not bid on anything yet"
-          description="Browse open craft requests and bid on the ones that suit your hands. You can bid at or above the client's starting budget."
+          description="Browse open craft requests and bid on the ones that suit your hands. Price each bid at what the work will take; if that is under the starting budget, tell the client why."
           action={{ label: "Find commissions", to: "/postings" }}
         />
       ) : (
@@ -56,6 +57,13 @@ export function MyApplicationsPage() {
                     <p className="mt-2 line-clamp-2 text-sm text-ink-soft">
                       {application.coverLetter}
                     </p>
+                    <BelowBudgetNote
+                      priceCentavos={application.proposedPriceCentavos}
+                      startingBudgetCentavos={application.startingBudgetCentavos}
+                      reason={application.belowBudgetReason}
+                      audience="artist"
+                      className="mt-2"
+                    />
                     <Link
                       to={`/postings/${application.postingId}`}
                       className="mt-2 inline-block text-sm font-medium text-indigo hover:underline"

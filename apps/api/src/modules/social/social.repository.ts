@@ -31,6 +31,18 @@ function idList(ids: string[], prefix: string) {
   return { sql: placeholders.join(", "), binds };
 }
 
+/**
+ * What a reaction or comment is on. Reactions live in a table per target;
+ * comments share one table with a column per target. Table and column names
+ * come from these maps, never from a request.
+ */
+export type Target = "post" | "share";
+const REACTION_TABLE: Record<Target, { table: string; column: string }> = {
+  post: { table: "post_reactions", column: "post_id" },
+  share: { table: "share_reactions", column: "share_id" },
+};
+const COMMENT_COLUMN: Record<Target, string> = { post: "post_id", share: "share_id" };
+
 const EMPTY: ReactionSummary = {
   love: 0,
   support: 0,
@@ -43,17 +55,19 @@ export async function reactionSummaries(
   postIds: string[],
   viewerId: string | null,
   q: Queryable = db,
+  on: Target = "post",
 ): Promise<Map<string, ReactionSummary>> {
+  const { table, column } = REACTION_TABLE[on];
   const out = new Map<string, ReactionSummary>();
   if (postIds.length === 0) return out;
 
   const { sql, binds } = idList(postIds, "p");
 
   const counts = await q.many<{ postId: Buffer; kind: ReactionKind; cnt: number }>(
-    `SELECT post_id, kind, COUNT(*) AS cnt
-       FROM post_reactions
-      WHERE post_id IN (${sql})
-      GROUP BY post_id, kind`,
+    `SELECT ${column} AS post_id, kind, COUNT(*) AS cnt
+       FROM ${table}
+      WHERE ${column} IN (${sql})
+      GROUP BY ${column}, kind`,
     binds,
   );
 
@@ -67,8 +81,8 @@ export async function reactionSummaries(
 
   if (viewerId) {
     const mine = await q.many<{ postId: Buffer; kind: ReactionKind }>(
-      `SELECT post_id, kind FROM post_reactions
-        WHERE user_id = :viewer AND post_id IN (${sql})`,
+      `SELECT ${column} AS post_id, kind FROM ${table}
+        WHERE user_id = :viewer AND ${column} IN (${sql})`,
       { ...binds, viewer: uuidToBuf(viewerId) },
     );
     for (const row of mine) {
@@ -85,14 +99,16 @@ export async function reactionSummaries(
 export async function commentCounts(
   postIds: string[],
   q: Queryable = db,
+  on: Target = "post",
 ): Promise<Map<string, number>> {
+  const column = COMMENT_COLUMN[on];
   const out = new Map<string, number>();
   if (postIds.length === 0) return out;
 
   const { sql, binds } = idList(postIds, "p");
   const rows = await q.many<{ postId: Buffer; cnt: number }>(
-    `SELECT post_id, COUNT(*) AS cnt FROM post_comments
-      WHERE post_id IN (${sql}) AND removed_at IS NULL GROUP BY post_id`,
+    `SELECT ${column} AS post_id, COUNT(*) AS cnt FROM post_comments
+      WHERE ${column} IN (${sql}) AND removed_at IS NULL GROUP BY ${column}`,
     binds,
   );
   for (const row of rows) out.set(bufToUuid(row.postId)!, Number(row.cnt));
@@ -153,16 +169,18 @@ export async function setReaction(
   userId: string,
   kind: ReactionKind,
   tx: Queryable = db,
+  on: Target = "post",
 ): Promise<void> {
+  const { table, column } = REACTION_TABLE[on];
   // Reacting again replaces rather than stacks, so the primary key is the
   // whole mechanism and MERGE keeps it to one round trip.
   await tx.run(
-    `MERGE INTO post_reactions r
-     USING (SELECT :postId AS post_id, :userId AS user_id FROM dual) s
-        ON (r.post_id = s.post_id AND r.user_id = s.user_id)
+    `MERGE INTO ${table} r
+     USING (SELECT :postId AS target_id, :userId AS user_id FROM dual) s
+        ON (r.${column} = s.target_id AND r.user_id = s.user_id)
       WHEN MATCHED THEN UPDATE SET r.kind = :kind, r.created_at = SYSTIMESTAMP
-      WHEN NOT MATCHED THEN INSERT (post_id, user_id, kind)
-           VALUES (s.post_id, s.user_id, :kind)`,
+      WHEN NOT MATCHED THEN INSERT (${column}, user_id, kind)
+           VALUES (s.target_id, s.user_id, :kind)`,
     { postId: uuidToBuf(postId), userId: uuidToBuf(userId), kind },
   );
 }
@@ -171,9 +189,11 @@ export async function clearReaction(
   postId: string,
   userId: string,
   tx: Queryable = db,
+  on: Target = "post",
 ): Promise<void> {
+  const { table, column } = REACTION_TABLE[on];
   await tx.run(
-    `DELETE FROM post_reactions WHERE post_id = :postId AND user_id = :userId`,
+    `DELETE FROM ${table} WHERE ${column} = :postId AND user_id = :userId`,
     { postId: uuidToBuf(postId), userId: uuidToBuf(userId) },
   );
 }
@@ -182,7 +202,9 @@ export async function listComments(
   postId: string,
   viewerId: string | null,
   q: Queryable = db,
+  on: Target = "post",
 ): Promise<CommentDto[]> {
+  const column = COMMENT_COLUMN[on];
   const storage = getStorage();
   const rows = await q.many<{
     id: Buffer;
@@ -201,7 +223,7 @@ export async function listComments(
        FROM post_comments c
        JOIN users u ON u.id = c.author_id
        LEFT JOIN images av ON av.id = u.avatar_image_id
-      WHERE c.post_id = :postId AND c.removed_at IS NULL
+      WHERE c.${column} = :postId AND c.removed_at IS NULL
       ORDER BY c.created_at`,
     { postId: uuidToBuf(postId) },
   );
@@ -234,10 +256,12 @@ export async function insertComment(
   authorId: string,
   body: string,
   tx: Queryable = db,
+  on: Target = "post",
 ): Promise<string> {
   const id = newId();
+  const column = COMMENT_COLUMN[on];
   await tx.run(
-    `INSERT INTO post_comments (id, post_id, author_id, body)
+    `INSERT INTO post_comments (id, ${column}, author_id, body)
      VALUES (:id, :postId, :authorId, :body)`,
     {
       id: uuidToBuf(id),
@@ -252,13 +276,13 @@ export async function insertComment(
 export async function findComment(
   id: string,
   q: Queryable = db,
-): Promise<{ authorId: string; postId: string } | null> {
-  const row = await q.one<{ authorId: Buffer; postId: Buffer }>(
-    `SELECT author_id, post_id FROM post_comments WHERE id = :id AND removed_at IS NULL`,
+): Promise<{ authorId: string; postId: string | null; shareId: string | null } | null> {
+  const row = await q.one<{ authorId: Buffer; postId: Buffer | null; shareId: Buffer | null }>(
+    `SELECT author_id, post_id, share_id FROM post_comments WHERE id = :id AND removed_at IS NULL`,
     { id: uuidToBuf(id) },
   );
   return row
-    ? { authorId: bufToUuid(row.authorId)!, postId: bufToUuid(row.postId)! }
+    ? { authorId: bufToUuid(row.authorId)!, postId: bufToUuid(row.postId), shareId: bufToUuid(row.shareId) }
     : null;
 }
 
@@ -381,6 +405,25 @@ export async function upsertShare(
   return true;
 }
 
+/**
+ * A share, if it exists and the post it shares is still published. Engagement
+ * on a share of a post taken down is refused, the same as on the post.
+ */
+export async function findLiveShare(
+  shareId: string,
+  q: Queryable = db,
+): Promise<{ userId: string; username: string; postId: string } | null> {
+  const row = await q.one<{ userId: Buffer; username: string; postId: Buffer }>(
+    `SELECT s.user_id, u.username, s.post_id
+       FROM post_shares s
+       JOIN users u ON u.id = s.user_id
+       JOIN artist_posts p ON p.id = s.post_id
+      WHERE s.id = :id AND p.status = 'published'`,
+    { id: uuidToBuf(shareId) },
+  );
+  return row ? { userId: bufToUuid(row.userId)!, username: row.username, postId: bufToUuid(row.postId)! } : null;
+}
+
 export async function deleteShare(
   postId: string,
   userId: string,
@@ -414,7 +457,8 @@ const SHARE_SELECT = `
     LEFT JOIN images av ON av.id = u.avatar_image_id
 `;
 
-export type ShareRecord = ShareDto & { postId: string };
+/** A share as stored; its reactions and comment count are attached when a card is built. */
+export type ShareRecord = Omit<ShareDto, "reactions" | "commentCount"> & { postId: string };
 
 function mapShare(row: ShareRow): ShareRecord {
   const storage = getStorage();

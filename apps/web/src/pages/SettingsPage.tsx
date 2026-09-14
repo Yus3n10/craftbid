@@ -21,9 +21,10 @@ import { Field, Select, TextArea, TextInput } from "../components/ui/Field.js";
 import { Card, RoleBadge, ThreadRule } from "../components/ui/Primitives.js";
 import { ProfileChecklist } from "../components/ProfileChecklist.js";
 import { AccountTypeSection } from "../components/AccountTypeSection.js";
-import { FormError, PageHeading } from "../components/ui/States.js";
+import { FieldMessages, FormError, PageHeading } from "../components/ui/States.js";
 import { PayoutAccountsForm } from "../components/commission/PayoutAccountsForm.js";
-import { ImageUploader, type UploadedImage } from "../components/ImageUploader.js";
+import type { UploadedImage } from "../components/ImageUploader.js";
+import { CroppedImageField } from "../components/CroppedImageField.js";
 
 function Section({
   id,
@@ -177,19 +178,19 @@ export function SettingsPage() {
           >
             <FormError error={saveProfile.error} />
 
-            <ImageUploader
+            <CroppedImageField
+              kind="avatar"
               label="Profile picture"
-              images={avatar}
-              onChange={setAvatar}
-              max={1}
+              image={avatar[0] ?? null}
+              onChange={(image) => setAvatar(image ? [image] : [])}
             />
 
-            <ImageUploader
-              label="Cover image"
-              hint="Sits behind your name at the top of your profile."
-              images={cover}
-              onChange={setCover}
-              max={1}
+            <CroppedImageField
+              kind="cover"
+              label="Cover photo"
+              hint="Sits above your name at the top of your profile."
+              image={cover[0] ?? null}
+              onChange={(image) => setCover(image ? [image] : [])}
             />
 
             <Field label="Display name" error={profileFields.displayName} required>
@@ -392,6 +393,7 @@ export function SettingsPage() {
             }}
           >
             <FormError error={saveLinks.error} />
+            <FieldMessages error={saveLinks.error} />
 
             <ul className="space-y-3">
               {links.map((link, index) => (

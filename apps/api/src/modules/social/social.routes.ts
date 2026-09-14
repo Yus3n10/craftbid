@@ -70,6 +70,46 @@ export const socialRoutes: FastifyPluginAsync = async (fastify) => {
     },
   );
 
+  // --- A share's own reactions and comments --------------------------------------
+  app.put(
+    "/shares/:id/reaction",
+    {
+      preHandler: fastify.requireVerified,
+      schema: { params: idParamSchema, body: setReactionSchema },
+      config: { rateLimit: { max: 120, timeWindow: "1 minute" } },
+    },
+    async (request, reply) => {
+      await service.reactToShare(request.params.id, request.user!.id, request.body.kind);
+      return reply.code(204).send();
+    },
+  );
+
+  app.delete(
+    "/shares/:id/reaction",
+    { preHandler: fastify.requireAuth, schema: { params: idParamSchema } },
+    async (request, reply) => {
+      await service.unreactToShare(request.params.id, request.user!.id);
+      return reply.code(204).send();
+    },
+  );
+
+  app.get(
+    "/shares/:id/comments",
+    { schema: { params: idParamSchema } },
+    async (request) => service.listShareComments(request.params.id, request.user?.id ?? null),
+  );
+
+  app.post(
+    "/shares/:id/comments",
+    {
+      preHandler: fastify.requireVerified,
+      schema: { params: idParamSchema, body: createCommentSchema },
+      config: { rateLimit: { max: 20, timeWindow: "5 minutes" } },
+    },
+    async (request, reply) =>
+      reply.code(201).send(await service.addShareComment(request.params.id, request.user!.id, request.body.body)),
+  );
+
   app.delete(
     "/comments/:id",
     { preHandler: fastify.requireAuth, schema: { params: idParamSchema } },

@@ -12,6 +12,8 @@ interface ApplicationRow {
   id: Buffer;
   postingId: Buffer;
   proposedPriceCentavos: number;
+  minPriceAtApplyCentavos: number;
+  belowBudgetReason: string | null;
   coverLetter: string;
   status: ApplicationStatus;
   createdAt: Date;
@@ -31,6 +33,7 @@ interface ApplicationRow {
 
 const APPLICATION_SELECT = `
   SELECT a.id, a.posting_id, a.proposed_price_centavos, a.cover_letter,
+         a.min_price_at_apply_centavos, a.below_budget_reason,
          a.status, a.created_at,
          u.id AS artist_id, u.username AS artist_username,
          u.display_name AS artist_display_name, u.role AS artist_role,
@@ -142,6 +145,8 @@ function mapApplication(
       ...(row.artistCity ? { city: row.artistCity } : {}),
     },
     proposedPriceCentavos: Number(row.proposedPriceCentavos),
+    startingBudgetCentavos: Number(row.minPriceAtApplyCentavos),
+    ...(row.belowBudgetReason ? { belowBudgetReason: row.belowBudgetReason } : {}),
     coverLetter: row.coverLetter,
     status: row.status,
     samples,
@@ -291,6 +296,7 @@ export async function insertApplication(
     artistId: string;
     proposedPriceCentavos: number;
     minPriceAtApplyCentavos: number;
+    belowBudgetReason: string | null;
     coverLetter: string;
   },
   tx: Queryable,
@@ -298,14 +304,15 @@ export async function insertApplication(
   await tx.run(
     `INSERT INTO applications
        (id, posting_id, artist_id, proposed_price_centavos,
-        min_price_at_apply_centavos, cover_letter)
-     VALUES (:id, :postingId, :artistId, :price, :minPrice, :coverLetter)`,
+        min_price_at_apply_centavos, below_budget_reason, cover_letter)
+     VALUES (:id, :postingId, :artistId, :price, :minPrice, :reason, :coverLetter)`,
     {
       id: uuidToBuf(input.id),
       postingId: uuidToBuf(input.postingId),
       artistId: uuidToBuf(input.artistId),
       price: input.proposedPriceCentavos,
       minPrice: input.minPriceAtApplyCentavos,
+      reason: input.belowBudgetReason,
       coverLetter: input.coverLetter,
     },
   );

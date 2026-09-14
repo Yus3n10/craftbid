@@ -1,3 +1,4 @@
+import { AVATAR_CROP, COVER_CROP, fitsCropSpec, type CropSpec } from "@craftbid/shared";
 import type {
   MeDto,
   PublicProfileDto,
@@ -10,6 +11,7 @@ import { withTransaction } from "../../db/query.js";
 import { badRequest, forbidden, notFound } from "../../lib/errors.js";
 import * as imagesRepo from "../images/images.repository.js";
 import * as repo from "./profiles.repository.js";
+import * as usersRepo from "./users.repository.js";
 import { emailVerificationEnabled } from "../../lib/mail/index.js";
 
 async function buildProfile(
@@ -91,6 +93,27 @@ async function assertOwnsImages(ids: string[], ownerId: string): Promise<void> {
   }
 }
 
+/**
+ * A new profile picture must be square and a new cover three times as wide as
+ * tall, the shapes the editor saves and the profile shows them in, so nothing
+ * is stretched or cropped differently from what the person framed. Only a
+ * change is checked: a picture already in place from before the editor stays.
+ */
+async function assertCropShape(userId: string, input: UpdateProfileInput): Promise<void> {
+  const current = await usersRepo.findById(userId);
+  const checks: { id: string | null | undefined; currentId: string | null | undefined; spec: CropSpec; name: string }[] = [
+    { id: input.avatarImageId, currentId: current?.avatarImageId, spec: AVATAR_CROP, name: "profile picture" },
+    { id: input.coverImageId, currentId: current?.coverImageId, spec: COVER_CROP, name: "cover photo" },
+  ];
+  for (const check of checks) {
+    if (!check.id || check.id === check.currentId) continue;
+    const image = await imagesRepo.findById(check.id);
+    if (!image || !fitsCropSpec(image.width, image.height, check.spec)) {
+      throw badRequest(`Crop the ${check.name} in the editor before saving it.`);
+    }
+  }
+}
+
 export async function updateProfile(
   userId: string,
   input: UpdateProfileInput,
@@ -99,6 +122,7 @@ export async function updateProfile(
     (id): id is string => typeof id === "string",
   );
   await assertOwnsImages(imageIds, userId);
+  await assertCropShape(userId, input);
 
   await repo.updateProfile(userId, {
     ...(input.displayName !== undefined ? { displayName: input.displayName } : {}),

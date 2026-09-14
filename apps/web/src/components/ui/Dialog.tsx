@@ -23,7 +23,7 @@ export function Dialog({
   title: string;
   children?: ReactNode;
   actions?: ReactNode;
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -50,7 +50,7 @@ export function Dialog({
       }}
       className={cx(
         "m-auto w-[calc(100%-2rem)] rounded-lg border border-fiber bg-paper-raised p-0 text-ink shadow-lift backdrop:bg-ink/40",
-        size === "sm" ? "max-w-sm" : "max-w-lg",
+        size === "sm" ? "max-w-sm" : size === "md" ? "max-w-lg" : "max-w-2xl",
       )}
     >
       {open && (

@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode, type Ref } from "react";
 import type {
   InputHTMLAttributes,
   SelectHTMLAttributes,
@@ -150,12 +150,18 @@ export function TextArea({
   invalid,
   className,
   ...rest
-}: TextareaHTMLAttributes<HTMLTextAreaElement> & { invalid?: boolean }) {
+}: TextareaHTMLAttributes<HTMLTextAreaElement> & {
+  invalid?: boolean;
+  /** React 19 passes a ref as an ordinary prop, so it reaches the textarea through rest. */
+  ref?: Ref<HTMLTextAreaElement>;
+}) {
   return (
     <textarea
       className={control(
         className,
-        "min-h-28 resize-y leading-relaxed",
+        // A caller that sets its own min-h (the one-line chat box) gets it:
+        // joined with min-h-28, which one applied would depend on CSS order.
+        /(?:^|\s)min-h-/.test(className ?? "") ? "leading-relaxed" : "min-h-28 resize-y leading-relaxed",
         invalid ? "border-rust" : "border-fiber-strong",
       )}
       aria-invalid={invalid || undefined}

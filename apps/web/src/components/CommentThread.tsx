@@ -95,11 +95,15 @@ function Comment({
 export function CommentThread({
   postId,
   artistId,
+  on = "post",
 }: {
+  /** The post's id, or the share's when `on` is "share". */
   postId: string;
-  /** The post's owner, who may remove comments from their own page. */
+  /** Whose card it is: the artist of a post, or the person who shared. They may clear comments from it. */
   artistId: string;
+  on?: "post" | "share";
 }) {
+  const base = `/${on === "share" ? "shares" : "posts"}/${postId}`;
   const { user } = useAuth();
   const requireAccount = useRequireAccount();
   const queryClient = useQueryClient();
@@ -108,11 +112,11 @@ export function CommentThread({
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["comments", postId],
-    queryFn: () => api.get<CommentDto[]>(`/posts/${postId}/comments`),
+    queryFn: () => api.get<CommentDto[]>(`${base}/comments`),
   });
 
   const add = useMutation({
-    mutationFn: () => api.post<CommentDto>(`/posts/${postId}/comments`, { body }),
+    mutationFn: () => api.post<CommentDto>(`${base}/comments`, { body }),
     onSuccess: () => {
       setBody("");
       void queryClient.invalidateQueries({ queryKey: ["comments", postId] });

@@ -5,6 +5,8 @@ import { formatPeso } from "@craftbid/shared";
 import { api } from "../lib/api.js";
 import { Page } from "../components/layout/Shell.js";
 import { ReportButton } from "../components/ReportButton.js";
+import { BelowBudgetNote } from "../components/BelowBudgetNote.js";
+import { MessageButton } from "../components/chat/MessageButton.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
 import { Stars } from "../components/ui/Stars.js";
 import {
@@ -84,6 +86,13 @@ function ApplicationRow({
           </div>
         </div>
 
+        <BelowBudgetNote
+          priceCentavos={application.proposedPriceCentavos}
+          startingBudgetCentavos={application.startingBudgetCentavos}
+          reason={application.belowBudgetReason}
+          audience="client"
+        />
+
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink-soft">
           {application.coverLetter}
         </p>
@@ -116,6 +125,11 @@ function ApplicationRow({
           >
             View portfolio
           </ButtonLink>
+          <MessageButton
+            postingId={application.postingId}
+            artistId={application.artist.id}
+            label={`Message ${application.artist.displayName}`}
+          />
 
           {postingOpen && application.status === "pending" && (
             <>

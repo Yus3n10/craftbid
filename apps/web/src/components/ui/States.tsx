@@ -147,6 +147,25 @@ export function ErrorState({
   );
 }
 
+/**
+ * The server's own reasons for a rejected form with repeated rows, where the
+ * field keys ("accounts.1.accountName") do not map onto one input each. Says
+ * each distinct reason once, so "Emoji can't be used here." is not buried
+ * under a generic "check the fields" line.
+ */
+export function FieldMessages({ error }: { error: unknown }) {
+  if (!(error instanceof ApiError)) return null;
+  const messages = [...new Set(Object.values(error.fields))];
+  if (messages.length === 0) return null;
+  return (
+    <ul role="alert" className="space-y-1 text-sm text-rust">
+      {messages.map((message) => (
+        <li key={message}>{message}</li>
+      ))}
+    </ul>
+  );
+}
+
 /** A short inline message for a failed form submission. */
 export function FormError({ error }: { error: unknown }) {
   if (!error) return null;

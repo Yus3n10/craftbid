@@ -20,6 +20,7 @@ import {
 } from "../components/ui/Primitives.js";
 import { ErrorState, FormError, RowSkeleton } from "../components/ui/States.js";
 import { PaymentPanel } from "../components/commission/PaymentPanel.js";
+import { MessageButton } from "../components/chat/MessageButton.js";
 
 function ReviewForm({ commission }: { commission: CommissionDto }) {
   const queryClient = useQueryClient();
@@ -148,6 +149,14 @@ export function CommissionDetailPage() {
                 <div className="mt-1">
                   <UserChip user={commission.artist} size={32} />
                 </div>
+              </div>
+              {/* Questions and updates that the payment record has no step for. */}
+              <div className="sm:ml-auto">
+                <MessageButton
+                  postingId={commission.posting.id}
+                  artistId={commission.artist.id}
+                  label={`Message ${isClient ? commission.artist.displayName : commission.client.displayName}`}
+                />
               </div>
             </div>
           </Card>

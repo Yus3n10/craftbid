@@ -34,6 +34,8 @@ const SettingsPage = lazy(async () => ({ default: (await import("./pages/Setting
 const VerifyEmailPage = lazy(async () => ({ default: (await import("./pages/VerifyEmailPage.js")).VerifyEmailPage }));
 const SavedPostsPage = lazy(async () => ({ default: (await import("./pages/SavedPostsPage.js")).SavedPostsPage }));
 const ActivityPage = lazy(async () => ({ default: (await import("./pages/ActivityPage.js")).ActivityPage }));
+const MessagesPage = lazy(async () => ({ default: (await import("./pages/MessagesPage.js")).MessagesPage }));
+const ConversationPage = lazy(async () => ({ default: (await import("./pages/ConversationPage.js")).ConversationPage }));
 const AdminPage = lazy(async () => ({ default: (await import("./pages/admin/AdminPage.js")).AdminPage }));
 const AdminUserDetail = lazy(async () => ({ default: (await import("./pages/admin/AdminUserDetail.js")).AdminUserDetail }));
 
@@ -254,6 +256,23 @@ export function App() {
           element={
             <RequireAuth>
               <SettingsPage />
+            </RequireAuth>
+          }
+        />
+
+        <Route
+          path="messages"
+          element={
+            <RequireAuth>
+              <MessagesPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="messages/:id"
+          element={
+            <RequireAuth>
+              <ConversationPage />
             </RequireAuth>
           }
         />

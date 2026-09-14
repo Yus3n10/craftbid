@@ -232,33 +232,38 @@ export function ProfilePage() {
 
   return (
     <>
-      {/* Cover. Falls back to a woven band in the artist's primary craft
-          colour rather than an empty grey slab. */}
-      <div
-        className="h-40 border-b border-fiber sm:h-56"
-        style={
-          profile.cover
-            ? {
-                backgroundImage: `url(${profile.cover.url})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }
-            : {
-                background: `repeating-linear-gradient(135deg, ${materialColor(
-                  profile.artist?.categories[0]?.slug,
-                )} 0 2px, transparent 2px 11px), var(--color-paper-sunk)`,
-              }
-        }
-        role="presentation"
-      />
+      {/* Cover. Always 3:1, the shape the cover editor frames and saves, so
+          the profile shows exactly what its owner chose at every width.
+          Falls back to a woven band in the artist's primary craft colour
+          rather than an empty grey slab. */}
+      <div className="mx-auto max-w-6xl px-4 pt-6">
+        <div
+          data-testid="profile-cover"
+          className="aspect-[3/1] w-full overflow-hidden rounded-lg border border-fiber"
+          style={
+            profile.cover
+              ? undefined
+              : {
+                  background: `repeating-linear-gradient(135deg, ${materialColor(
+                    profile.artist?.categories[0]?.slug,
+                  )} 0 2px, transparent 2px 11px), var(--color-paper-sunk)`,
+                }
+          }
+          role="presentation"
+        >
+          {profile.cover && <img src={profile.cover.url} alt="" className="size-full object-cover" />}
+        </div>
+      </div>
 
       <Page>
-        <div className="-mt-16 flex flex-wrap items-end justify-between gap-4 sm:-mt-20">
-          <div className="flex items-end gap-4">
-            <span className="rounded-full bg-paper p-1">
+        {/* Only the portrait overlaps the cover; the name sits below it, so it is
+            never printed across someone's photo. */}
+        <div className="-mt-6 flex flex-wrap items-start justify-between gap-4 pl-4 sm:pl-6">
+          <div className="flex min-w-0 items-start gap-4">
+            <span className="-mt-14 shrink-0 rounded-full bg-paper p-1 sm:-mt-16">
               <Avatar user={profile} size={96} />
             </span>
-            <div className="pb-1">
+            <div className="min-w-0 pt-1">
               <h1 className="font-display text-3xl">{profile.displayName}</h1>
               <p className="flex flex-wrap items-center gap-2 text-ink-faint">
                 <span>@{profile.username}</span>
@@ -269,7 +274,7 @@ export function ProfilePage() {
           </div>
 
           {isSelf && (
-            <div className="flex gap-2 pb-1">
+            <div className="flex gap-2 pt-1">
               <ButtonLink to="/settings" variant="secondary" size="sm">
                 Edit profile
               </ButtonLink>

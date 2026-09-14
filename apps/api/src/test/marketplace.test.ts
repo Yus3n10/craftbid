@@ -93,7 +93,7 @@ describe("marketplace workflow", () => {
       expect(bySearch.json().items[0].title).toBe("Stoneware mugs");
     });
 
-    it("stops the minimum budget changing once artists have applied", async () => {
+    it("stops the starting budget changing once artists have applied", async () => {
       const app = await getTestApp();
       const posting = await createPosting(client, { minBudgetCentavos: 150_000 });
       await applyToPosting(artist, posting.id, 150_000);
@@ -105,13 +105,13 @@ describe("marketplace workflow", () => {
         payload: { minBudgetCentavos: 500_000 },
       });
 
-      // Artists priced their bids against the advertised minimum.
+      // Artists priced their bids against the advertised starting budget.
       expect(response.statusCode).toBe(400);
     });
   });
 
   describe("applications", () => {
-    it("lets an artist apply at exactly the minimum", async () => {
+    it("lets an artist apply at exactly the starting budget", async () => {
       const posting = await createPosting(client, { minBudgetCentavos: 150_000 });
       const response = await applyToPosting(artist, posting.id, 150_000);
 
@@ -120,18 +120,10 @@ describe("marketplace workflow", () => {
       expect(response.json().status).toBe("pending");
     });
 
-    it("lets an artist apply above the minimum", async () => {
+    it("lets an artist apply above the starting budget", async () => {
       const posting = await createPosting(client, { minBudgetCentavos: 150_000 });
       const response = await applyToPosting(artist, posting.id, 220_000);
       expect(response.statusCode).toBe(201);
-    });
-
-    it("refuses a bid one centavo below the minimum", async () => {
-      const posting = await createPosting(client, { minBudgetCentavos: 150_000 });
-      const response = await applyToPosting(artist, posting.id, 149_999);
-
-      expect(response.statusCode).toBe(400);
-      expect(response.json().error.fields.proposedPriceCentavos).toBeDefined();
     });
 
     it("refuses a second application from the same artist", async () => {

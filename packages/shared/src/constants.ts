@@ -70,6 +70,8 @@ export const NOTIFICATION_TYPES = [
   "balance_method_chosen",
   "account_warning",
   "content_removed",
+  "share_reaction",
+  "share_comment",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -295,12 +297,15 @@ export const LIMITS = {
   password: { min: 10, max: 200 },
   bio: { max: 1000 },
   commentBody: { max: 1000 },
+  messageBody: { max: 2000 },
   shareCaption: { max: 500 },
   headline: { max: 120 },
   postingTitle: { min: 8, max: 140 },
   postingDescription: { min: 30, max: 5000 },
   postingRequirements: { max: 2000 },
   coverLetter: { min: 30, max: 3000 },
+  /** Why a bid is below the client's starting budget. */
+  belowBudgetReason: { max: 500 },
   reviewBody: { max: 2000 },
   captionMax: 1000,
   skillsPerArtist: 20,
@@ -426,3 +431,42 @@ export type BugReportStatus = (typeof BUG_REPORT_STATUSES)[number];
 
 /** How long an account waits between switching artist and client. */
 export const ROLE_SWITCH_COOLDOWN_DAYS = 30;
+
+/**
+ * Suggested messages for chat. Tapping one fills the message box; nothing is
+ * sent until the person presses Send, so each can be edited first.
+ *
+ * Split by who is writing and whether the request is still at the bidding
+ * stage or is now a commission, because "send me a progress photo" means
+ * nothing before anyone has been chosen.
+ */
+export const CHAT_SUGGESTIONS = {
+  client: {
+    bidding: [
+      "Could you tell me more about how you would make this?",
+      "How soon could you start?",
+      "Could you show me a similar piece you have made?",
+      "I have a question about your bid.",
+    ],
+    commission: [
+      "Can you send me an update on the commission?",
+      "Can you give me an estimate of when this will be finished?",
+      "Can you send me a progress photo?",
+      "I have a question about the commission.",
+    ],
+  },
+  artist: {
+    bidding: [
+      "Can you clarify what you want for this piece?",
+      "Do you have a reference photo or measurements?",
+      "I have a question about your request.",
+      "Are you available to talk right now?",
+    ],
+    commission: [
+      "Can you confirm the details before I start?",
+      "I have a question about the commission.",
+      "Here is an update on your piece.",
+      "Are you available to talk right now?",
+    ],
+  },
+} as const;

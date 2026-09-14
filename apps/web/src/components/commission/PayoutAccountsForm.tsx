@@ -5,7 +5,7 @@ import { ApiError, api } from "../../lib/api.js";
 import { useUnsavedChanges } from "../../lib/unsavedChanges.js";
 import { Button } from "../ui/Button.js";
 import { Field, TextInput } from "../ui/Field.js";
-import { FormError } from "../ui/States.js";
+import { FieldMessages, FormError } from "../ui/States.js";
 
 interface Draft {
   gcashName: string;
@@ -113,7 +113,6 @@ export function PayoutAccountsForm() {
     },
   });
 
-  const fields = save.error instanceof ApiError ? save.error.fields : {};
   const set = (key: keyof Draft) => (event: React.ChangeEvent<HTMLInputElement>) =>
     setDraft((current) => ({ ...current, [key]: event.target.value }));
 
@@ -164,11 +163,7 @@ export function PayoutAccountsForm() {
         </Field>
       </Method>
 
-      {Object.keys(fields).length > 0 && (
-        <p className="text-sm text-rust" role="alert">
-          Check the details above: numbers need all their digits, and each method needs a name.
-        </p>
-      )}
+      <FieldMessages error={save.error} />
 
       <div className="flex items-center gap-3">
         <Button type="submit" loading={save.isPending}>

@@ -1,11 +1,17 @@
 import { z } from "zod";
 import { LIMITS, LINK_PLATFORMS, PH_REGIONS, CRAFT_CATEGORY_SLUGS } from "../constants.js";
-import { httpsUrlSchema, optionalText, uuidSchema } from "./common.js";
+import { NO_EMOJI_MESSAGE, containsEmoji, httpsUrlSchema, optionalText, uuidSchema } from "./common.js";
+
+/** A place name: any script, no emoji. */
+const citySchema = optionalText(80).refine(
+  (value) => value === undefined || !containsEmoji(value),
+  NO_EMOJI_MESSAGE,
+);
 
 /** Region and city only. Street addresses are never collected. */
 export const locationSchema = z.object({
   region: z.enum(PH_REGIONS).optional(),
-  city: optionalText(80),
+  city: citySchema,
 });
 
 export const updateProfileSchema = z.object({
@@ -17,7 +23,7 @@ export const updateProfileSchema = z.object({
     .optional(),
   bio: optionalText(LIMITS.bio.max),
   region: z.enum(PH_REGIONS).nullish(),
-  city: optionalText(80),
+  city: citySchema,
   avatarImageId: uuidSchema.nullish(),
   coverImageId: uuidSchema.nullish(),
 });
@@ -56,6 +62,7 @@ export const contactUrlSchema = z
   .trim()
   .min(1, "Add a link or an email address.")
   .max(500)
+  .refine((value) => !containsEmoji(value), NO_EMOJI_MESSAGE)
   .transform((value) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? `mailto:${value}` : value,
   )

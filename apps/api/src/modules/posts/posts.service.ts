@@ -151,6 +151,11 @@ async function assembleFeed(
       entries.flatMap((entry) => (entry.shareId ? [entry.shareId] : [])),
     ),
   ]);
+  const shareIds = [...shares.keys()];
+  const [shareReactions, shareComments] = await Promise.all([
+    social.reactionSummaries(shareIds, viewerId, undefined, "share"),
+    social.commentCounts(shareIds, undefined, "share"),
+  ]);
   const decorated = new Map(
     (await social.decorate([...posts.values()], viewerId)).map((post) => [post.id, post]),
   );
@@ -166,7 +171,16 @@ async function assembleFeed(
     const share = shares.get(entry.shareId);
     if (!share) continue;
     const { postId: _postId, ...shareDto } = share;
-    items.push({ ...post, share: shareDto });
+    // The card carries both: the original post's engagement for the post shown
+    // inside it, and the share's own for the card itself.
+    items.push({
+      ...post,
+      share: {
+        ...shareDto,
+        reactions: shareReactions.get(share.id) ?? { love: 0, support: 0, like: 0, total: 0, mine: null },
+        commentCount: shareComments.get(share.id) ?? 0,
+      },
+    });
   }
   return items;
 }

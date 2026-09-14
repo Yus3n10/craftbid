@@ -13,6 +13,8 @@ import { ReactionBar, ReactionSummaryLine } from "./ReactionBar.js";
 import { CommentThread } from "./CommentThread.js";
 import { Lightbox } from "./Lightbox.js";
 import { ReportDialog } from "./ReportButton.js";
+import { ClampedText } from "./ClampedText.js";
+import { SharedPostCard } from "./SharedPostCard.js";
 
 function postedAgo(iso: string): string {
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
@@ -73,6 +75,12 @@ function PostMoreMenu({ postId }: { postId: string }) {
 }
 
 export function FeedPost({ post }: { post: FeedItemDto }) {
+  // A share is its own card with its own engagement; see SharedPostCard.
+  if (post.share) return <SharedPostCard post={post} share={post.share} />;
+  return <OwnPost post={post} />;
+}
+
+function OwnPost({ post }: { post: FeedItemDto }) {
   const { user } = useAuth();
   const requireAccount = useRequireAccount();
   const queryClient = useQueryClient();
@@ -114,29 +122,6 @@ export function FeedPost({ post }: { post: FeedItemDto }) {
   return (
     <Card categorySlug={post.category?.slug} className="overflow-hidden">
       <article>
-        {post.share && (
-          // Who shared it sits above the post, which keeps its own artist
-          // header: the work is always credited to the person who made it.
-          <div className="border-b border-fiber bg-paper px-4 py-3 pl-5">
-            <div className="flex items-center gap-2 text-sm">
-              <Link to={`/artists/${post.share.user.username}`} className="shrink-0">
-                <Avatar user={post.share.user} size={24} />
-              </Link>
-              <p className="min-w-0 text-ink-soft">
-                <Link
-                  to={`/artists/${post.share.user.username}`}
-                  className="font-medium text-ink hover:underline"
-                >
-                  {post.share.user.displayName}
-                </Link>{" "}
-                shared this · {postedAgo(post.share.createdAt)}
-              </p>
-            </div>
-            {post.share.caption && (
-              <p className="mt-2 whitespace-pre-wrap text-sm text-ink">{post.share.caption}</p>
-            )}
-          </div>
-        )}
         <header className="flex items-start gap-3 p-4 pl-5">
           <Link to={`/artists/${post.artist.username}`}>
             <Avatar user={post.artist} size={40} />
@@ -178,12 +163,14 @@ export function FeedPost({ post }: { post: FeedItemDto }) {
         )}
 
         <div className="px-4 pb-3 pl-5">
-          <p className="whitespace-pre-wrap">{post.caption}</p>
-          {post.description && (
-            <p className="mt-2 whitespace-pre-wrap text-sm text-ink-soft">
-              {post.description}
-            </p>
-          )}
+          <ClampedText className="break-words">
+            <p className="whitespace-pre-wrap">{post.caption}</p>
+            {post.description && (
+              <p className="mt-2 whitespace-pre-wrap text-sm text-ink-soft">
+                {post.description}
+              </p>
+            )}
+          </ClampedText>
         </div>
 
         {cover && (

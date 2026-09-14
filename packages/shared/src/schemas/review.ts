@@ -26,5 +26,15 @@ export const createReportSchema = z.object({
   details: optionalText(1000),
 });
 
+/**
+ * What the notifications page reports once it has shown the list: the newest
+ * notification on screen. Everything up to and including it is marked read.
+ */
+export const markNotificationsReadSchema = z.preprocess(
+  // A request with no body at all is the same as an empty one: mark everything.
+  (value) => value ?? {},
+  z.object({ throughId: uuidSchema.optional() }),
+);
+
 export type CreateReviewInput = z.infer<typeof createReviewSchema>;
 export type CreateReportInput = z.infer<typeof createReportSchema>;

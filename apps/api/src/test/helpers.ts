@@ -93,9 +93,13 @@ export async function resetData(): Promise<void> {
     `DELETE FROM applications`,
     `DELETE FROM posting_images`,
     `DELETE FROM postings`,
+    `DELETE FROM share_reactions`,
+    `DELETE FROM post_comments`,
     `DELETE FROM artist_post_images`,
     `DELETE FROM artist_posts`,
     `DELETE FROM notifications`,
+    `DELETE FROM messages`,
+    `DELETE FROM conversations`,
     `DELETE FROM moderation_actions`,
     `DELETE FROM bug_reports`,
     `DELETE FROM reports`,
@@ -218,6 +222,7 @@ export async function applyToPosting(
   postingId: string,
   proposedPriceCentavos: number,
   samplePostIds: string[] = [],
+  belowBudgetReason?: string,
 ): Promise<LightMyRequestResponse> {
   const instance = await getTestApp();
   return instance.inject({
@@ -229,6 +234,7 @@ export async function applyToPosting(
       coverLetter:
         "I have made several bridal bouquets in this style and would love to make yours.",
       samplePostIds,
+      ...(belowBudgetReason === undefined ? {} : { belowBudgetReason }),
     },
   });
 }

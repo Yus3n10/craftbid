@@ -124,6 +124,12 @@ async function main(): Promise<void> {
     // Order matters: children before parents, and reviews before the
     // commissions they cite.
     const steps: [string, string][] = [
+      // Chat goes first: a conversation points at the request and both people.
+      [
+        "conversations",
+        `DELETE FROM conversations WHERE client_id IN (${sql}) OR artist_id IN (${sql})
+            OR posting_id IN (SELECT id FROM postings WHERE client_id IN (${sql}))`,
+      ],
       [
         "commission_problems",
         `DELETE FROM commission_problems WHERE commission_id IN (${theirCommissions})`,

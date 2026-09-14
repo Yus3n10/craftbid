@@ -5,7 +5,7 @@ import type {
   Paginated,
   ReactionKind,
 } from "@craftbid/shared";
-import { withTransaction } from "../../db/query.js";
+import { db, withTransaction } from "../../db/query.js";
 import { badRequest, forbidden, notFound } from "../../lib/errors.js";
 import * as postsRepo from "../posts/posts.repository.js";
 import * as repo from "./social.repository.js";
@@ -114,13 +114,81 @@ export async function removeComment(
   if (!comment) throw notFound("That comment does not exist.");
 
   if (comment.authorId !== userId) {
-    const owner = await postsRepo.findOwner(comment.postId);
-    if (!owner || owner.artistId !== userId) {
+    // The owner of the card it sits on may clear it: the artist for a post,
+    // the person who shared for a share.
+    const ownerId = comment.postId
+      ? (await postsRepo.findOwner(comment.postId))?.artistId
+      : comment.shareId
+        ? (await repo.findLiveShare(comment.shareId))?.userId
+        : undefined;
+    if (ownerId !== userId) {
       throw forbidden("You can only delete your own comments.");
     }
   }
 
   await repo.deleteComment(commentId);
+}
+
+// --- Engagement on a share ------------------------------------------------------
+//
+// A share is its own card. Reacting to it or commenting on it is engagement with
+// the person who shared, so they are the one told, not the original artist.
+
+async function requireShare(shareId: string) {
+  const share = await repo.findLiveShare(shareId);
+  if (!share) throw notFound("That shared post does not exist.");
+  return share;
+}
+
+export async function reactToShare(shareId: string, userId: string, kind: ReactionKind): Promise<void> {
+  const share = await requireShare(shareId);
+  await withTransaction(async (tx) => {
+    await repo.setReaction(shareId, userId, kind, tx, "share");
+    if (share.userId === userId) return;
+    // Deduplicated per person per shared post: a sharer has one share of a
+    // post, so the post id picks out this share for them.
+    await notifications.notifyOncePerActor(
+      {
+        userId: share.userId,
+        type: "share_reaction",
+        postId: share.postId,
+        actorId: userId,
+        payload: { kind, shareId, sharerUsername: share.username },
+      },
+      tx,
+    );
+  });
+}
+
+export async function unreactToShare(shareId: string, userId: string): Promise<void> {
+  await requireShare(shareId);
+  await repo.clearReaction(shareId, userId, db, "share");
+}
+
+export async function listShareComments(shareId: string, viewerId: string | null): Promise<CommentDto[]> {
+  await requireShare(shareId);
+  return repo.listComments(shareId, viewerId, db, "share");
+}
+
+export async function addShareComment(shareId: string, authorId: string, body: string): Promise<CommentDto> {
+  const share = await requireShare(shareId);
+  const id = await withTransaction(async (tx) => {
+    const commentId = await repo.insertComment(shareId, authorId, body, tx, "share");
+    if (share.userId !== authorId) {
+      await notifications.notify(
+        {
+          userId: share.userId,
+          type: "share_comment",
+          payload: { shareId, postId: share.postId, actorId: authorId, commentId, sharerUsername: share.username },
+        },
+        tx,
+      );
+    }
+    return commentId;
+  });
+  const created = (await repo.listComments(shareId, authorId, db, "share")).find((comment) => comment.id === id);
+  if (!created) throw notFound();
+  return created;
 }
 
 export async function setSaved(

@@ -193,7 +193,7 @@ export function PostingFormPage() {
           hint={
             hasBids
               ? "Artists have already bid against this figure, so it can no longer be changed."
-              : `The least you would pay, from ${formatPeso(MONEY.minBudgetCentavos)}. Artists bid at or above it.`
+              : `What you expect to pay, from ${formatPeso(MONEY.minBudgetCentavos)}. Artists can bid lower, but they have to tell you why.`
           }
           error={fields.minBudgetCentavos}
           required

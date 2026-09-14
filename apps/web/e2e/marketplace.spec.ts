@@ -101,18 +101,19 @@ test.describe("marketplace", () => {
 
     await expect(page.getByRole("heading", { name: "Bid on this request" })).toBeVisible();
 
-    // Below the minimum is refused, in the form, before anything is sent.
-    await page.getByLabel("Your price").fill("1000");
+    // Below the starting budget asks for a reason before it can be sent.
+    await page.getByRole("spinbutton", { name: "Your price", exact: true }).fill("1000");
     await page
       .getByLabel("Message to the client")
       .fill(
         "I have made several bouquets in this style and would be glad to make yours in mercerised cotton.",
       );
-    await expect(page.getByText(/cannot be below ₱1,500/i)).toBeVisible();
+    await expect(page.getByText(/₱500 below the client's starting budget/i)).toBeVisible();
     await expect(page.getByRole("button", { name: "Send bid" })).toBeDisabled();
 
-    // At or above the minimum is accepted.
-    await page.getByLabel("Your price").fill("1800");
+    // At or above the starting budget needs no reason.
+    await page.getByRole("spinbutton", { name: "Your price", exact: true }).fill("1800");
+    await expect(page.getByLabel("Why is your price lower?")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Send bid" })).toBeEnabled();
     await page.getByRole("button", { name: "Send bid" }).click();
 

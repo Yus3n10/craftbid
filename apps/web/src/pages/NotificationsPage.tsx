@@ -1,10 +1,10 @@
+import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MODERATION_RULE_COPY, type ModerationRule, type NotificationDto, type NotificationType } from "@craftbid/shared";
 import { api } from "../lib/api.js";
 import { cx } from "../lib/cx.js";
 import { Page } from "../components/layout/Shell.js";
-import { Button } from "../components/ui/Button.js";
 import { Card } from "../components/ui/Primitives.js";
 import {
   EmptyState,
@@ -25,6 +25,8 @@ const COPY: Record<NotificationType, string> = {
   balance_method_chosen: "The client chose how they will pay the balance.",
   account_warning: "A warning from Craftbid.",
   content_removed: "Craftbid removed something you posted.",
+  share_reaction: "Someone reacted to a post you shared.",
+  share_comment: "Someone commented on a post you shared.",
   payment_submitted: "The client recorded a payment. Check that you received it.",
   payment_confirmed: "A payment was confirmed as received.",
   payment_rejected: "The artist says a payment did not arrive. Check the details.",
@@ -81,6 +83,11 @@ function linkFor(notification: NotificationDto): string {
   };
   if (payload.commissionId) return `/commissions/${payload.commissionId}`;
   if (payload.postingId) return `/postings/${payload.postingId}`;
+  // Engagement on a share leads to the sharer's own profile, where the share is.
+  if (notification.type === "share_reaction" || notification.type === "share_comment") {
+    const sharer = (notification.payload as { sharerUsername?: string }).sharerUsername;
+    return sharer ? `/artists/${sharer}` : "/notifications";
+  }
   // A warning or a removal has nothing to open; its text is the message.
   if (notification.type === "account_warning" || notification.type === "content_removed") return "/notifications";
   // A reaction or comment leads to the piece it was about.
@@ -99,28 +106,42 @@ export function NotificationsPage() {
       ),
   });
 
+  /**
+   * Opening the page is reading it.
+   *
+   * Once the list is on screen, the server is told the newest notification it
+   * showed, and marks that and everything older read. The badge clears only
+   * when the server has done it, so the two never disagree. The list itself is
+   * not refetched, so what was new on this visit stays highlighted until the
+   * reader leaves; the next visit shows it read.
+   */
   const markRead = useMutation({
-    mutationFn: () => api.post("/notifications/read"),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+    mutationFn: (throughId: string) => api.post("/notifications/read", { throughId }),
+    onSuccess: () => {
+      queryClient.setQueryData(["notifications", "unread"], { unread: 0 });
+      void queryClient.invalidateQueries({ queryKey: ["notifications", "unread"] });
+    },
   });
+  const reported = useRef<string | null>(null);
+  const newest = data?.items[0];
+  const hasUnread = Boolean(data && data.unread > 0);
+  useEffect(() => {
+    if (!newest || !hasUnread || reported.current === newest.id) return;
+    reported.current = newest.id;
+    markRead.mutate(newest.id);
+  }, [newest, hasUnread, markRead]);
+
+  // Leaving drops the highlighted copy, so coming back shows them read.
+  useEffect(
+    () => () => void queryClient.invalidateQueries({ queryKey: ["notifications", "list"] }),
+    [queryClient],
+  );
 
   return (
     <Page width="narrow">
       <PageHeading
         title="Notifications"
         description="Activity on your requests, bids and commissions."
-        actions={
-          data && data.unread > 0 ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              loading={markRead.isPending}
-              onClick={() => markRead.mutate()}
-            >
-              Mark all read
-            </Button>
-          ) : undefined
-        }
       />
 
       {error ? (

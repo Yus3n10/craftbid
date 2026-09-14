@@ -27,6 +27,8 @@ import {
 import { ErrorState, FormError, RowSkeleton } from "../components/ui/States.js";
 import { Lightbox } from "../components/Lightbox.js";
 import { ReportButton } from "../components/ReportButton.js";
+import { BelowBudgetNote } from "../components/BelowBudgetNote.js";
+import { MessageButton } from "../components/chat/MessageButton.js";
 
 function Gallery({ posting }: { posting: PostingDto }) {
   const [active, setActive] = useState(0);
@@ -119,9 +121,13 @@ function ApplyForm({
   const queryClient = useQueryClient();
   const [price, setPrice] = useState<number | "">(posting.minBudgetCentavos);
   const [coverLetter, setCoverLetter] = useState("");
+  const [reason, setReason] = useState("");
   const [samples, setSamples] = useState<string[]>([]);
   useUnsavedChanges(
-    coverLetter.trim() !== "" || samples.length > 0 || price !== posting.minBudgetCentavos,
+    coverLetter.trim() !== "" ||
+      reason.trim() !== "" ||
+      samples.length > 0 ||
+      price !== posting.minBudgetCentavos,
   );
 
   const { user } = useAuth();
@@ -139,6 +145,8 @@ function ApplyForm({
         proposedPriceCentavos: price === "" ? 0 : price,
         coverLetter,
         samplePostIds: samples,
+        // Only a lower bid carries a reason; the server ignores one otherwise.
+        ...(belowBudget && reason.trim() ? { belowBudgetReason: reason.trim() } : {}),
       }),
     onSuccess: () => {
       // The parent owns the confirmation. Refetching the posting flips
@@ -151,7 +159,7 @@ function ApplyForm({
   });
 
   const fields = mutation.error instanceof ApiError ? mutation.error.fields : {};
-  const belowMinimum = price !== "" && price < posting.minBudgetCentavos;
+  const belowBudget = price !== "" && price < posting.minBudgetCentavos;
 
   return (
     <Card className="p-6">
@@ -159,8 +167,8 @@ function ApplyForm({
         <div>
           <h2 className="font-display text-xl">Bid on this request</h2>
           <p className="mt-1 text-sm text-ink-soft">
-            The client is starting at {formatPeso(posting.minBudgetCentavos)}. Bid
-            that or more, based on what the work will actually take.
+            The client is starting at {formatPeso(posting.minBudgetCentavos)}. Price
+            it at what the work will actually take. If that is less, say why.
           </p>
         </div>
 
@@ -176,12 +184,8 @@ function ApplyForm({
 
           <Field
             label="Your price"
-            hint={`Minimum ${formatPeso(posting.minBudgetCentavos)}`}
-            error={
-              belowMinimum
-                ? `Your price cannot be below ${formatPeso(posting.minBudgetCentavos)}.`
-                : fields.proposedPriceCentavos
-            }
+            hint={`Starting budget ${formatPeso(posting.minBudgetCentavos)}`}
+            error={fields.proposedPriceCentavos}
             required
           >
             {({ id, describedBy, invalid }) => (
@@ -194,6 +198,35 @@ function ApplyForm({
               />
             )}
           </Field>
+
+          {belowBudget && (
+            <div className="space-y-3">
+              <BelowBudgetNote
+                priceCentavos={price}
+                startingBudgetCentavos={posting.minBudgetCentavos}
+                audience="artist"
+              />
+              <Field
+                label="Why is your price lower?"
+                hint="The client sees this next to your price, so a lower bid reads as a good offer rather than a mistake."
+                error={fields.belowBudgetReason}
+                required
+              >
+                {({ id, describedBy, invalid }) => (
+                  <TextArea
+                    id={id}
+                    aria-describedby={describedBy}
+                    invalid={invalid}
+                    value={reason}
+                    onChange={(event) => setReason(event.target.value)}
+                    maxLength={LIMITS.belowBudgetReason.max}
+                    rows={3}
+                    required
+                  />
+                )}
+              </Field>
+            </div>
+          )}
 
           <Field
             label="Message to the client"
@@ -266,7 +299,7 @@ function ApplyForm({
             type="submit"
             size="lg"
             loading={mutation.isPending}
-            disabled={belowMinimum}
+            disabled={belowBudget && reason.trim() === ""}
           >
             Send bid
           </Button>
@@ -362,10 +395,17 @@ export function PostingDetailPage() {
                   Each artist gets one bid per request, so it stays a fair
                   comparison for the client.
                 </p>
-                <div className="mt-3">
+                <div className="mt-3 flex flex-wrap items-start gap-2">
                   <ButtonLink to="/my/applications" variant="secondary" size="sm">
                     See my bids
                   </ButtonLink>
+                  {user && (
+                    <MessageButton
+                      postingId={posting.id}
+                      artistId={user.id}
+                      label={`Message ${posting.client.displayName}`}
+                    />
+                  )}
                 </div>
               </div>
             </Card>
@@ -386,7 +426,7 @@ export function PostingDetailPage() {
               <span className="eyebrow block">Starting budget</span>
               <Money centavos={posting.minBudgetCentavos} size="lg" className="mt-1 block" />
               <p className="mt-2 text-sm text-ink-faint">
-                Bids must be at or above this amount.
+                Artists can bid lower, with a reason.
               </p>
 
               <div className="mt-5 border-t border-fiber pt-4">

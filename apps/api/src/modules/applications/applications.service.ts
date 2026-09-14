@@ -21,11 +21,10 @@ import * as users from "../users/users.repository.js";
 /**
  * Submits a bid.
  *
- * The minimum-price rule is checked three times over, deliberately. Here for a
- * readable error; again against the posting row read inside the transaction, so
- * a concurrent edit cannot slip past; and finally by a CHECK constraint on the
- * row itself, which is the only one that cannot be bypassed by a future code
- * path that forgets the rule.
+ * A bid may be below the client's starting budget, but then it must say why.
+ * That is decided against the posting row read inside the transaction, so a
+ * concurrent edit cannot slip past, and a CHECK constraint on the row holds the
+ * same rule, so no future code path can store a lower bid without a reason.
  */
 export async function apply(
   postingId: string,
@@ -50,15 +49,12 @@ export async function apply(
         throw badRequest("This request is paused and is not taking bids right now.");
       }
 
-      if (input.proposedPriceCentavos < posting.minBudgetCentavos) {
-        throw badRequest(
-          `Your price must be at least ${formatPeso(posting.minBudgetCentavos)}.`,
-          {
-            proposedPriceCentavos: `The client's minimum is ${formatPeso(
-              posting.minBudgetCentavos,
-            )}.`,
-          },
-        );
+      const below = input.proposedPriceCentavos < posting.minBudgetCentavos;
+      if (below && !input.belowBudgetReason) {
+        const message = `Your price is below the client's starting budget of ${formatPeso(
+          posting.minBudgetCentavos,
+        )}. Tell them why.`;
+        throw badRequest(message, { belowBudgetReason: message });
       }
 
       await repo.insertApplication(
@@ -67,9 +63,12 @@ export async function apply(
           postingId,
           artistId,
           proposedPriceCentavos: input.proposedPriceCentavos,
-          // Copied so the bid stays valid against the minimum that was
-          // advertised when it was made.
+          // Copied so the bid is judged against the starting budget that
+          // was advertised when it was made.
           minPriceAtApplyCentavos: posting.minBudgetCentavos,
+          // Dropped at or above the budget: a reason typed before raising the
+          // price explains nothing about the price that was sent.
+          belowBudgetReason: below ? input.belowBudgetReason! : null,
           coverLetter: input.coverLetter,
         },
         tx,

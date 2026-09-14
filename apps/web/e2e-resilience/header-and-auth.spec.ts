@@ -229,7 +229,7 @@ test.describe("across widths, signed in as a client", () => {
       // on the Linux CI runner than on Windows, so a header that fit here with
       // 9px to spare overflowed by 15px in CI. Since Sign out moved into the
       // account menu there are 142px free here, so 32 leaves CI clear room.
-      if (width === 1024) {
+      if (width === 320 || width === 1024) {
         await page.evaluate(() => document.fonts.ready);
         const spare = await page.evaluate(() => {
           const row = document.querySelector("header > div")!;
@@ -239,7 +239,9 @@ test.describe("across widths, signed in as a client", () => {
           const used = shown.reduce((sum, child) => sum + child.scrollWidth, 0);
           return inner - used - parseFloat(style.columnGap) * (shown.length - 1);
         });
-        expect(spare, "free width in the header row, px").toBeGreaterThanOrEqual(32);
+        // At 320 the row holds the mark and four icons and no text, so CI's
+        // wider fonts cannot eat into it; 8px is room enough.
+        expect(spare, "free width in the header row, px").toBeGreaterThanOrEqual(width === 320 ? 8 : 32);
       }
 
       if (width >= 1024) {

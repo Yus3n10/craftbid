@@ -334,10 +334,12 @@ export async function runSeed(log: (message: string) => void = console.log): Pro
   }
 
   log("Creating bids...");
-  const bids = [
+  const bids: { posting: number; artist: string; price: number; letter: string; reason?: string }[] = [
     { posting: 0, artist: "malou_hooks", price: 180_000, letter: "I have made eleven bridal bouquets in this style, including two with the same blue you described. For the bouquet plus two bridesmaid bouquets I would use mercerised cotton so it holds shape and does not shed. About three weeks from confirmation." },
     { posting: 0, artist: "rosa_stitch", price: 165_000, letter: "Crochet is not my main craft but I have done floral work for barong details for years. I would be glad to take this on if you want the accents hand-embroidered rather than crocheted." },
     { posting: 1, artist: "ana_weaves", price: 280_000, letter: "A three-metre runner is two panels joined at the selvedge on my loom. Natural indigo with undyed stripes is exactly what I dye for. Four weeks, because the indigo needs its dips." },
+    // Below the ₱2,500 starting budget, with the reason the client reads beside it.
+    { posting: 1, artist: "rosa_stitch", price: 215_000, reason: "I have indigo-dyed abaca left from a runner I finished last month, so I only need to buy the undyed thread.", letter: "I would weave this on a narrower loom in three panels, hand-stitched together so the seams sit under the stripes. About three and a half weeks." },
     { posting: 2, artist: "kirby_clay", price: 456_000, letter: "Twenty-four stackable mugs at ₱190 each. High-fired stoneware at cone 10, so they will take a commercial dishwasher without crazing. Six weeks for a run this size." },
   ];
 
@@ -356,6 +358,7 @@ export async function runSeed(log: (message: string) => void = console.log): Pro
           artistId,
           proposedPriceCentavos: bid.price,
           minPriceAtApplyCentavos: posting!.minBudgetCentavos,
+          belowBudgetReason: bid.reason ?? null,
           coverLetter: bid.letter,
         },
         tx,

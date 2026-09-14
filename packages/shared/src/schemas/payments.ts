@@ -6,7 +6,7 @@ import {
   PROBLEM_REASONS,
   TRANSFER_METHODS,
 } from "../constants.js";
-import { uuidSchema } from "./common.js";
+import { NO_EMOJI_MESSAGE, containsEmoji, uuidSchema } from "./common.js";
 
 /**
  * A Philippine mobile number, as GCash and Maya accounts are keyed by one.
@@ -29,7 +29,10 @@ const accountNameSchema = z
   .string()
   .trim()
   .min(LIMITS.payoutAccountName.min, "Enter the name on the account.")
-  .max(LIMITS.payoutAccountName.max);
+  .max(LIMITS.payoutAccountName.max)
+  // The name the bank or wallet holds, which has letters in any script and no
+  // emoji. A client sends money to it, so it has to match the real account.
+  .refine((value) => !containsEmoji(value), NO_EMOJI_MESSAGE);
 
 /**
  * Where an artist is paid. Shown only to the client of an active commission
@@ -43,7 +46,12 @@ export const payoutAccountSchema = z.discriminatedUnion("method", [
     method: z.literal("bank"),
     accountName: accountNameSchema,
     accountNumber: bankAccountNumberSchema,
-    bankName: z.string().trim().min(LIMITS.bankName.min, "Enter the bank.").max(LIMITS.bankName.max),
+    bankName: z
+      .string()
+      .trim()
+      .min(LIMITS.bankName.min, "Enter the bank.")
+      .max(LIMITS.bankName.max)
+      .refine((value) => !containsEmoji(value), NO_EMOJI_MESSAGE),
   }),
 ]);
 export type PayoutAccountInput = z.infer<typeof payoutAccountSchema>;

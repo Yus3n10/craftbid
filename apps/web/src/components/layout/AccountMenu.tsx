@@ -22,6 +22,7 @@ export function accountLinks(user: MeDto) {
     { to: "/settings", label: "Edit profile and settings" },
     { to: "/saved", label: "Saved posts" },
     { to: "/activity", label: "Activity history" },
+    { to: "/messages", label: "Messages" },
     { to: "/notifications", label: "Notifications" },
     ...(user.isStaff ? [{ to: "/admin", label: "Admin" }] : []),
   ];

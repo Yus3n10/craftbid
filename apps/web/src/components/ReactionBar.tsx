@@ -28,10 +28,14 @@ const REACTIONS: {
 export function ReactionBar({
   postId,
   reactions,
+  on = "post",
 }: {
+  /** The post's id, or the share's when `on` is "share". */
   postId: string;
   reactions: ReactionSummary;
+  on?: "post" | "share";
 }) {
+  const base = `/${on === "share" ? "shares" : "posts"}/${postId}`;
   const requireAccount = useRequireAccount();
   const queryClient = useQueryClient();
   const [local, setLocal] = useState<ReactionSummary | null>(null);
@@ -41,8 +45,8 @@ export function ReactionBar({
   const mutation = useMutation({
     mutationFn: (kind: ReactionKind | null) =>
       kind === null
-        ? api.delete(`/posts/${postId}/reaction`)
-        : api.put(`/posts/${postId}/reaction`, { kind }),
+        ? api.delete(`${base}/reaction`)
+        : api.put(`${base}/reaction`, { kind }),
     onError: () => setLocal(null),
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ["feed"] });

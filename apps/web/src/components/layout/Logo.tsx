@@ -2,7 +2,7 @@
  * The mark is a warp-and-weft crossing: two threads over, one under. It is the
  * smallest honest picture of weaving, and it reads at 24px.
  */
-export function Logo({ size = 26 }: { size?: number }) {
+export function Logo({ size = 26, wordmarkClassName }: { size?: number; wordmarkClassName?: string }) {
   return (
     <span className="inline-flex items-center gap-2">
       <svg
@@ -43,7 +43,7 @@ export function Logo({ size = 26 }: { size?: number }) {
           opacity="0.75"
         />
       </svg>
-      <span className="font-display text-xl font-semibold tracking-tight text-ink">
+      <span className={`font-display text-xl font-semibold tracking-tight text-ink ${wordmarkClassName ?? ""}`}>
         Craftbid
       </span>
     </span>

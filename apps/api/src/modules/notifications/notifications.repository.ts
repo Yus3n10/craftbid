@@ -67,14 +67,31 @@ export async function listForUser(
   };
 }
 
-export async function markAllRead(
+/**
+ * Marks a person's notifications read, up to and including one they were shown.
+ *
+ * Bounded by that notification's own created_at, read from the table, so one
+ * that arrived after the page loaded stays unread, and an id belonging to
+ * someone else matches nothing. Without an id, everything is marked.
+ */
+export async function markRead(
   userId: string,
+  throughId: string | undefined,
   q: Queryable = db,
 ): Promise<number> {
+  if (!throughId) {
+    return q.run(
+      `UPDATE notifications SET read_at = SYSTIMESTAMP
+        WHERE user_id = :userId AND read_at IS NULL`,
+      { userId: uuidToBuf(userId) },
+    );
+  }
   return q.run(
     `UPDATE notifications SET read_at = SYSTIMESTAMP
-      WHERE user_id = :userId AND read_at IS NULL`,
-    { userId: uuidToBuf(userId) },
+      WHERE user_id = :userId AND read_at IS NULL
+        AND created_at <= (SELECT created_at FROM notifications
+                            WHERE id = :throughId AND user_id = :userId)`,
+    { userId: uuidToBuf(userId), throughId: uuidToBuf(throughId) },
   );
 }
 
