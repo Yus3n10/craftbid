@@ -21,6 +21,7 @@ export async function overview(): Promise<AdminOverviewDto> {
   const row = await db.one<{
     openReports: number;
     openBugReports: number;
+    openProblems: number;
     suspendedAccounts: number;
     unconfirmedAccounts: number;
     actionsThisWeek: number;
@@ -28,6 +29,7 @@ export async function overview(): Promise<AdminOverviewDto> {
     `SELECT
        (SELECT COUNT(*) FROM reports WHERE status = 'open') AS open_reports,
        (SELECT COUNT(*) FROM bug_reports WHERE status = 'open') AS open_bug_reports,
+       (SELECT COUNT(*) FROM commission_problems WHERE status = 'open') AS open_problems,
        (SELECT COUNT(*) FROM users WHERE status = 'suspended') AS suspended_accounts,
        (SELECT COUNT(*) FROM users WHERE status <> 'deleted' AND email_verified_at IS NULL) AS unconfirmed_accounts,
        (SELECT COUNT(*) FROM moderation_actions WHERE created_at > SYSTIMESTAMP - INTERVAL '7' DAY) AS actions_this_week
@@ -36,6 +38,7 @@ export async function overview(): Promise<AdminOverviewDto> {
   return {
     openReports: Number(row?.openReports ?? 0),
     openBugReports: Number(row?.openBugReports ?? 0),
+    openProblems: Number(row?.openProblems ?? 0),
     suspendedAccounts: Number(row?.suspendedAccounts ?? 0),
     unconfirmedAccounts: Number(row?.unconfirmedAccounts ?? 0),
     actionsThisWeek: Number(row?.actionsThisWeek ?? 0),

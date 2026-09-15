@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MODERATION_RULES, USER_ROLES, USER_STATUSES } from "../constants.js";
+import { MODERATION_RULES, PAYMENT_STATUSES, USER_ROLES, USER_STATUSES } from "../constants.js";
 import { optionalText, paginationSchema, uuidSchema } from "./common.js";
 
 export const moderationInputSchema = z.object({
@@ -25,6 +25,28 @@ export const adminUsersQuerySchema = paginationSchema.extend({
   role: z.enum(USER_ROLES).optional(),
 });
 export type AdminUsersQuery = z.infer<typeof adminUsersQuerySchema>;
+
+/** Staff settle a reported problem: carry on, or call the commission off. */
+export const resolveProblemSchema = z.object({
+  outcome: z.enum(["continue", "cancel"]),
+  note: z
+    .string()
+    .trim()
+    .min(5, "Write a note both people will read.")
+    .max(1000, "Notes can be up to 1000 characters."),
+});
+export type ResolveProblemInput = z.infer<typeof resolveProblemSchema>;
+
+export const adminProblemsQuerySchema = paginationSchema.extend({
+  status: z.enum(["open", "closed"]).optional(),
+});
+
+export const adminPaymentsQuerySchema = paginationSchema.extend({
+  status: z.enum(PAYMENT_STATUSES).optional(),
+  /** A username of either person, or a reference number. */
+  q: z.string().trim().max(60).optional(),
+});
+export type AdminPaymentsQuery = z.infer<typeof adminPaymentsQuerySchema>;
 
 export const roleSwitchSchema = z.object({ role: z.enum(USER_ROLES) });
 

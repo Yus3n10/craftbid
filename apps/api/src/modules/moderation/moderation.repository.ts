@@ -2,7 +2,7 @@ import type { ModerationAction, ModerationRule } from "@craftbid/shared";
 import { bufToUuid, newId, uuidToBuf } from "../../db/ids.js";
 import { db, type Queryable } from "../../db/query.js";
 
-export type ActionTarget = "user" | "artist_post" | "posting" | "comment" | "report" | "bug_report";
+export type ActionTarget = "user" | "artist_post" | "posting" | "comment" | "report" | "bug_report" | "problem" | "payment";
 
 export async function recordAction(
   input: {

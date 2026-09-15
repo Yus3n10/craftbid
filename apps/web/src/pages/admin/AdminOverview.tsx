@@ -15,6 +15,7 @@ export function AdminOverview() {
 
   const tiles = [
     { label: "Open reports", value: data.openReports, to: "/admin?tab=reports" },
+    { label: "Open commission problems", value: data.openProblems, to: "/admin?tab=problems" },
     { label: "Open bug reports", value: data.openBugReports, to: "/admin?tab=bugs" },
     { label: "Suspended accounts", value: data.suspendedAccounts, to: "/admin?tab=users" },
     { label: "Emails not confirmed", value: data.unconfirmedAccounts, to: "/admin?tab=users" },

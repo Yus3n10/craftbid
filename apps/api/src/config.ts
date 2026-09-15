@@ -69,6 +69,9 @@ const envSchema = z
     MAIL_FROM_NAME: z.string().trim().default("Craftbid"),
     // Where links in emails point: the web app, not this API.
     PUBLIC_WEB_URL: z.string().trim().url().default("http://localhost:5173"),
+    // Who gets the daily summary of reports, bug reports and commission
+    // problems. Unset means the summary is skipped, with a log line.
+    OWNER_ALERT_EMAIL: z.string().trim().email().optional(),
   })
   .superRefine((env, ctx) => {
     if (env.STORAGE_DRIVER === "imagekit") {
@@ -192,6 +195,7 @@ export const config = {
       fromName: env.MAIL_FROM_NAME,
     },
     publicWebUrl: env.PUBLIC_WEB_URL.replace(/\/$/, ""),
+    ownerAlertEmail: env.OWNER_ALERT_EMAIL,
   },
   storage: {
     driver: env.STORAGE_DRIVER,

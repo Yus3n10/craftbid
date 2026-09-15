@@ -3,9 +3,12 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import {
   adminListQuerySchema,
+  adminPaymentsQuerySchema,
+  adminProblemsQuerySchema,
   adminUsersQuerySchema,
   moderationInputSchema,
   paginationSchema,
+  resolveProblemSchema,
   resolveReportSchema,
   unsuspendSchema,
   uuidSchema,
@@ -13,6 +16,7 @@ import {
 } from "@craftbid/shared";
 import * as moderation from "../moderation/moderation.service.js";
 import * as service from "./admin.service.js";
+import * as adminPayments from "./admin-payments.repository.js";
 
 const idParams = z.object({ id: uuidSchema });
 
@@ -103,6 +107,30 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
   app.post("/admin/bugs/:id/resolve", { schema: { params: idParams } }, async (request, reply) => {
     await moderation.resolveBug(request.user!.id, request.params.id);
     return reply.code(204).send();
+  });
+
+  app.get("/admin/problems", { schema: { querystring: adminProblemsQuerySchema } }, async (request) =>
+    page(await adminPayments.listProblems(request.query.status, request.query.limit, request.query.offset), request.query),
+  );
+  app.post(
+    "/admin/problems/:id/resolve",
+    { schema: { params: idParams, body: resolveProblemSchema } },
+    async (request, reply) => {
+      await moderation.resolveProblem(request.user!.id, request.params.id, request.body);
+      return reply.code(204).send();
+    },
+  );
+
+  app.get("/admin/payments", { schema: { querystring: adminPaymentsQuerySchema } }, async (request) =>
+    page(await adminPayments.listPayments(request.query), request.query),
+  );
+  app.get("/admin/payments/:id/receipt", { schema: { params: idParams } }, async (request, reply) => {
+    const receipt = await moderation.viewPaymentReceipt(request.user!.id, request.params.id);
+    return reply
+      .header("content-type", receipt.contentType)
+      // Names and account numbers: never kept by any cache.
+      .header("cache-control", "private, no-store")
+      .send(receipt.body);
   });
 
   app.get("/admin/actions", { schema: { querystring: paginationSchema } }, async (request) =>

@@ -5,6 +5,8 @@ import { PageHeading } from "../../components/ui/States.js";
 import { AdminActivity } from "./AdminActivity.js";
 import { AdminBugs } from "./AdminBugs.js";
 import { AdminOverview } from "./AdminOverview.js";
+import { AdminPayments } from "./AdminPayments.js";
+import { AdminProblems } from "./AdminProblems.js";
 import { AdminReports } from "./AdminReports.js";
 import { AdminUsers } from "./AdminUsers.js";
 
@@ -12,6 +14,8 @@ const TABS = [
   { key: "overview", label: "Overview" },
   { key: "reports", label: "Reports" },
   { key: "users", label: "Users" },
+  { key: "problems", label: "Problems" },
+  { key: "payments", label: "Payments" },
   { key: "bugs", label: "Bug reports" },
   { key: "activity", label: "Activity log" },
 ] as const;
@@ -47,6 +51,8 @@ export function AdminPage() {
       {tab === "overview" && <AdminOverview />}
       {tab === "reports" && <AdminReports />}
       {tab === "users" && <AdminUsers />}
+      {tab === "problems" && <AdminProblems />}
+      {tab === "payments" && <AdminPayments />}
       {tab === "bugs" && <AdminBugs />}
       {tab === "activity" && <AdminActivity />}
     </Page>

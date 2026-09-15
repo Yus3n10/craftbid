@@ -742,14 +742,16 @@ export async function withdrawProblem(
 }
 
 /**
- * Settles a problem. Deliberately not reachable over HTTP: Craftbid has no
- * staff accounts yet, so the site owner runs this from the command line (see
- * problems-cli.ts). "cancel" calls the commission off; "continue" unpauses it.
+ * Settles a problem: "cancel" calls the commission off; "continue" unpauses it.
+ * Both people are told. Staff do this from the admin screen, through the
+ * moderation service, which passes `alsoInTransaction` to write its audit row
+ * in the same transaction; the command-line tool still calls it directly.
  */
 export async function resolveProblem(
   problemId: string,
   outcome: "continue" | "cancel",
   note: string,
+  alsoInTransaction?: (tx: Queryable) => Promise<void>,
 ): Promise<void> {
   await withTransaction(async (tx) => {
     const problem = await repo.findProblem(problemId, tx);
@@ -770,6 +772,7 @@ export async function resolveProblem(
         tx,
       );
     }
+    await alsoInTransaction?.(tx);
   });
 }
 

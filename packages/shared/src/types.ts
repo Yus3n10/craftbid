@@ -373,6 +373,7 @@ export interface RoleSwitchStatusDto {
 export interface AdminOverviewDto {
   openReports: number;
   openBugReports: number;
+  openProblems: number;
   suspendedAccounts: number;
   unconfirmedAccounts: number;
   actionsThisWeek: number;
@@ -437,6 +438,48 @@ export interface AdminReportDto {
     owner: { id: string; username: string } | null;
   } | null;
   resolution: { note: string | null; at: string; by: string } | null;
+}
+
+/**
+ * One payment record as staff see it: every record on every tracked
+ * commission, whatever its state, with both people and who recorded it.
+ */
+export interface AdminPaymentDto {
+  id: string;
+  commissionId: string;
+  postingTitle: string;
+  kind: PaymentKind;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  /** Rejected, and a later record of the same kind exists on the commission. */
+  replaced: boolean;
+  amountCentavos: number;
+  referenceNumber: string | null;
+  paidOn: string | null;
+  hasReceipt: boolean;
+  client: { id: string; username: string };
+  artist: { id: string; username: string };
+  recordedBy: { id: string; username: string };
+  /** The account the client said they paid, copied when it was recorded. */
+  paidTo: { name: string; number: string; bank: string | null } | null;
+  submittedAt: string;
+  decidedAt: string | null;
+}
+
+export interface AdminProblemDto {
+  id: string;
+  commissionId: string;
+  postingTitle: string;
+  reason: ProblemReason;
+  details: string;
+  status: ProblemStatus;
+  resolution: string | null;
+  createdAt: string;
+  closedAt: string | null;
+  openedBy: { id: string; username: string };
+  client: { id: string; username: string; email: string };
+  artist: { id: string; username: string; email: string };
+  payments: AdminPaymentDto[];
 }
 
 export interface AdminBugReportDto {

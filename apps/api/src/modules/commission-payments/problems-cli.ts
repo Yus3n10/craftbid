@@ -2,13 +2,12 @@ import { config } from "../../config.js";
 import { PROBLEM_REASONS } from "@craftbid/shared";
 
 /**
- * Reported problems, for the site owner.
+ * Reported problems, from the command line.
  *
- * Craftbid has no staff accounts, and a web screen that shows receipts and
- * both parties' email addresses to "an admin" would need a role, an audit trail
- * and its own security review before it existed. Until then, this runs on the
- * owner's machine with the database credentials, which is already the most
- * trusted place Craftbid has, and nothing here is reachable over HTTP.
+ * The admin screen's Problems tab is now the usual way to settle these: it
+ * shows both people, the payment records and their receipts, and records who
+ * resolved what. This stays as a fallback that needs only the database
+ * credentials, for when the site itself is unavailable.
  *
  *   pnpm --filter @craftbid/api problems list
  *   pnpm --filter @craftbid/api problems resolve <problemId> continue "note to both"

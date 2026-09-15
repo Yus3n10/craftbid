@@ -34,6 +34,7 @@ const COPY: Record<NotificationType, string> = {
   commission_shipped: "Your piece is on its way.",
   problem_reported: "A problem was reported on a commission.",
   problem_closed: "A reported problem on a commission was closed.",
+  chat_unread: "You have an unread message.",
 };
 
 /**
@@ -72,6 +73,11 @@ function describe(notification: NotificationDto): string {
     const kind = (notification.payload as { kind?: string }).kind;
     return (kind && REACTION_COPY[kind]) ?? COPY.post_reaction;
   }
+  if (notification.type === "chat_unread") {
+    const { fromName, postingTitle } = notification.payload as { fromName?: string; postingTitle?: string };
+    if (fromName && postingTitle) return `${fromName} sent you a message about ${postingTitle}. It is still unread.`;
+    return COPY.chat_unread;
+  }
   return COPY[notification.type];
 }
 
@@ -80,7 +86,11 @@ function linkFor(notification: NotificationDto): string {
     postingId?: string;
     commissionId?: string;
     postId?: string;
+    conversationId?: string;
   };
+  if (notification.type === "chat_unread") {
+    return payload.conversationId ? `/messages/${payload.conversationId}` : "/messages";
+  }
   if (payload.commissionId) return `/commissions/${payload.commissionId}`;
   if (payload.postingId) return `/postings/${payload.postingId}`;
   // Engagement on a share leads to the sharer's own profile, where the share is.

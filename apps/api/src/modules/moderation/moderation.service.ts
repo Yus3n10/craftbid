@@ -6,6 +6,9 @@ import * as notifications from "../notifications/notifications.repository.js";
 import * as postingsRepo from "../postings/postings.repository.js";
 import * as users from "../users/users.repository.js";
 import * as repo from "./moderation.repository.js";
+import * as adminPayments from "../admin/admin-payments.repository.js";
+import * as payments from "../commission-payments/commission-payments.service.js";
+import { getStorage } from "../../lib/storage/index.js";
 
 /**
  * Everything staff can do to people and their content.
@@ -199,4 +202,50 @@ export async function resolveBug(staffId: string, bugId: string): Promise<void> 
       tx,
     );
   });
+}
+
+/**
+ * Settles a reported commission problem from the admin screen. The outcome,
+ * the notices to both people and the audit row commit together.
+ */
+export async function resolveProblem(
+  staffId: string,
+  problemId: string,
+  input: { outcome: "continue" | "cancel"; note: string },
+): Promise<void> {
+  await payments.resolveProblem(problemId, input.outcome, input.note, (tx) =>
+    repo.recordAction(
+      {
+        staffId,
+        action: "resolve_problem",
+        targetType: "problem",
+        targetId: problemId,
+        subjectUserId: null,
+        note: `${input.outcome === "cancel" ? "Cancelled the commission" : "Commission continues"}: ${input.note}`,
+      },
+      tx,
+    ),
+  );
+}
+
+/**
+ * The receipt behind a payment record, for staff. Every look is recorded:
+ * receipts carry names and account numbers, and reading one is itself
+ * something the log should show.
+ */
+export async function viewPaymentReceipt(
+  staffId: string,
+  paymentId: string,
+): Promise<{ body: Buffer; contentType: string }> {
+  const receipt = await adminPayments.receiptOf(paymentId);
+  if (!receipt) throw notFound("That payment has no receipt.");
+  const body = await getStorage().getPrivate(receipt.objectKey);
+  if (!body) throw notFound("That receipt is no longer stored.");
+  await withTransaction((tx) =>
+    repo.recordAction(
+      { staffId, action: "payment_file_viewed", targetType: "payment", targetId: paymentId, subjectUserId: receipt.clientId },
+      tx,
+    ),
+  );
+  return { body, contentType: receipt.contentType };
 }

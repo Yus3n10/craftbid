@@ -72,6 +72,7 @@ export const NOTIFICATION_TYPES = [
   "content_removed",
   "share_reaction",
   "share_comment",
+  "chat_unread",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -423,6 +424,8 @@ export const MODERATION_ACTIONS = [
   "resolve_report",
   "dismiss_report",
   "resolve_bug",
+  "resolve_problem",
+  "payment_file_viewed",
 ] as const;
 export type ModerationAction = (typeof MODERATION_ACTIONS)[number];
 
