@@ -111,10 +111,18 @@ async function main(): Promise<void> {
     `SELECT object_key FROM commission_files WHERE commission_id IN (${theirCommissions})`,
     binds,
   );
+  // Chat images go with the conversations deleted below, which cascade their
+  // rows but cannot reach private storage.
+  const chatObjects = await db.many<{ objectKey: string }>(
+    `SELECT object_key FROM chat_files WHERE conversation_id IN (
+       SELECT id FROM conversations WHERE client_id IN (${sql}) OR artist_id IN (${sql})
+          OR posting_id IN (SELECT id FROM postings WHERE client_id IN (${sql})))`,
+    binds,
+  );
 
   if (!COMMIT) {
     console.log(
-      `\n${objects.length} stored image object(s) and ${privateObjects.length} private commission file(s) would also be removed.`,
+      `\n${objects.length} stored image object(s), ${privateObjects.length} private commission file(s) and ${chatObjects.length} chat image(s) would also be removed.`,
     );
     console.log("\nDry run. Re-run with --commit to delete.");
     return;
@@ -191,6 +199,17 @@ async function main(): Promise<void> {
     }
   }
   console.log(`  removed ${removedPrivate}/${privateObjects.length} private commission files`);
+
+  let removedChat = 0;
+  for (const { objectKey } of chatObjects) {
+    try {
+      await storage.removePrivate(objectKey);
+      removedChat++;
+    } catch (error) {
+      console.log(`  could not remove ${objectKey}: ${(error as Error).message}`);
+    }
+  }
+  console.log(`  removed ${removedChat}/${chatObjects.length} chat images`);
 
   console.log("\nDone.");
 }

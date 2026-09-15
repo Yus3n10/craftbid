@@ -100,6 +100,7 @@ export async function resetData(): Promise<void> {
     `DELETE FROM artist_posts`,
     `DELETE FROM notifications`,
     `DELETE FROM messages`,
+    `DELETE FROM chat_files`,
     `DELETE FROM conversations`,
     `DELETE FROM moderation_actions`,
     `DELETE FROM bug_reports`,

@@ -4,9 +4,17 @@ import type {
   MessageDto,
   OpenConversationInput,
 } from "@craftbid/shared";
+import { newId } from "../../db/ids.js";
 import { DbError, withTransaction } from "../../db/query.js";
 import { badRequest, notFound } from "../../lib/errors.js";
+import { getStorage } from "../../lib/storage/index.js";
+import { normaliseImage } from "../images/images.service.js";
 import * as repo from "./chat.repository.js";
+
+/** Chat images are for looking at on a phone; the longest side stops here. */
+const CHAT_IMAGE_MAX_SIDE = 1600;
+
+const CANNOT_ATTACH = "That image cannot be sent here. Attach it again and resend.";
 
 /**
  * Chat between a client and an artist about one craft request.
@@ -96,16 +104,95 @@ export async function messages(userId: string, conversationId: string, after?: s
   return repo.listMessages(conversationId, userId, after ? new Date(after) : undefined);
 }
 
-export async function send(userId: string, conversationId: string, body: string): Promise<MessageDto> {
+function requireOpen(conversation: repo.ChatAccess): void {
+  if (stateOf(conversation).canSend) return;
+  throw badRequest(
+    conversation.applicationStatus === "accepted"
+      ? "This commission was cancelled, so the conversation is closed. You can still read it."
+      : "This bid is no longer open, so the conversation is closed. You can still read it.",
+  );
+}
+
+/**
+ * Text, an image, or both. An image must be one the sender uploaded to this
+ * conversation and has not sent yet. Otherwise one person could put the other
+ * person's upload, or a file from a different conversation, into a message.
+ */
+export async function send(
+  userId: string,
+  conversationId: string,
+  content: { body?: string; fileId?: string },
+): Promise<MessageDto> {
   const { conversation, role } = await load(conversationId, userId);
-  if (!stateOf(conversation).canSend) {
-    throw badRequest(
-      conversation.applicationStatus === "accepted"
-        ? "This commission was cancelled, so the conversation is closed. You can still read it."
-        : "This bid is no longer open, so the conversation is closed. You can still read it.",
-    );
+  requireOpen(conversation);
+
+  if (content.fileId) {
+    const file = await repo.findFile(content.fileId);
+    if (!file || file.conversationId !== conversationId || file.uploaderId !== userId || file.attached) {
+      throw badRequest(CANNOT_ATTACH);
+    }
   }
-  return withTransaction((tx) => repo.insertMessage(conversationId, userId, role, body, tx));
+
+  try {
+    return await withTransaction((tx) =>
+      repo.insertMessage(conversationId, userId, role, { body: content.body ?? null, fileId: content.fileId ?? null }, tx),
+    );
+  } catch (error) {
+    // The same file sent twice at the same moment: the unique key decides.
+    if (error instanceof DbError && error.isUniqueViolation) throw badRequest(CANNOT_ATTACH);
+    throw error;
+  }
+}
+
+/**
+ * Stores one image for this conversation, to be attached by the next message.
+ * The same checks as every upload (real image bytes, re-encoded, metadata
+ * dropped), smaller, and in private storage under the conversation.
+ */
+export async function uploadImage(
+  userId: string,
+  conversationId: string,
+  buffer: Buffer,
+): Promise<{ fileId: string; width: number; height: number }> {
+  const { conversation } = await load(conversationId, userId);
+  requireOpen(conversation);
+
+  const image = await normaliseImage(buffer, { maxSide: CHAT_IMAGE_MAX_SIDE });
+  const fileId = newId();
+  // Server-derived key; nothing the client sends reaches the storage path.
+  const objectKey = `conversations/${conversationId}/${fileId}.webp`;
+  const storage = getStorage();
+  await storage.putPrivate(objectKey, image.data, "image/webp");
+  try {
+    await repo.insertFile({
+      id: fileId,
+      conversationId,
+      uploaderId: userId,
+      objectKey,
+      contentType: "image/webp",
+      byteSize: image.data.byteLength,
+      width: image.width,
+      height: image.height,
+    });
+  } catch (error) {
+    await storage.removePrivate(objectKey).catch(() => {});
+    throw error;
+  }
+  return { fileId, width: image.width, height: image.height };
+}
+
+/** The bytes of an image in this conversation, for its two people only. */
+export async function readImage(
+  userId: string,
+  conversationId: string,
+  fileId: string,
+): Promise<{ body: Buffer; contentType: string }> {
+  await load(conversationId, userId);
+  const file = await repo.findFile(fileId);
+  if (!file || file.conversationId !== conversationId) throw notFound("That image does not exist.");
+  const body = await getStorage().getPrivate(file.objectKey);
+  if (!body) throw notFound("That image does not exist.");
+  return { body, contentType: file.contentType };
 }
 
 export async function markRead(userId: string, conversationId: string): Promise<void> {

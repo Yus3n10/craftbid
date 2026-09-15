@@ -1,5 +1,6 @@
 import { expect, test, type Browser, type Page, type TestInfo } from "@playwright/test";
 import { confirmEmail } from "./email.js";
+import { receiptPng } from "./images.js";
 
 /**
  * Chat on the real stack: a client messages an artist who bid, the artist sees
@@ -84,6 +85,18 @@ test("a client and an artist talk about a bid, and carry on into the commission"
   // The client's open conversation picks the reply up without a reload.
   await expect(client.getByText("Next week, if the blue yarn arrives in time 🧶")).toBeVisible({ timeout: 20_000 });
 
+  // --- A photo of the colours, through the real upload and private storage ------------
+  await artist.locator('input[type="file"]').setInputFiles({
+    name: "yarn.png",
+    mimeType: "image/png",
+    buffer: receiptPng(90),
+  });
+  await expect(artist.getByRole("img", { name: "Image to send" })).toBeVisible();
+  await artist.getByRole("textbox", { name: "Message Maya Dela Cruz" }).fill("The two blues side by side");
+  await artist.getByRole("button", { name: "Send" }).click();
+  await expect(artist.getByRole("button", { name: /Image from you/ })).toBeVisible({ timeout: 20_000 });
+  await expect(client.getByRole("button", { name: `Image from ${artistName}. Open full size` })).toBeVisible({ timeout: 20_000 });
+
   // --- Chosen: the same conversation, now on the commission ---------------------------
   await client.goto(`${postingUrl}/applications`);
   await client.getByRole("button", { name: "Choose this artist" }).click();
@@ -94,6 +107,8 @@ test("a client and an artist talk about a bid, and carry on into the commission"
   await expect(client.getByText("Next week, if the blue yarn arrives in time 🧶")).toBeVisible();
   await expect(client.getByRole("link", { name: title })).toBeVisible();
   await expect(client.getByText(/^Commission:/)).toBeVisible();
+  // The photo sent while bidding still loads now that it is a commission.
+  await expect(client.getByRole("button", { name: `Image from ${artistName}. Open full size` })).toBeVisible({ timeout: 20_000 });
 
   await Promise.all([client, artist].map((page) => page.context().close()));
 });

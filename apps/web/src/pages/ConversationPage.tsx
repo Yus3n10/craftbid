@@ -2,7 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CHAT_SUGGESTIONS, LIMITS, type ConversationDto, type MessageDto } from "@craftbid/shared";
-import { api } from "../lib/api.js";
+import { api, postForm } from "../lib/api.js";
+import { compressForChat, ImagePreparationError } from "../lib/compressImage.js";
 import { cx } from "../lib/cx.js";
 import { useUnsavedChanges } from "../lib/unsavedChanges.js";
 import { Page } from "../components/layout/Shell.js";
@@ -10,6 +11,8 @@ import { Button } from "../components/ui/Button.js";
 import { TextArea } from "../components/ui/Field.js";
 import { Avatar, RoleBadge } from "../components/ui/Primitives.js";
 import { ErrorState, FormError, RowSkeleton } from "../components/ui/States.js";
+import { ImageIcon } from "../components/ui/Icons.js";
+import { PrivateImage } from "../components/commission/PrivateImage.js";
 import { messageTime } from "../components/chat/messageTime.js";
 
 /** How often an open conversation asks for new messages, while it is visible. */
@@ -21,6 +24,15 @@ function mergeById(current: MessageDto[], incoming: MessageDto[]): MessageDto[] 
   const added = incoming.filter((message) => !seen.has(message.id));
   return added.length === 0 ? current : [...current, ...added];
 }
+
+/** A photo chosen or pasted, shown above the box until it is sent or removed. */
+interface PendingImage {
+  file: File;
+  previewUrl: string;
+}
+
+/** Widest a chat image is shown in the thread, in CSS pixels. */
+const THREAD_IMAGE_WIDTH = 240;
 
 /** Whether the reader is at, or nearly at, the newest message. */
 function nearBottom(): boolean {
@@ -89,7 +101,21 @@ export function ConversationPage() {
   const stickToBottom = useRef(true);
   const bottom = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
-  useUnsavedChanges(draft.trim() !== "");
+  const chooser = useRef<HTMLInputElement>(null);
+  const [pending, setPending] = useState<PendingImage | null>(null);
+  useUnsavedChanges(draft.trim() !== "" || pending !== null);
+
+  // The preview is an in-memory URL; let it go when the photo is replaced,
+  // removed or sent, or the page is left.
+  useEffect(() => () => {
+    if (pending) URL.revokeObjectURL(pending.previewUrl);
+  }, [pending]);
+
+  function choose(file: File | undefined) {
+    if (!file || !file.type.startsWith("image/")) return;
+    setPending({ file, previewUrl: URL.createObjectURL(file) });
+    input.current?.focus();
+  }
 
   const conversation = useQuery({
     queryKey: ["conversation", id],
@@ -120,7 +146,8 @@ export function ConversationPage() {
     let stopped = false;
     const timer = window.setInterval(() => {
       if (stopped || document.visibilityState !== "visible") return;
-      const last = latest.current.at(-1);
+      // Index access rather than .at(-1), which Safari before 15.4 lacks.
+      const last = latest.current[latest.current.length - 1];
       const query = last ? `?after=${encodeURIComponent(last.createdAt)}` : "";
       api
         .get<{ items: MessageDto[] }>(`/conversations/${id}/messages${query}`)
@@ -154,20 +181,37 @@ export function ConversationPage() {
     if (stickToBottom.current) bottom.current?.scrollIntoView({ block: "end" });
   }, [messages.length]);
 
+  /**
+   * A photo is shrunk in the browser, uploaded, and then attached to the
+   * message by the id the upload returned. The text, if any, goes with it.
+   */
   const send = useMutation({
-    mutationFn: (body: string) => api.post<MessageDto>(`/conversations/${id}/messages`, { body }),
+    mutationFn: async ({ body, file }: { body: string; file: File | null }) => {
+      let fileId: string | undefined;
+      if (file) {
+        const compressed = await compressForChat(file);
+        const form = new FormData();
+        form.append("file", compressed, compressed.type === "image/webp" ? "photo.webp" : "photo.jpg");
+        fileId = (await postForm<{ fileId: string }>(`/conversations/${id}/files`, form)).fileId;
+      }
+      return api.post<MessageDto>(`/conversations/${id}/messages`, {
+        ...(fileId ? { fileId } : {}),
+        ...(body ? { body } : {}),
+      });
+    },
     onSuccess: (message) => {
       stickToBottom.current = true;
       setMessages((current) => mergeById(current, [message]));
       setDraft("");
+      setPending(null);
       void queryClient.invalidateQueries({ queryKey: ["conversations", "list"] });
     },
   });
 
   function submit() {
     const body = draft.trim();
-    if (!body || send.isPending) return;
-    send.mutate(body);
+    if ((!body && !pending) || send.isPending) return;
+    send.mutate({ body, file: pending?.file ?? null });
   }
 
   if (conversation.error || history.error) {
@@ -208,14 +252,31 @@ export function ConversationPage() {
           {messages.map((message) => (
             <li key={message.id} className={cx("flex", message.mine ? "justify-end" : "justify-start")}>
               <div className={cx("max-w-[85%] sm:max-w-[75%]", message.mine && "text-right")}>
-                <p
-                  className={cx(
-                    "inline-block whitespace-pre-wrap break-words rounded-lg px-3.5 py-2 text-left text-sm",
-                    message.mine ? "rounded-br-sm bg-indigo text-paper-raised" : "rounded-bl-sm bg-paper-sunk text-ink",
-                  )}
-                >
-                  {message.body}
-                </p>
+                {message.image && (
+                  <div
+                    className={cx("mb-1 inline-block max-w-full align-top", message.mine ? "ml-auto" : "mr-auto")}
+                    style={{
+                      width: Math.min(THREAD_IMAGE_WIDTH, message.image.width),
+                      aspectRatio: `${message.image.width} / ${message.image.height}`,
+                    }}
+                  >
+                    <PrivateImage
+                      path={`/conversations/${id}/files/${message.image.fileId}`}
+                      alt={message.mine ? "Image from you" : `Image from ${data.otherParty.displayName}`}
+                      className="size-full"
+                    />
+                  </div>
+                )}
+                {message.body && (
+                  <p
+                    className={cx(
+                      "inline-block whitespace-pre-wrap break-words rounded-lg px-3.5 py-2 text-left text-sm",
+                      message.mine ? "rounded-br-sm bg-indigo text-paper-raised" : "rounded-bl-sm bg-paper-sunk text-ink",
+                    )}
+                  >
+                    {message.body}
+                  </p>
+                )}
                 <span className="mt-1 block px-1 text-[11px] text-ink-faint">
                   {message.mine ? "You · " : ""}
                   {messageTime(message.createdAt)}
@@ -235,8 +296,9 @@ export function ConversationPage() {
             submit();
           }}
         >
-          {/* Suggestions fill the box and never send. Three at most, wrapping rather than scrolling sideways. */}
-          <ul className="mb-2 flex flex-wrap gap-2" aria-label="Suggested messages">
+          {/* Suggestions fill the box and never send. Three at most, wrapping rather than scrolling sideways.
+              Hidden while a photo waits to be sent, so the bar stays short on a phone. */}
+          <ul className={cx("mb-2 flex flex-wrap gap-2", pending && "hidden")} aria-label="Suggested messages">
             {suggestions.map((suggestion) => (
               <li key={suggestion}>
                 <button
@@ -253,8 +315,50 @@ export function ConversationPage() {
             ))}
           </ul>
 
-          <FormError error={send.error} />
+          {send.error instanceof ImagePreparationError ? (
+            <p role="alert" className="rounded-md border border-rust/30 bg-rust-wash px-3 py-2 text-sm font-medium text-rust">
+              {send.error.message}
+            </p>
+          ) : (
+            <FormError error={send.error} />
+          )}
+
+          {pending && (
+            <div className="mb-2 flex items-center gap-3">
+              <img
+                src={pending.previewUrl}
+                alt="Image to send"
+                className="max-h-20 max-w-[50%] rounded-md border border-fiber bg-paper-sunk object-contain"
+              />
+              <Button type="button" variant="ghost" size="sm" onClick={() => setPending(null)} disabled={send.isPending}>
+                Remove image
+              </Button>
+            </div>
+          )}
+
           <div className="flex items-end gap-2">
+            <input
+              ref={chooser}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              tabIndex={-1}
+              aria-hidden="true"
+              onChange={(event) => {
+                choose(event.target.files?.[0]);
+                // Cleared so choosing the same photo again still fires a change.
+                event.target.value = "";
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => chooser.current?.click()}
+              disabled={send.isPending}
+              aria-label="Attach an image"
+              className="press flex size-11 shrink-0 items-center justify-center rounded-md border border-fiber bg-paper-raised text-ink-soft transition-colors hover:border-fiber-strong hover:text-ink disabled:opacity-50"
+            >
+              <ImageIcon className="size-5" />
+            </button>
             <label htmlFor="message-body" className="sr-only">
               Message {data.otherParty.displayName}
             </label>
@@ -266,6 +370,13 @@ export function ConversationPage() {
               rows={1}
               placeholder={`Message ${data.otherParty.displayName}`}
               onChange={(event) => setDraft(event.target.value)}
+              onPaste={(event) => {
+                // A copied image becomes the photo to send; pasted text is left alone.
+                const image = Array.from(event.clipboardData.files).find((file) => file.type.startsWith("image/"));
+                if (!image) return;
+                event.preventDefault();
+                choose(image);
+              }}
               onKeyDown={(event) => {
                 // Enter sends on a keyboard with a mouse; on a phone it makes a new line.
                 if (event.key === "Enter" && !event.shiftKey && window.matchMedia("(pointer: fine)").matches) {
@@ -275,7 +386,7 @@ export function ConversationPage() {
               }}
               className="min-h-11 max-h-40 flex-1 resize-none"
             />
-            <Button type="submit" loading={send.isPending} disabled={draft.trim() === ""}>
+            <Button type="submit" loading={send.isPending} disabled={draft.trim() === "" && !pending}>
               Send
             </Button>
           </div>

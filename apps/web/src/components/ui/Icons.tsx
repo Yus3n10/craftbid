@@ -170,3 +170,14 @@ export function EyeOffIcon(props: IconProps) {
     </Icon>
   );
 }
+
+/** A framed picture with a hill and a sun: attach an image. */
+export function ImageIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+      <circle cx="9" cy="10" r="1.6" />
+      <path d="M20.5 16l-5-5-8.5 8.5" />
+    </Icon>
+  );
+}

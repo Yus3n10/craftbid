@@ -293,19 +293,6 @@ export async function uploadCommissionFile(
   return JSON.parse(text) as { id: string; kind: "receipt" | "finished_photo"; width: number; height: number };
 }
 
-/**
- * Loads a private commission file as an object URL for an <img>.
- *
- * A plain `src` pointing at the API would work in the browser, where the
- * session is a cookie, but not in the desktop build, which authenticates with
- * a header an image tag cannot send. Fetching the bytes and handing the image
- * an in-memory URL works for both, and nothing shareable ever exists. The
- * caller revokes the URL when the image goes away.
- */
-export async function loadPrivateImage(commissionId: string, fileId: string): Promise<string> {
-  return loadPrivateUrl(`/commissions/${commissionId}/files/${fileId}`);
-}
-
 /** Sends a multipart form the same way as an upload, and parses the answer. */
 export async function postForm<T>(path: string, form: FormData): Promise<T> {
   const accessToken = getAccessToken();
@@ -320,7 +307,16 @@ export async function postForm<T>(path: string, form: FormData): Promise<T> {
   return (text ? JSON.parse(text) : null) as T;
 }
 
-/** Any private image the API streams (receipts, bug screenshots), as an object URL. */
+/**
+ * Any private image the API streams (receipts, chat images, bug screenshots),
+ * as an object URL for an <img>.
+ *
+ * A plain `src` pointing at the API would work in the browser, where the
+ * session is a cookie, but not in the desktop build, which authenticates with
+ * a header an image tag cannot send. Fetching the bytes and handing the image
+ * an in-memory URL works for both, and nothing shareable ever exists. The
+ * caller revokes the URL when the image goes away.
+ */
 export async function loadPrivateUrl(path: string): Promise<string> {
   const accessToken = getAccessToken();
   const response = await fetch(`${API_URL}${path}`, {

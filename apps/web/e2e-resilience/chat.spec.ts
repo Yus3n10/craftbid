@@ -44,7 +44,13 @@ async function stubApi(page: Page, extra?: Handler) {
       const url = new URL(route.request().url());
       const path = apiPath(url)!;
       const method = route.request().method();
-      calls.push({ method, path, search: url.search, body: route.request().postDataJSON?.() ?? null });
+      let body: unknown = null;
+      try {
+        body = route.request().postDataJSON?.() ?? null;
+      } catch {
+        // An image upload is multipart, not JSON.
+      }
+      calls.push({ method, path, search: url.search, body });
       const handled = extra?.(route, path, method, url);
       if (handled) return handled;
       if (path === "/auth/me") return route.fulfill(json(CLIENT));
@@ -205,4 +211,203 @@ test("a client opens a conversation from a bid", async ({ page }) => {
   await expect(page).toHaveURL(new RegExp(`/messages/${CONVERSATION_ID}$`));
   expect(opened).toEqual([{ postingId: POSTING_ID, artistId: ARTIST_SUMMARY.id }]);
   await expect(page.getByText("No messages yet. Say hello, or pick a suggestion below.")).toBeVisible();
+});
+
+test.describe("images in a conversation", () => {
+  const FILE_ID = "01920000-0000-7000-8000-0000000000f1";
+  const PIXEL = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+    "base64",
+  );
+
+  /** Width and height of a WebP inside a multipart body, or null when there is none. */
+  function webpSize(body: Buffer): { width: number; height: number } | null {
+    const riff = body.indexOf("RIFF");
+    if (riff < 0 || body.toString("ascii", riff + 8, riff + 12) !== "WEBP") return null;
+    const chunk = body.toString("ascii", riff + 12, riff + 16);
+    // Extended format, which browsers write when they embed a colour profile:
+    // the canvas size is stored as width-1 and height-1 in three bytes each.
+    if (chunk === "VP8X") {
+      return { width: body.readUIntLE(riff + 24, 3) + 1, height: body.readUIntLE(riff + 27, 3) + 1 };
+    }
+    if (chunk === "VP8 ") {
+      return { width: body.readUInt16LE(riff + 26) & 0x3fff, height: body.readUInt16LE(riff + 28) & 0x3fff };
+    }
+    return null;
+  }
+
+  /** A large PNG drawn in the page and pasted into the box, as a copied photo arrives. */
+  async function pastePhoto(page: Page) {
+    await page.getByRole("textbox", { name: "Message Nena Hooks" }).evaluate(async (box) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 3000;
+      canvas.height = 2000;
+      const context = canvas.getContext("2d")!;
+      context.fillStyle = "#b47a5a";
+      context.fillRect(0, 0, 3000, 2000);
+      context.fillStyle = "#1f3a4d";
+      context.fillRect(400, 300, 1200, 900);
+      const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), "image/png"));
+      const data = new DataTransfer();
+      data.items.add(new File([blob], "photo.png", { type: "image/png" }));
+      box.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }));
+    });
+  }
+
+  async function stubImages(page: Page, sent: { upload?: Buffer; message?: unknown }) {
+    return stubApi(page, (route, path, method) => {
+      if (path === `/conversations/${CONVERSATION_ID}`) return route.fulfill(json(CONVERSATION));
+      if (path === `/conversations/${CONVERSATION_ID}/read`) return route.fulfill({ status: 204 });
+      if (path === `/conversations/${CONVERSATION_ID}/files` && method === "POST") {
+        sent.upload = route.request().postDataBuffer() ?? undefined;
+        return route.fulfill(json({ fileId: FILE_ID, width: 1600, height: 1067 }, 201));
+      }
+      if (path === `/conversations/${CONVERSATION_ID}/messages` && method === "POST") {
+        const body = route.request().postDataJSON() as { body?: string; fileId?: string };
+        sent.message = body;
+        return route.fulfill(
+          json(
+            {
+              id: "01920000-0000-7000-8000-00000000m009",
+              body: body.body ?? "",
+              mine: true,
+              createdAt: "2026-09-15T03:00:00.000Z",
+              image: { fileId: FILE_ID, width: 1600, height: 1067 },
+            },
+            201,
+          ),
+        );
+      }
+      if (path === `/conversations/${CONVERSATION_ID}/messages`) return route.fulfill(json({ items: [] }));
+      if (path === `/conversations/${CONVERSATION_ID}/files/${FILE_ID}`) {
+        return route.fulfill({ status: 200, contentType: "image/png", body: PIXEL });
+      }
+      return undefined;
+    });
+  }
+
+  test("a pasted photo is shrunk before upload, then sent as an image", async ({ page }) => {
+    const sent: { upload?: Buffer; message?: unknown } = {};
+    await stubImages(page, sent);
+    await page.goto(`/messages/${CONVERSATION_ID}`);
+    const send = page.getByRole("button", { name: "Send" });
+    await expect(send).toBeDisabled();
+
+    await pastePhoto(page);
+    await expect(page.getByRole("img", { name: "Image to send" })).toBeVisible();
+    await expect(send).toBeEnabled();
+    await send.click();
+
+    await expect(page.getByRole("button", { name: /Image from you/ })).toBeVisible();
+    expect(sent.upload && webpSize(sent.upload)).toEqual({ width: 1600, height: 1067 });
+    expect(sent.message).toEqual({ fileId: FILE_ID });
+    await expect(page.getByRole("img", { name: "Image to send" })).toHaveCount(0);
+  });
+
+  test("an attached photo goes with the text typed beside it, and can be removed first", async ({ page }) => {
+    const sent: { upload?: Buffer; message?: unknown } = {};
+    await stubImages(page, sent);
+    await page.goto(`/messages/${CONVERSATION_ID}`);
+
+    const png = Buffer.from(
+      await page.evaluate(async () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 800;
+        canvas.height = 600;
+        canvas.getContext("2d")!.fillRect(0, 0, 800, 600);
+        const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), "image/png"));
+        return [...new Uint8Array(await blob.arrayBuffer())];
+      }),
+    );
+    const chooser = page.locator('input[type="file"]');
+    await chooser.setInputFiles({ name: "yarn.png", mimeType: "image/png", buffer: png });
+    await expect(page.getByRole("img", { name: "Image to send" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Remove image" }).click();
+    await expect(page.getByRole("img", { name: "Image to send" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Send" })).toBeDisabled();
+
+    await chooser.setInputFiles({ name: "yarn.png", mimeType: "image/png", buffer: png });
+    await page.getByRole("textbox", { name: "Message Nena Hooks" }).fill("These are the two colours");
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect.poll(() => sent.message).toEqual({ fileId: FILE_ID, body: "These are the two colours" });
+    await expect(page.getByText("These are the two colours")).toBeVisible();
+  });
+
+  test("a received image loads privately and opens full size", async ({ page }) => {
+    await stubApi(page, (route, path) => {
+      if (path === `/conversations/${CONVERSATION_ID}`) return route.fulfill(json(CONVERSATION));
+      if (path === `/conversations/${CONVERSATION_ID}/read`) return route.fulfill({ status: 204 });
+      if (path === `/conversations/${CONVERSATION_ID}/messages`) {
+        return route.fulfill(
+          json({
+            items: [
+              {
+                id: "01920000-0000-7000-8000-00000000m010",
+                body: "",
+                mine: false,
+                createdAt: "2026-09-15T03:00:00.000Z",
+                image: { fileId: FILE_ID, width: 1600, height: 1067 },
+              },
+            ],
+          }),
+        );
+      }
+      if (path === `/conversations/${CONVERSATION_ID}/files/${FILE_ID}`) {
+        return route.fulfill({ status: 200, contentType: "image/png", body: PIXEL });
+      }
+      return undefined;
+    });
+    await page.goto(`/messages/${CONVERSATION_ID}`);
+    const thumbnail = page.getByRole("button", { name: /Image from Nena Hooks/ });
+    await expect(thumbnail).toBeVisible();
+    await thumbnail.click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+  });
+
+  test("a photo waiting to be sent fits a 320px phone", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 700 });
+    await stubImages(page, {});
+    await page.goto(`/messages/${CONVERSATION_ID}`);
+    await pastePhoto(page);
+    await expect(page.getByRole("img", { name: "Image to send" })).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Message Nena Hooks" })).toBeInViewport();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+
+  test("a closed conversation offers no way to attach", async ({ page }) => {
+    await stubApi(page, (route, path) => {
+      if (path === `/conversations/${CONVERSATION_ID}`) return route.fulfill(json({ ...CONVERSATION, canSend: false }));
+      if (path === `/conversations/${CONVERSATION_ID}/read`) return route.fulfill({ status: 204 });
+      if (path === `/conversations/${CONVERSATION_ID}/messages`) return route.fulfill(json({ items: [] }));
+      return undefined;
+    });
+    await page.goto(`/messages/${CONVERSATION_ID}`);
+    await expect(page.getByText(/the conversation is closed/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Attach an image" })).toHaveCount(0);
+  });
+});
+
+test("the list says when the last message was a photo", async ({ page }) => {
+  await stubApi(page, (route, path) =>
+    path === "/conversations"
+      ? route.fulfill(
+          json({
+            items: [
+              {
+                id: CONVERSATION_ID,
+                posting: { id: POSTING_ID, title: "Crochet wedding bouquet" },
+                otherParty: ARTIST_SUMMARY,
+                myRole: "client",
+                lastMessage: { body: "", createdAt: "2026-09-15T02:02:00.000Z", mine: false, hasImage: true },
+                unread: false,
+              },
+            ],
+          }),
+        )
+      : undefined,
+  );
+  await page.goto("/messages");
+  await expect(page.getByRole("link", { name: /Nena Hooks/ }).getByText("Sent a photo")).toBeVisible();
 });

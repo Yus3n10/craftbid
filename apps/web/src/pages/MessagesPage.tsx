@@ -57,7 +57,7 @@ export function MessagesPage() {
                       <p className="truncate text-xs text-ink-faint">{conversation.posting.title}</p>
                       <p className={cx("mt-1 truncate text-sm", conversation.unread ? "text-ink" : "text-ink-soft")}>
                         {conversation.lastMessage.mine && <span className="text-ink-faint">You: </span>}
-                        {conversation.lastMessage.body}
+                        {conversation.lastMessage.body || (conversation.lastMessage.hasImage ? "Sent a photo" : "")}
                       </p>
                     </div>
                     {conversation.unread && (

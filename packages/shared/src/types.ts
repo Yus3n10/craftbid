@@ -466,9 +466,12 @@ export interface ConversationDto {
 
 export interface MessageDto {
   id: string;
+  /** Empty for a message that is only an image. */
   body: string;
   createdAt: string;
   mine: boolean;
+  /** A private image, opened through /conversations/:id/files/:fileId. */
+  image?: { fileId: string; width: number; height: number };
 }
 
 export interface ConversationSummaryDto {
@@ -476,6 +479,6 @@ export interface ConversationSummaryDto {
   posting: { id: string; title: string };
   otherParty: UserSummaryDto;
   myRole: "client" | "artist";
-  lastMessage: { body: string; createdAt: string; mine: boolean };
+  lastMessage: { body: string; createdAt: string; mine: boolean; hasImage?: boolean };
   unread: boolean;
 }

@@ -336,7 +336,7 @@ function DecisionCard({ commissionId, payment }: { commissionId: string; payment
         )}
       </dl>
       {payment.receiptFileId && (
-        <PrivateImage commissionId={commissionId} fileId={payment.receiptFileId} alt="The client's receipt" className="h-56 w-full" />
+        <PrivateImage path={`/commissions/${commissionId}/files/${payment.receiptFileId}`} alt="The client's receipt" className="h-56 w-full" />
       )}
       <FormError error={decide.error} />
       <div className="flex flex-col gap-2 sm:flex-row">
@@ -779,7 +779,7 @@ function History({ commission }: { commission: CommissionDto }) {
         {tracking.payments.map((payment) => (
           <li key={payment.id} className="flex gap-3 rounded-md border border-fiber bg-paper-raised p-3 text-sm">
             {payment.receiptFileId && (
-              <PrivateImage commissionId={commission.id} fileId={payment.receiptFileId} alt="Receipt" className="h-16 w-12 shrink-0" />
+              <PrivateImage path={`/commissions/${commission.id}/files/${payment.receiptFileId}`} alt="Receipt" className="h-16 w-12 shrink-0" />
             )}
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -859,7 +859,7 @@ export function PaymentPanel({ commission, isClient }: { commission: CommissionD
             <h3 className="font-display text-lg">The finished piece</h3>
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
               {tracking.finishedPhotoIds.map((fileId) => (
-                <PrivateImage key={fileId} commissionId={commission.id} fileId={fileId} alt="Photo of the finished piece" className="aspect-square w-full" />
+                <PrivateImage key={fileId} path={`/commissions/${commission.id}/files/${fileId}`} alt="Photo of the finished piece" className="aspect-square w-full" />
               ))}
             </div>
           </section>

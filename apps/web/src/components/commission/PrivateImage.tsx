@@ -1,23 +1,23 @@
 import { useEffect, useRef, useState } from "react";
-import { loadPrivateImage } from "../../lib/api.js";
+import { loadPrivateUrl } from "../../lib/api.js";
 import { cx } from "../../lib/cx.js";
 import { CloseIcon } from "../ui/Icons.js";
 
 /**
- * A receipt or a photo of a commission, which only its two parties may see.
+ * A private image: a receipt, a photo of a commission, or an image sent in
+ * chat, which only the people it belongs to may see.
  *
  * The bytes are fetched with the session and shown from memory, so no link to
  * the file exists anywhere to be copied or forwarded. Tapping opens it full
  * size, because a receipt is read, not glanced at.
  */
 export function PrivateImage({
-  commissionId,
-  fileId,
+  path,
   alt,
   className,
 }: {
-  commissionId: string;
-  fileId: string;
+  /** The API path that streams it, such as /commissions/:id/files/:fileId. */
+  path: string;
   alt: string;
   className?: string;
 }) {
@@ -28,7 +28,7 @@ export function PrivateImage({
   useEffect(() => {
     let active = true;
     let objectUrl: string | null = null;
-    loadPrivateImage(commissionId, fileId)
+    loadPrivateUrl(path)
       .then((created) => {
         objectUrl = created;
         if (active) setUrl(created);
@@ -39,7 +39,7 @@ export function PrivateImage({
       active = false;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [commissionId, fileId]);
+  }, [path]);
 
   if (failed) {
     return (

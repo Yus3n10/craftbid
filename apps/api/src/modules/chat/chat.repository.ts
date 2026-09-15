@@ -146,17 +146,93 @@ export async function userSummary(userId: string, q: Queryable = db): Promise<Us
 
 interface MessageRow {
   id: Buffer;
-  body: string;
+  body: string | null;
   createdAt: Date;
   senderId: Buffer;
+  fileId: Buffer | null;
+  fileWidth: number | null;
+  fileHeight: number | null;
 }
 
+/** A message's columns with its image's size, from messages `m` and chat_files `f`. */
+const MESSAGE_COLUMNS = `m.id, m.body, m.created_at, m.sender_id,
+  m.file_id, f.width AS file_width, f.height AS file_height`;
+const MESSAGE_FROM = `messages m LEFT JOIN chat_files f ON f.id = m.file_id`;
+
 function mapMessage(row: MessageRow, viewerId: string): MessageDto {
+  const fileId = bufToUuid(row.fileId);
   return {
     id: bufToUuid(row.id)!,
-    body: row.body,
+    // A string even for an image on its own, so a page built before images
+    // existed renders an empty caption rather than failing on null.
+    body: row.body ?? "",
     createdAt: row.createdAt.toISOString(),
     mine: bufToUuid(row.senderId) === viewerId,
+    ...(fileId ? { image: { fileId, width: Number(row.fileWidth), height: Number(row.fileHeight) } } : {}),
+  };
+}
+
+export interface ChatFileRecord {
+  id: string;
+  conversationId: string;
+  uploaderId: string;
+  objectKey: string;
+  contentType: string;
+  attached: boolean;
+}
+
+export async function insertFile(
+  file: {
+    id: string;
+    conversationId: string;
+    uploaderId: string;
+    objectKey: string;
+    contentType: string;
+    byteSize: number;
+    width: number;
+    height: number;
+  },
+  q: Queryable = db,
+): Promise<void> {
+  await q.run(
+    `INSERT INTO chat_files (id, conversation_id, uploader_id, object_key, content_type, byte_size, width, height)
+     VALUES (:id, :conversationId, :uploaderId, :objectKey, :contentType, :byteSize, :width, :height)`,
+    {
+      id: uuidToBuf(file.id),
+      conversationId: uuidToBuf(file.conversationId),
+      uploaderId: uuidToBuf(file.uploaderId),
+      objectKey: file.objectKey,
+      contentType: file.contentType,
+      byteSize: file.byteSize,
+      width: file.width,
+      height: file.height,
+    },
+  );
+}
+
+export async function findFile(fileId: string, q: Queryable = db): Promise<ChatFileRecord | null> {
+  const row = await q.one<{
+    id: Buffer;
+    conversationId: Buffer;
+    uploaderId: Buffer;
+    objectKey: string;
+    contentType: string;
+    attached: number;
+  }>(
+    `SELECT f.id, f.conversation_id, f.uploader_id, f.object_key, f.content_type,
+            CASE WHEN EXISTS (SELECT 1 FROM messages m WHERE m.file_id = f.id) THEN 1 ELSE 0 END AS attached
+       FROM chat_files f
+      WHERE f.id = :id`,
+    { id: uuidToBuf(fileId) },
+  );
+  if (!row) return null;
+  return {
+    id: bufToUuid(row.id)!,
+    conversationId: bufToUuid(row.conversationId)!,
+    uploaderId: bufToUuid(row.uploaderId)!,
+    objectKey: row.objectKey,
+    contentType: row.contentType,
+    attached: row.attached === 1,
   };
 }
 
@@ -180,17 +256,17 @@ export async function listMessages(
   if (after) {
     binds.after = after;
     rows = await q.many<MessageRow>(
-      `SELECT id, body, created_at, sender_id FROM messages
-        WHERE conversation_id = :id AND created_at >= :after
-        ORDER BY created_at, id`,
+      `SELECT ${MESSAGE_COLUMNS} FROM ${MESSAGE_FROM}
+        WHERE m.conversation_id = :id AND m.created_at >= :after
+        ORDER BY m.created_at, m.id`,
       binds,
     );
   } else {
     rows = await q.many<MessageRow>(
-      `SELECT id, body, created_at, sender_id FROM (
-         SELECT id, body, created_at, sender_id FROM messages
-          WHERE conversation_id = :id
-          ORDER BY created_at DESC, id DESC
+      `SELECT * FROM (
+         SELECT ${MESSAGE_COLUMNS} FROM ${MESSAGE_FROM}
+          WHERE m.conversation_id = :id
+          ORDER BY m.created_at DESC, m.id DESC
           FETCH FIRST ${HISTORY_LIMIT} ROWS ONLY
        ) ORDER BY created_at, id`,
       binds,
@@ -203,13 +279,20 @@ export async function insertMessage(
   conversationId: string,
   senderId: string,
   senderRole: "client" | "artist",
-  body: string,
+  content: { body: string | null; fileId: string | null },
   tx: Queryable,
 ): Promise<MessageDto> {
   const id = newId();
   await tx.run(
-    `INSERT INTO messages (id, conversation_id, sender_id, body) VALUES (:id, :conversationId, :senderId, :body)`,
-    { id: uuidToBuf(id), conversationId: uuidToBuf(conversationId), senderId: uuidToBuf(senderId), body },
+    `INSERT INTO messages (id, conversation_id, sender_id, body, file_id)
+     VALUES (:id, :conversationId, :senderId, :body, :fileId)`,
+    {
+      id: uuidToBuf(id),
+      conversationId: uuidToBuf(conversationId),
+      senderId: uuidToBuf(senderId),
+      body: content.body,
+      fileId: content.fileId ? uuidToBuf(content.fileId) : null,
+    },
   );
   // Sending counts as having read everything up to your own message. The
   // column is one of two literals, never from the request.
@@ -218,7 +301,7 @@ export async function insertMessage(
     `UPDATE conversations SET last_message_at = SYSTIMESTAMP, ${readColumn} = SYSTIMESTAMP WHERE id = :id`,
     { id: uuidToBuf(conversationId) },
   );
-  const row = await tx.one<MessageRow>(`SELECT id, body, created_at, sender_id FROM messages WHERE id = :id`, {
+  const row = await tx.one<MessageRow>(`SELECT ${MESSAGE_COLUMNS} FROM ${MESSAGE_FROM} WHERE m.id = :id`, {
     id: uuidToBuf(id),
   });
   return mapMessage(row!, senderId);
@@ -282,8 +365,8 @@ export async function listForUser(viewerId: string, q: Queryable = db): Promise<
   });
   const [lastMessages, people] = await Promise.all([
     q.many<MessageRow & { conversationId: Buffer }>(
-      `SELECT conversation_id, id, body, created_at, sender_id FROM (
-         SELECT m.conversation_id, m.id, m.body, m.created_at, m.sender_id,
+      `SELECT conversation_id, id, body, created_at, sender_id, file_id FROM (
+         SELECT m.conversation_id, m.id, m.body, m.created_at, m.sender_id, m.file_id,
                 ROW_NUMBER() OVER (PARTITION BY m.conversation_id ORDER BY m.created_at DESC, m.id DESC) AS rn
            FROM messages m
           WHERE m.conversation_id IN (${placeholders.join(", ")})
@@ -307,7 +390,12 @@ export async function listForUser(viewerId: string, q: Queryable = db): Promise<
         posting: { id: bufToUuid(row.postingId)!, title: row.postingTitle },
         otherParty: other,
         myRole: bufToUuid(row.clientId) === viewerId ? ("client" as const) : ("artist" as const),
-        lastMessage: { body: last.body, createdAt: last.createdAt.toISOString(), mine: bufToUuid(last.senderId) === viewerId },
+        lastMessage: {
+          body: last.body ?? "",
+          createdAt: last.createdAt.toISOString(),
+          mine: bufToUuid(last.senderId) === viewerId,
+          ...(last.fileId ? { hasImage: true } : {}),
+        },
         unread: row.unread === 1,
       },
     ];

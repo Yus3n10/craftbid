@@ -59,7 +59,11 @@ export interface NormalisedImage {
  * Shared by public images and by private commission files, so a receipt gets
  * exactly the same scrutiny as a portfolio photo.
  */
-export async function normaliseImage(buffer: Buffer): Promise<NormalisedImage> {
+export async function normaliseImage(
+  buffer: Buffer,
+  options: { maxSide?: number } = {},
+): Promise<NormalisedImage> {
+  const maxSide = options.maxSide ?? 2000;
   if (buffer.length === 0) {
     throw badRequest("That file is empty.");
   }
@@ -101,7 +105,7 @@ export async function normaliseImage(buffer: Buffer): Promise<NormalisedImage> {
 
   const output = await pipeline
     .rotate() // apply the EXIF orientation before that metadata is discarded
-    .resize({ width: 2000, height: 2000, fit: "inside", withoutEnlargement: true })
+    .resize({ width: maxSide, height: maxSide, fit: "inside", withoutEnlargement: true })
     .webp({ quality: 82 })
     .toBuffer({ resolveWithObject: true });
 
