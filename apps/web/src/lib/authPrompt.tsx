@@ -6,15 +6,9 @@ import { ResendLink } from "../components/CheckYourEmail.js";
 import { useAuth } from "./auth.js";
 
 /**
- * The "you need an account" popup.
- *
- * Save, react, comment, share and bid used to send a signed-out visitor
- * straight to the sign-in page. From a post someone had just found, that read
- * as the click doing something odd, or as having worked, and it took them
- * away from what they were looking at. Now the click opens this over the page
- * instead: what they tried to do, why it needs an account, and a way to sign
- * in or join that brings them back here. The X, Escape or a tap outside closes
- * it and leaves them where they were.
+ * The "you need an account" popup: what they tried to do, why it needs an
+ * account, and a way to sign in or join that brings them back here. The X,
+ * Escape or a tap outside closes it and leaves them where they were.
  *
  * This is presentation only. Every one of these actions is refused by the API
  * without a session regardless of what the page shows.

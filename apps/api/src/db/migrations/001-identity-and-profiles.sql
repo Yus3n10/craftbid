@@ -6,8 +6,6 @@
 --
 -- Two Oracle portability rules apply throughout the schema:
 --   * Flags are NUMBER(1) constrained to 0/1, not BOOLEAN, which is 23ai-only.
---     The production Autonomous Database version is not known yet and Always
---     Free ADB can be provisioned as 19c.
 --   * VARCHAR2 lengths are declared in CHAR, not the default BYTE. A Filipino
 --     name with an enye, or any emoji, costs multiple bytes; byte semantics
 --     would truncate real user input. Oracle caps a CHAR-semantics column at

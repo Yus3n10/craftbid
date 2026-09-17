@@ -6,7 +6,6 @@ const NOW = Date.parse("2026-09-14T22:00:00.000Z");
 
 describe("daysAgo", () => {
   it("never goes negative when the server's clock is ahead of the phone's", () => {
-    // A share made "now" used to read "-1 days ago".
     expect(daysAgo("2026-09-14T22:00:05.000Z", { now: NOW })).toBe("Today");
     // Across midnight in Manila: the phone reads 23:59:58, the server stamped
     // 00:00:03 on the next day.

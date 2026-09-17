@@ -1,7 +1,5 @@
 # Batch 4: Staff Tools Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-
 **Goal:** A daily 4 PM summary email to the owner, commission problems and every payment record (with receipts) in the admin screen, an in-app notice for chat left unread an hour, and cleanup of chat images never sent.
 
 **Architecture:** Migration 020 adds `job_runs` (a run is claimed by inserting its key), nudge columns on `conversations`, and widens the moderation-action, target and notification-type lists. An in-process runner in the API ticks every 5 minutes (the Cloudflare keep-alive keeps Render awake) and runs three idempotent jobs. Admin gets Problems and Payments tabs backed by staff-only routes; resolving a problem and opening a receipt both write `moderation_actions` rows in the same transaction as the change or read.

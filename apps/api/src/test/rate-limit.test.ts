@@ -45,8 +45,7 @@ describe("rate limiting", () => {
   describe("behind the site's Worker", () => {
     // Cloudflare stamps every Worker subrequest to another Cloudflare zone
     // (onrender.com is one) with this single CF-Connecting-IP, whoever the
-    // visitor was. Measured on production 2026-09-17: through the site, the
-    // login limit was shared by everyone.
+    // visitor was.
     const WORKER_ADDRESS = "2a06:98c0:3600::103";
     const SECRET = "a-test-proxy-secret-that-is-long-enough";
     let proxied: FastifyInstance;

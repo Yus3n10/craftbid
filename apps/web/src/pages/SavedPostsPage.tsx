@@ -17,9 +17,8 @@ const LIMIT = 12;
 /**
  * Posts this person saved, most recently saved first.
  *
- * Saved posts used to exist only as a tab on the home feed, where nobody
- * looked for them. This page is linked from the account menu, the phone menu,
- * and the note that appears the moment something is saved.
+ * Linked from the account menu, the phone menu, and the note that appears the
+ * moment something is saved.
  */
 export function SavedPostsPage() {
   const [offset, setOffset] = useState(0);

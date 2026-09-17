@@ -7,14 +7,7 @@ import { api } from "../lib/api.js";
 /**
  * A slow band of real work along the foot of the hero.
  *
- * The hero was words on paper. What a marketplace has that a landing page does
- * not is inventory, so the liveliest honest thing to put here is the work
- * itself: these are real posts by real artists, and clicking one goes to their
- * profile.
- *
- * Renders nothing at all when there is nothing to show. An empty marquee, or
- * one padded out with stock photographs, would be worse than the plain hero it
- * replaced.
+ * Renders nothing at all when there is nothing to show.
  */
 export function WorkRibbon() {
   const { data } = useQuery({

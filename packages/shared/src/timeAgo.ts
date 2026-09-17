@@ -1,9 +1,5 @@
 /**
  * How long ago something happened, in the words the cards and comments use.
- *
- * One copy for the whole app. There used to be four, and all of them floored
- * the raw difference: a timestamp from a server whose clock ran a few seconds
- * ahead of the phone's came out slightly in the future and read "-1 days ago".
  */
 
 const MANILA_DATE = new Intl.DateTimeFormat("en-CA", {

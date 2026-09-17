@@ -5,10 +5,7 @@
  * craftbid-api.onrender.com, which are different sites, so the session
  * cookies the API set were third-party cookies. WebKit refuses those outright,
  * and WebKit is every browser on an iPhone, Messenger's in-app browser
- * included. On those devices sign-in answered 200, the browser stored nothing,
- * and the next request that needed the session came back 401: "My bids" said
- * "You need to sign in to do that" to someone who had just signed in, and
- * closing Messenger's browser lost a session that had never really existed.
+ * included.
  *
  * Answering /api/* from this Worker makes the same cookies first-party. The
  * API itself does not change: it still sets them, the Worker passes them
@@ -52,8 +49,7 @@ export function upstreamUrl(requestUrl: string, apiOrigin: string): string {
  *
  * - X-Forwarded-For is replaced, never appended to, with the address
  *   Cloudflare saw. A visitor-supplied value is a lie the rate limiter would
- *   otherwise believe. (The API keys limits on CF-Connecting-IP, which
- *   Cloudflare sets itself on this request; this is for logs.)
+ *   otherwise believe.
  * - X-Forwarded-Host and -Proto describe the site the browser was on.
  * - Host is dropped, so the runtime sets it from the upstream URL.
  * - X-Craftbid-Client-Ip carries the visitor's address, vouched for by

@@ -4,9 +4,7 @@
  * The service worker answers every page load from its precache, so the first
  * visit after a deploy runs the previous build while the new worker installs
  * behind it. `autoUpdate` activates that worker at once, but the page already
- * on screen keeps the old code until something reloads it. Found in use: an
- * artist opened Settings the day payment details shipped and the section was
- * not there, because the page was the build from before.
+ * on screen keeps the old code until something reloads it.
  *
  * The injected registerSW.js only registers the worker and never reloads, so
  * this watches for the moment a new worker takes control and reloads at the

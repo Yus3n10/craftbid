@@ -13,11 +13,6 @@ import {
  * Exercises POST /images for real, rather than inserting rows the way the
  * other suites do.
  *
- * Every other test seeds image rows directly, which is right for tests about
- * who may attach an image, but it meant nothing here had ever run: not the
- * magic-byte sniffing, not sharp, not the storage driver. An upload endpoint
- * broken in production passed CI without complaint.
- *
  * These run against the local driver, so a fault in a hosted provider's
  * credentials still will not surface here. What they do cover is everything
  * between the request and the driver, which is where the logic lives.
@@ -97,7 +92,7 @@ describe("image upload", () => {
   });
 
   it("strips EXIF, so an uploaded photo cannot carry its GPS location", async () => {
-    // The README claims this. A camera photo carries where it was taken, and
+    // A camera photo carries where it was taken, and
     // handing that to strangers on a marketplace is the kind of leak nobody
     // notices until it matters.
     const withExif = await image(800, 600)

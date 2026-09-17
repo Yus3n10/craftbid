@@ -848,9 +848,6 @@ The order that has worked every time:
   sign-up sends a real email; test addresses bounce and bounces can get sending
   blocked. Instead, create `smoketest_` users directly in the database with the
   repository's own functions using `ENV_FILE=.env.adb`, test, then purge.
-- The Claude Code permission classifier has refused some production database
-  writes from the session (creating smoke-test accounts) while allowing others
-  (running migrations). If it refuses, the developer runs the step.
 - The Playwright scripts used for production checks lived in the session
   scratchpad and are **not in the repository**.
 

@@ -12,7 +12,7 @@ import {
 /**
  * Opening the notifications page marks what it showed as read.
  *
- * There is no "Mark all read" button any more. The page reads the list, then
+ * The page reads the list, then
  * tells the server the newest notification it displayed, and only that one and
  * older are marked. Something that arrives in between stays unread, because
  * nobody has seen it.

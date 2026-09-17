@@ -6,10 +6,7 @@ import { fileURLToPath } from "node:url";
  * Copies the migration SQL into the build output.
  *
  * tsc only emits JavaScript, so without this `dist/db/migrations` does not
- * exist and the built migration CLI fails with ENOENT. The API itself does not
- * run migrations at startup, so nothing crashes on deploy, which is exactly
- * what makes this the kind of bug found at the worst moment: the first time
- * someone tries to migrate from the deployed build.
+ * exist and the built migration CLI fails with ENOENT.
  *
  * Written in Node rather than as a shell `cp` so it works on Windows too.
  */

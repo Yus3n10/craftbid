@@ -1,7 +1,5 @@
 # Batch 2: Personal Home Feed Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-
 **Goal:** Put open craft requests in the home feed, rank the feed by each person's craft interests with fresh items always near the top, and show a client's requests on their profile.
 
 **Architecture:** Migration 018 adds `user_category_interest`. A new `interests` module records weighted, decaying category scores from existing actions (best effort, after the action succeeds). A new `home` module ranks the newest 500 posts, shares and open requests in one Oracle query and returns a discriminated union. The web feed calls `/home` and falls back to `/feed` on 404 during the deploy gap.

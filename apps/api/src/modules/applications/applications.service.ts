@@ -147,7 +147,7 @@ export async function accept(
       // decline that lands in between from being overwritten.
       //
       // The request row first, then bids: cancelling a request locks in the
-      // same order, and the opposite order deadlocked the two (measured).
+      // same order, and the opposite order deadlocked the two.
       if (!(await postingsRepo.transitionStatus(context.postingId, "open", "in_progress", tx))) {
         throw conflict("This request is no longer open. Refresh to see where it stands.");
       }

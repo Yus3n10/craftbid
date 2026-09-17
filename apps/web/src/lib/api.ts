@@ -18,9 +18,7 @@ export const API_URL = __API_URL__;
  * fetch has no timeout of its own. A request that is accepted and then never
  * answered leaves its promise pending forever, and a pending promise is a
  * query stuck in `isLoading`, which is a screen of skeletons that never
- * resolve into anything and never report a problem. That was survivable only
- * by reloading the page, and reloading was the one thing nothing on screen
- * suggested doing.
+ * resolve into anything and never report a problem.
  *
  * The number is chosen against Render's free tier rather than against a
  * healthy request, which is 100-400ms. A stopped service takes 30-60s to come
@@ -70,8 +68,7 @@ export class ApiError extends Error {
  * A signal that aborts after `ms`.
  *
  * AbortSignal.timeout arrived in Safari 16 and Chrome 103. Phones older than
- * that still reach this site, and calling it there threw before every request
- * was sent, so the page painted but nothing on it ever loaded.
+ * that still reach this site.
  */
 function deadlineSignal(ms: number): AbortSignal {
   if (typeof AbortSignal.timeout === "function") return AbortSignal.timeout(ms);
@@ -83,7 +80,7 @@ function deadlineSignal(ms: number): AbortSignal {
 /**
  * Sessions ride on httpOnly cookies, so no token is ever readable from
  * JavaScript and an XSS cannot walk off with one. Every request opts in with
- * `credentials: "include"` because the API is on a different origin.
+ * `credentials: "include"`.
  */
 let refreshInFlight: Promise<boolean> | null = null;
 

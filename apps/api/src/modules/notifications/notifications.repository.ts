@@ -3,9 +3,8 @@ import { bufToUuid, newId, uuidToBuf } from "../../db/ids.js";
 import { db, type Queryable } from "../../db/query.js";
 
 /**
- * In-app notifications only. No email and no SMS: both cost money at volume,
- * and the budget for this project is zero. The rows here are enough to drive a
- * bell icon and an activity list.
+ * In-app notifications only. The rows here are enough to drive a bell icon
+ * and an activity list.
  */
 export async function notify(
   input: { userId: string; type: NotificationType; payload: Record<string, unknown> },

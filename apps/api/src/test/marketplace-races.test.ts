@@ -12,13 +12,8 @@ import {
 } from "./helpers.js";
 
 /**
- * Two people acting on the same bid at the same moment.
- *
- * A bid's status used to be read, checked, and then overwritten without
- * looking again, so a withdrawal landing while the client accepted could leave
- * a live commission on a withdrawn bid, or an accepted bid the artist had
- * already taken back. Whatever the timing, the stored state must be one the
- * rules allow.
+ * Two people acting on the same bid at the same moment. Whatever the timing,
+ * the stored state must be one the rules allow.
  */
 describe("simultaneous actions on one bid", () => {
   let client: Session;

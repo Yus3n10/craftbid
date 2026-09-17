@@ -14,9 +14,8 @@ import { UnsavedChangesProvider } from "./lib/unsavedChanges.js";
  * work made by hand. Figtree handles interface text, clear and warm at small
  * sizes on a phone.
  *
- * Both are bundled and served from this site rather than Google Fonts, whose
- * stylesheet blanked the whole page whenever that host was slow. The opsz file
- * carries the optical-size axis that headings pin at 24. Both still degrade to
+ * Both are bundled and served from this site. The opsz file carries the
+ * optical-size axis that headings pin at 24. Both still degrade to
  * system faces until they load.
  */
 import "@fontsource-variable/bricolage-grotesque/opsz.css";

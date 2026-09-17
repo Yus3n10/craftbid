@@ -102,13 +102,10 @@ export function cookieOptions(maxAgeSeconds?: number) {
     httpOnly: true,
     secure: config.isProduction,
     /**
-     * Lax everywhere. This was "none" in production while the web app called
-     * the API on its own domain, which made every call cross-site. Since
-     * 2026-09-12 the site calls /api on its own origin through its Worker, so
-     * the cookies are first-party and Lax is sent on every request the app
-     * makes and on links followed into the site. "none" had kept the session
-     * attached to cross-site and framed requests for no remaining reason.
-     * The Origin check in app.ts still guards cookie-authenticated writes.
+     * Lax everywhere. The site calls /api on its own origin through its
+     * Worker, so the cookies are first-party and Lax is sent on every request
+     * the app makes and on links followed into the site. The Origin check in
+     * app.ts still guards cookie-authenticated writes.
      */
     sameSite: "lax" as const,
     path: "/",
@@ -126,14 +123,8 @@ export function cookieOptions(maxAgeSeconds?: number) {
  * The attributes a session cookie has to be deleted with.
  *
  * A browser only overwrites a cookie when the incoming Set-Cookie matches the
- * existing one on name, domain, path AND SameSite. Clearing with just a path,
- * which is what this did (while cookies were SameSite=None), produced a
- * Set-Cookie without SameSite=None or Secure. The browser either treats that as a different cookie or rejects it
- * outright, since SameSite=None without Secure is invalid, and the session
- * survived a sign-out that had already returned 204.
- *
- * Derived from cookieOptions rather than written out again, so the two cannot
- * drift apart the way they just did.
+ * existing one on name, domain, path AND SameSite. Derived from cookieOptions
+ * rather than written out again, so the two cannot drift apart.
  */
 export function clearCookieOptions() {
   const { maxAge: _maxAge, ...rest } = cookieOptions(0);

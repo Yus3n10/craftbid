@@ -26,10 +26,8 @@ type Tab = "all" | "saved";
  * Who the feed is being fetched for, once that is known.
  *
  * Someone who may have a session waits for it to be confirmed (and renewed,
- * if the 15-minute access token lapsed) before the feed is asked for. Asked
- * for at the same moment, it went out with the lapsed token, came back as a
- * stranger's feed without their saves or reactions, and was what the next
- * reload showed. A first-time visitor has nothing to wait for.
+ * if the 15-minute access token lapsed) before the feed is asked for. A
+ * first-time visitor has nothing to wait for.
  *
  * The viewer is part of the query key so signing in or out never reuses the
  * other person's copy.

@@ -116,9 +116,7 @@ export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
  *
  * The stored value stays "transfer" although it now means paying after
  * delivery: the site and the API deploy minutes apart, so renaming a value the
- * two exchange would break the step in between. Cash on delivery to a courier,
- * and paying after seeing photos before shipping, were removed on 2026-09-16 at
- * the developer's request.
+ * two exchange would break the step in between.
  */
 export const BALANCE_METHODS = ["transfer", "meetup"] as const;
 export type BalanceMethod = (typeof BALANCE_METHODS)[number];
@@ -139,7 +137,6 @@ export type ProblemStatus = (typeof PROBLEM_STATUSES)[number];
 export const COMMISSION_FILE_KINDS = ["receipt", "finished_photo"] as const;
 export type CommissionFileKind = (typeof COMMISSION_FILE_KINDS)[number];
 
-/** Platforms an artist may link for off-platform contact. */
 /**
  * Reactions.
  *
@@ -157,6 +154,7 @@ export const REACTION_LABELS: Record<ReactionKind, string> = {
   like: "Like",
 };
 
+/** Platforms an artist may link for off-platform contact. */
 export const LINK_PLATFORMS = [
   "facebook",
   "messenger",

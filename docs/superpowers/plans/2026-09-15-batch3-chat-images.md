@@ -1,7 +1,5 @@
 # Batch 3: Images in Chat Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-
 **Goal:** Let the two people in a conversation send one image per message (attach or paste), shrunk in the browser before upload, stored privately and visible only to them.
 
 **Architecture:** Migration 019 adds `chat_files` and lets a message carry a file instead of text. Upload is a separate multipart call returning a file id, which the existing send call attaches. The server reuses `normaliseImage` (magic bytes, sharp re-encode, EXIF dropped) capped at 1600px, stores with `putPrivate`, and streams back through a membership-checked route. The browser compresses with a canvas before upload. `PrivateImage` is generalised to any private API path.

@@ -26,9 +26,8 @@ import { getMe } from "../users/users.service.js";
  * Body for the two routes that work with or without one.
  *
  * A bare `.optional()` is not enough: Fastify hands the validator an absent
- * body and the result comes back as a validation failure, so a plain POST to
- * logout answered 400. Preprocessing an absent body into an empty object makes
- * the optional field genuinely optional.
+ * body and the result comes back as a validation failure. Preprocessing an
+ * absent body into an empty object makes the optional field genuinely optional.
  *
  * The browser sends nothing here and relies on its cookie; the desktop build
  * has no cookie and sends the token it holds.

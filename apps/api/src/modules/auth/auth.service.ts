@@ -53,7 +53,7 @@ export function startSession(userId: string, role: UserRole, persistent: boolean
 /**
  * Creates the account. With email verification on, nobody is signed in yet:
  * a link goes to the address, and following it is what starts the session.
- * With it off, registration signs in straight away, as it always did.
+ * With it off, registration signs in straight away.
  */
 export async function register(
   input: RegisterInput,
@@ -319,8 +319,8 @@ export async function requestPasswordReset(email: string): Promise<void> {
   const token = generateRefreshToken();
   const claimed = await withTransaction(async (tx) => {
     // Locking the account row makes the limit check and the new link one
-    // step. Two requests at the same moment otherwise both saw no recent link
-    // and both sent one (measured in the test).
+    // step. Two requests at the same moment otherwise both see no recent link
+    // and both send one.
     await tx.run(`SELECT id FROM users WHERE id = :id FOR UPDATE`, { id: uuidToBuf(user.id) });
     const recent = await sessions.recentPasswordResetTokens(user.id, tx);
     if (recent.lastHour >= 3) return false;

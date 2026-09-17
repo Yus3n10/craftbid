@@ -49,10 +49,7 @@ function toDraft(accounts: PayoutAccountDto[]): Draft {
  * One payment method: a heading and its fields on one shared two-column grid.
  *
  * Every method uses the same two columns, name on the left and number on the
- * right, so the boxes line up down the whole form. It used to be two columns
- * for GCash and Maya and three for the bank, and the number fields carried
- * their format as a hint between label and box, which pushed those boxes lower
- * than the name boxes beside them. The format is now the placeholder.
+ * right, so the boxes line up down the whole form.
  */
 function Method({ title, children }: { title: string; children: ReactNode }) {
   return (

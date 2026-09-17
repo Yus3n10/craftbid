@@ -1,7 +1,6 @@
 -- Password reset.
 --
--- Someone who forgot their password had no way back into their account. A
--- reset works like email verification: a single-use link sent to the account's
+-- A reset works like email verification: a single-use link sent to the account's
 -- address, of which only the SHA-256 is stored, so a copy of this table cannot
 -- be turned into working links. Links are short-lived because holding one is
 -- enough to take over the account.

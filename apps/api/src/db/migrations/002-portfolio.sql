@@ -1,6 +1,5 @@
 -- Artist portfolio and showcase posts.
 --
--- The brief listed PORTFOLIO_ITEMS and ARTIST_POSTS as separate candidates.
 -- They are one entity here: the same record read two ways. On a profile it is
 -- a portfolio piece, in discovery it is a feed post, and on an application it
 -- is a work sample. Splitting them would mean two tables, two upload paths and

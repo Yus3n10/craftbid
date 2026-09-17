@@ -178,8 +178,6 @@ describe("the social layer", () => {
         payload: { body: "Something the artist should be able to remove." },
       });
 
-      // No moderator exists in this product, so the person whose portfolio it
-      // is has to be able to clear their own page.
       const removed = await app.inject({
         method: "DELETE",
         url: `/comments/${created.json().id}`,
@@ -485,8 +483,7 @@ describe("cache headers", () => {
   /**
    * A reload has to show what was posted since the last one. A browser holding
    * a feed under max-age or stale-while-revalidate answers the reload's fetch
-   * from its own copy, which was measured on production in Chromium: three
-   * loads, one server response.
+   * from its own copy.
    */
   it("makes the browser check with the server before reusing an anonymous read", async () => {
     const app = await getTestApp();

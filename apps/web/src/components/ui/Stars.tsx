@@ -3,12 +3,6 @@ import { cx } from "../../lib/cx.js";
 /**
  * Star ratings, drawn rather than typed.
  *
- * These were the characters ★ and ☆ until now, which looked fine on one
- * machine and wrong on others: they are glyphs from whatever font happens to
- * resolve them, so their weight, size and vertical alignment drift between
- * platforms, and they cannot take a stroke or a partial fill. A screen reader
- * also reads "black star black star black star" unless the label is right.
- *
  * One path, filled or outlined, sized from the surrounding text.
  */
 

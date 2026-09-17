@@ -23,8 +23,7 @@ let pool: oracledb.Pool | undefined;
  *
  * Without this the symptom is NJS-505 ("unable to initiate TLS connection")
  * after about a minute of silence, on the first query rather than at startup,
- * because a pool with poolMin 0 connects lazily. Naming the missing variable
- * up front turns an hour of guesswork into one line of log.
+ * because a pool with poolMin 0 connects lazily.
  */
 function assertWalletNeedsNoPassword(walletDir: string): void {
   const pem = join(walletDir, "ewallet.pem");

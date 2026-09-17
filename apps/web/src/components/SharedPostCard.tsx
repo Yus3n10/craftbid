@@ -43,8 +43,7 @@ function OriginalPostDialog({ post, open, onClose }: { post: FeedItemDto; open: 
  *
  * It is the sharer's card, with its own reactions and comments. The post it
  * shares sits inside as a preview, credited to the artist who made it, and
- * opens the real post with that post's own reactions and comments. Before this,
- * the card simply was the original, so reacting to a share reacted to the post.
+ * opens the real post with that post's own reactions and comments.
  */
 export function SharedPostCard({ post, share }: { post: FeedItemDto; share: ShareDto }) {
   const [showComments, setShowComments] = useState(false);

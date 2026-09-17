@@ -1,9 +1,5 @@
 -- Reactions and comments on a share, separate from the post it shares.
 --
--- A share used to be a pointer: its card showed the original post's reactions
--- and comments, and reacting on it reacted to the original. Now a share is its
--- own card with its own engagement, and the original keeps its own.
---
 -- Reactions get their own table, because post_reactions is keyed on post_id
 -- and a primary key cannot hold a column that is sometimes empty. Comments stay
 -- in one table with exactly one of post_id or share_id, so reporting, staff

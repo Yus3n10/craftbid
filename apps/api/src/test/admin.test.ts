@@ -53,7 +53,6 @@ describe("the admin API", () => {
     expect((await get(staff, "/admin/overview")).statusCode).toBe(404);
   });
 
-  /** The developer asked to see, per account, whether its email was confirmed. */
   it("lists accounts with whether each email is confirmed, and filters on it", async () => {
     await db.run(`UPDATE users SET email_verified_at = NULL WHERE id = :id`, { id: uuidToBuf(client.id) });
     await db.run(`UPDATE users SET email_verified_at = SYSTIMESTAMP WHERE id = :id`, { id: uuidToBuf(artist.id) });

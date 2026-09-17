@@ -76,15 +76,6 @@ const authPlugin: FastifyPluginAsync = async (app) => {
   });
 
   /**
-   * For actions that put something in front of other people: posting,
-   * bidding, reacting, commenting, saving and sharing. An account that has not
-   * proved its address can sign in and look around, and is refused these.
-   *
-   * Read from the database rather than from the access token, so confirming
-   * the address in one browser takes effect in every other one immediately,
-   * not when their token next rotates.
-   */
-  /**
    * The admin screen. Read from the database every time, so taking staff
    * access away, or suspending a staff account, applies to the next request.
    * A 404 rather than a 403: nothing tells a stranger the admin API exists.
@@ -95,6 +86,15 @@ const authPlugin: FastifyPluginAsync = async (app) => {
     if (!account?.isStaff || account.status !== "active") throw notFound();
   });
 
+  /**
+   * For actions that put something in front of other people: posting,
+   * bidding, reacting, commenting, saving and sharing. An account that has not
+   * proved its address can sign in and look around, and is refused these.
+   *
+   * Read from the database rather than from the access token, so confirming
+   * the address in one browser takes effect in every other one immediately,
+   * not when their token next rotates.
+   */
   app.decorate("requireVerified", async (request: FastifyRequest) => {
     if (!request.user) throw unauthorized();
     if (!emailVerificationEnabled()) return;

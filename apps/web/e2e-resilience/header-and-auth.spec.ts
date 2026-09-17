@@ -226,9 +226,8 @@ test.describe("across widths, signed in as a client", () => {
       expect(overflow, "horizontal overflow in px").toBeLessThanOrEqual(0);
 
       // Fitting is not enough. The same header row measures about 40px wider
-      // on the Linux CI runner than on Windows, so a header that fit here with
-      // 9px to spare overflowed by 15px in CI. Since Sign out moved into the
-      // account menu there are 142px free here, so 32 leaves CI clear room.
+      // on the Linux CI runner than on Windows, so 32px spare leaves CI clear
+      // room.
       if (width === 320 || width === 1024) {
         await page.evaluate(() => document.fonts.ready);
         const spare = await page.evaluate(() => {
@@ -254,10 +253,6 @@ test.describe("across widths, signed in as a client", () => {
     });
   }
 
-  /**
-   * Settings used to be reachable only through "Edit profile" on the profile
-   * page, and it is where an artist adds the details clients pay them with.
-   */
   test("Settings is one step from the header, on a phone and on a desktop", async ({ page }) => {
     await stubApi(page, () => ARTIST);
 

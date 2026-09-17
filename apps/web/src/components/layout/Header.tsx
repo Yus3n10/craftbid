@@ -90,11 +90,8 @@ function MessagesLink() {
 }
 
 /**
- * The bell, with the unread count on it.
- *
- * On phones it used to live only inside the menu, so the only way to find out
- * whether anything had happened was to open the menu and look. It sits in the
- * bar itself at every width now.
+ * The bell, with the unread count on it. It sits in the bar itself at every
+ * width.
  */
 function NotificationsLink() {
   return (
@@ -115,13 +112,7 @@ function NotificationsLink() {
 /**
  * The site header.
  *
- * On a phone this used to be a 64px sticky bar whose menu opened inside it:
- * search, every destination, and four more buttons, all pinned to the top of
- * the screen. Opened, that panel covered most of a phone's viewport, stayed
- * there while the page scrolled underneath, and only closed when one of the
- * plain links in it was tapped. "Your profile", "Notifications" and "Post a
- * request" navigated without closing it, so the next page opened already
- * buried. Below the full-navigation width it now:
+ * Below the full-navigation width it:
  *
  * - closes the menu on any change of page, on Escape, and on a tap outside it;
  * - caps the open menu at the space under the bar, scrolling inside itself;
@@ -130,11 +121,9 @@ function NotificationsLink() {
  * - slides the bar away while reading downward and brings it straight back
  *   on the first scroll up, so it never sits over content someone is reading.
  *
- * The full navigation now starts at 1024px instead of 768px. Measured signed
- * in as a client, its contents ran to 904px, so between 768 and 900 the whole
- * page scrolled sideways and the search box was squeezed to 50px. Between
- * 1024 and 1280 the links fit but search does not, so it is the same search
- * button there too, and the inline box returns at 1280.
+ * The full navigation starts at 1024px. Between 1024 and 1280 the links fit
+ * but search does not, so it is the same search button there too, and the
+ * inline box returns at 1280.
  *
  * On the sign-in and account pages the header is not pinned at all. Those are
  * short forms, usually filled in with the on-screen keyboard up, when a sticky
@@ -285,8 +274,6 @@ export function Header() {
               <MessagesLink />
               <NotificationsLink />
 
-              {/* Settings, saved posts and history were reachable only through
-                  the profile page. The cog opens all of them, and Sign out. */}
               <AccountMenu user={user} onSignOut={askToSignOut} onReportBug={() => setReportingBug(true)} />
 
               {user.role === "client" && (

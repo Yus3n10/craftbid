@@ -1,7 +1,5 @@
 # Admin screen, reporting and role switching: implementation plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-
 **Goal:** Give the site owner a staff-only admin screen (reports, accounts with email-confirmed status, bug reports, removals, warnings, suspensions, audit log), let people report content and site bugs, and let accounts switch between Artist and Client under guards.
 
 **Architecture:** One additive Oracle migration (014) holds the new columns and tables, with rules as constraints where possible. The API follows the existing `routes → service → repository` layering in a new `modules/admin` and `modules/moderation`, guarded by a database-read `requireStaff`. Every moderation write records a `moderation_actions` row in the same transaction. The web app adds a lazy `/admin` route, a Report dialog, a bug report dialog and an Account type section, all on existing primitives.

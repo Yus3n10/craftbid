@@ -1,9 +1,4 @@
 -- Trust and safety hooks, plus in-app notifications.
---
--- Deliberately minimal. The brief asked for sensible extension points rather
--- than a moderation system, so this is a place for reports to land and a queue
--- for in-app notices. There is no email or SMS anywhere in the product: both
--- cost money at volume, and the budget is zero.
 
 CREATE TABLE reports (
   id          RAW(16)                  NOT NULL,

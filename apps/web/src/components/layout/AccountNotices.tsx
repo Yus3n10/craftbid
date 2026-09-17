@@ -27,8 +27,7 @@ export function AccountNotices() {
           <p>
             {/* Worded for both kinds of unconfirmed account: a new one that was
                 emailed a link at sign-up, and one from before verification
-                existed, which never was. "We sent you a link" was untrue for
-                every one of the second. */}
+                existed, which never was. */}
             <strong>Confirm your email to post, bid, react, comment, save and share.</strong>{" "}
             {resendOpen ? (
               <>We will email a confirmation link to {user.email}.</>

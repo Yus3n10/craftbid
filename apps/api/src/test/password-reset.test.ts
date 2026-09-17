@@ -7,8 +7,7 @@ import { getTestApp, registerUser, resetData, type Session } from "./helpers.js"
 /**
  * Password reset.
  *
- * Someone who forgot their password had no way back in. A link sent to the
- * account's address sets a new one. The answer to "send me a link" never says
+ * A link sent to the account's address sets a new one. The answer to "send me a link" never says
  * whether an address has an account, and a reset signs every device out.
  */
 

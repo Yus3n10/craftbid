@@ -1,14 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { EMPTY_PAGE, SIGNED_OUT, apiPath } from "./stub-api.js";
 
-/**
- * The page on a poor connection or an older phone.
- *
- * Google Fonts used to be a render-blocking stylesheet in the document head.
- * With that host hung, Chromium and WebKit showed no <body> at all for 90
- * seconds: black inside Messenger, white in Chrome. Reproduced on production
- * 2026-09-15 after someone opening a Messenger link saw exactly that.
- */
+/** The page on a poor connection or an older phone. */
 
 function stubSignedOut(page: import("@playwright/test").Page) {
   return page.route(
@@ -37,8 +30,7 @@ test("the home page paints while outside font hosts never answer", async ({ page
 });
 
 test("requests load on a browser without AbortSignal.timeout", async ({ page }) => {
-  // iOS before 16 and Chrome before 103. Reproduced 2026-09-15: the page shell
-  // painted, and every call to the API threw before it was sent.
+  // iOS before 16 and Chrome before 103.
   await page.addInitScript("delete AbortSignal.timeout;");
   const posting = {
     id: "01920000-0000-7000-8000-0000000000b1",

@@ -68,15 +68,7 @@ interface State {
   reloading: boolean;
 }
 
-/**
- * Catches a render error so one broken screen does not blank the whole app.
- *
- * Without this, a rejected route import unmounted the entire tree and left an
- * empty <div id="root">: a white page, with the URL updated so it looked like
- * the app had simply stopped. Nothing recovered it either, because React
- * caches a lazy component's rejection, so navigating back and forth replayed
- * the same failure. Only a manual refresh brought it back.
- */
+/** Catches a render error so one broken screen does not blank the whole app. */
 interface Props {
   children: ReactNode;
   label?: string;

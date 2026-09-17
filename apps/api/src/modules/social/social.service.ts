@@ -106,8 +106,7 @@ export async function addComment(
  *
  * Both the author and the artist whose post it is may delete: the author
  * because it is their words, and the artist because a portfolio page is
- * somewhere they have to be able to clear abuse from without waiting on a
- * moderator this product does not have.
+ * somewhere they have to be able to clear abuse from.
  */
 export async function removeComment(
   commentId: string,

@@ -18,10 +18,7 @@ export function Shell() {
   /**
    * A new page starts at its top, as it would after a full page load.
    *
-   * Without this, following a link kept the previous page's scroll offset, so
-   * the next page opened partway down, and with a header that slides away on
-   * a phone it could open with the header already out of view. Back and
-   * forward (POP) are left to the browser. Query-string changes, such as
+   * Back and forward (POP) are left to the browser. Query-string changes, such as
    * filtering requests, keep the pathname and so keep their place.
    */
   useEffect(() => {
@@ -76,8 +73,7 @@ export function Shell() {
               <p className="mt-3 text-sm text-ink-soft">{BRAND.tagline}</p>
             </div>
 
-            {/* Wraps rather than squeezing: three columns fill a 320px phone exactly,
-                and the Linux CI runner's wider text pushed them 3px past it. */}
+            {/* Wraps rather than squeezing: three columns fill a 320px phone exactly. */}
             <nav aria-label="Footer" className="flex flex-wrap gap-x-12 gap-y-8 text-sm">
               <div>
                 <h2 className="eyebrow mb-3">For clients</h2>

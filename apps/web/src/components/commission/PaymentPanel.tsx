@@ -350,10 +350,8 @@ function DecisionCard({ commissionId, payment }: { commissionId: string; payment
 /**
  * How the client will pay the second half.
  *
- * Choosing used to save on the click with nothing to say it had, so it looked
- * as if the choice went nowhere. Now a choice is a draft until Save changes,
- * which appears only when the draft differs from what is saved, and saving
- * says so and tells the artist.
+ * A choice is a draft until Save changes, which appears only when the draft
+ * differs from what is saved, and saving says so and tells the artist.
  */
 function BalanceMethodPicker({ commissionId, current }: { commissionId: string; current: BalanceMethod }) {
   const refresh = useRefresh(commissionId);

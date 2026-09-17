@@ -1,17 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { EMPTY_PAGE, SIGNED_OUT, isApiCall } from "./stub-api.js";
 
-/**
- * The two ways this app used to become unusable without saying so, and the
- * behaviour that now replaces each.
- *
- * Both were found by using the site, not by reading it, and neither was
- * catchable by anything in the suite at the time: the marketplace tests drive
- * a healthy build talking to a healthy API, and these are about what happens
- * when one of those two things is not true. Each test here was checked by
- * reverting its fix and watching it fail.
- */
-
 /** Everything the app asks of the API, answered without an API. */
 async function stubApi(page: Page): Promise<void> {
   await page.route(
@@ -27,16 +16,10 @@ async function stubApi(page: Page): Promise<void> {
 
 test.describe("a build that changed under an open page", () => {
   /**
-   * The failure this reproduces:
-   *
    * Routes are dynamic imports and a deploy renames the chunks. A page open
    * across a deploy still asks for the old filenames, and Cloudflare answers
    * an unknown path with index.html rather than a 404, so the browser is given
-   * HTML where it asked for a module and rejects it. React then unmounted the
-   * whole tree, leaving an empty <div id="root"> -- a white page on a URL that
-   * had already changed, so it read as the app having simply stopped. React
-   * caches a lazy component's rejection, so navigating away and back replayed
-   * it: only a manual reload recovered, and nothing on screen said so.
+   * HTML where it asked for a module and rejects it.
    */
   test("recovers itself instead of going blank", async ({ page }) => {
     await stubApi(page);
@@ -121,14 +104,8 @@ test.describe("a build that changed under an open page", () => {
 
 test.describe("an API that accepts a request and never answers", () => {
   /**
-   * The failure this reproduces:
-   *
    * fetch has no timeout. Render stops the free service after fifteen idle
-   * minutes, and a request into that gap could be accepted and never answered,
-   * which left the promise pending, the query in isLoading, and the screen
-   * showing skeletons that resolved into nothing and reported nothing. Watched
-   * for twelve seconds it was still eight skeletons and no error. There was no
-   * way out of it but a reload.
+   * minutes, and a request into that gap can be accepted and never answered.
    *
    * What is asserted is the root cause rather than the eventual message: the
    * attempt is abandoned on a deadline, so it can be retried at all. A request
@@ -159,8 +136,7 @@ test.describe("an API that accepts a request and never answers", () => {
 
     await page.goto("/");
 
-    // One 20s deadline, then React Query's first retry. Before the fix this
-    // stayed at 1 for as long as the tab was open.
+    // One 20s deadline, then React Query's first retry.
     await expect
       .poll(() => attempts, { timeout: 40_000, intervals: [1_000] })
       .toBeGreaterThan(1);

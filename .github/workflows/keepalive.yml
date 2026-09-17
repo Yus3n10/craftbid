@@ -10,15 +10,6 @@ name: Keep the database alive
 # Render's free tier, which spins down after 15 minutes.
 on:
   schedule:
-    # Twice a week, and no longer responsible for keeping the API awake: a
-    # Cloudflare cron trigger does that every ten minutes, on a scheduler that
-    # does not drift the way GitHub's does under load.
-    #
-    # This is the backstop for the slower clock. Always Free Autonomous
-    # Database stops after 7 idle days and is permanently deleted after 90, and
-    # /health runs a real query rather than reporting process liveness, so a
-    # twice-weekly ping is enough to hold that off even if Cloudflare is
-    # reconfigured or the Worker is removed.
     - cron: "0 3 * * 1,4"
   workflow_dispatch:
 

@@ -53,13 +53,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /**
    * Becomes signed in only once the browser has proved it kept the session.
    *
-   * This used to trust the user in the sign-in response. That response is
-   * produced whether or not the browser went on to store the cookies that came
-   * with it, so a browser that refused them showed a signed-in header and
-   * menu, and the first page that needed the session answered 401: "My bids"
-   * told someone who had just signed in that they needed to sign in. Asking
-   * /auth/me, which only answers with the session, turns that silent false
-   * state into a message at the moment it can still be acted on.
+   * The sign-in response is produced whether or not the browser went on to
+   * store the cookies that came with it. Asking /auth/me, which only answers
+   * with the session, turns a refused cookie into a message at the moment it
+   * can still be acted on.
    *
    * Only a 401 means the session was not kept. Any other failure here (a
    * timeout, the API waking up) says nothing about the cookies, so the

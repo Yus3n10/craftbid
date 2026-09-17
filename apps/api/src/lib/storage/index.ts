@@ -4,12 +4,6 @@ import { createImageKitStorage } from "./imagekit.js";
 
 /**
  * Image bytes live in object storage; the database holds only the key.
- *
- * The port exists because the free-tier landscape here is genuinely uncertain:
- * the local driver cannot be production (Render's disk is ephemeral and is
- * wiped on every deploy), and the eventual production driver depends on which
- * account the operator is willing to create. Swapping one is a config change,
- * not a code change.
  */
 export interface ObjectStorage {
   readonly name: string;

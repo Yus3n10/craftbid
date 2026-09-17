@@ -1,7 +1,5 @@
 # Batch 1: Fixes Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-
 **Goal:** Stop the blank page on slow networks, load data on older iPhones, fix "-1 days ago", trim chat suggestions to three, and refresh the feed after a request is posted.
 
 **Architecture:** Web-only changes plus pure helpers in `packages/shared` (tested from the API's Vitest suite, as `crop.ts` is). No migration, no API change.

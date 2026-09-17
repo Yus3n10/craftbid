@@ -211,9 +211,7 @@ describe("authentication", () => {
   it("accepts logout and refresh with no request body at all", async () => {
     const app = await getTestApp();
 
-    // A POST with no body is the natural way to call these. Fastify answered
-    // 400 for a while because the optional body schema rejected an absent
-    // body, which broke sign-out and made renewable sessions look dead.
+    // A POST with no body is the natural way to call these.
     const logout = await app.inject({ method: "POST", url: "/auth/logout" });
     expect(logout.statusCode).toBe(204);
 
@@ -223,10 +221,6 @@ describe("authentication", () => {
   });
 
   it("sends session cookies as SameSite=Lax, the same in every environment", async () => {
-    // The web app calls the API on its own origin through the site Worker, so
-    // nothing needs a cross-site cookie any more. SameSite=None let a framed or
-    // cross-site page carry the session; Lax does not. There is deliberately
-    // no production-only branch left for this test to miss.
     const app = await getTestApp();
     const registration = await app.inject({
       method: "POST",

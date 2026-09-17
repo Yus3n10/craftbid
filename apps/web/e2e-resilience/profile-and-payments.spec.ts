@@ -1,12 +1,6 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 import { EMPTY_PAGE, SIGNED_OUT, apiPath } from "./stub-api.js";
 
-/**
- * The client batch of 2026-09-14: the home feed after a lapsed session, the
- * show-password button, the role badge and profile checklist, the balance
- * option's Save changes, and the unread count on a phone's header.
- */
-
 const base = {
   avatar: null,
   cover: null,

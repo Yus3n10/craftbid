@@ -16,8 +16,8 @@ services:
     region: singapore
     healthCheckPath: /health
 
-    # Installing pnpm with npm rather than corepack, after corepack cost three
-    # failed deploys: its shims default to the read-only /usr/bin (EROFS), and
+    # Installing pnpm with npm rather than corepack: its shims default to the
+    # read-only /usr/bin (EROFS), and
     # pointing it elsewhere needs both a pre-created directory and a PATH edit.
     #
     # npm puts a global install next to the Node that Render provisioned, under

@@ -39,13 +39,6 @@ function Gallery({ posting }: { posting: PostingDto }) {
 
   return (
     <div className="space-y-3">
-      {/*
-        The reference image is the brief. It was forced into 3:2 and cropped,
-        which on an upright photograph cut off exactly the detail the client
-        was pointing at. It now keeps its own proportions and is capped by
-        height, so a tall photo is shown whole without pushing the description
-        and the bid form off the screen.
-      */}
       <button
         type="button"
         onClick={() => setZoomed(active)}

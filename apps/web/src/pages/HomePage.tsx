@@ -18,12 +18,6 @@ function Hero() {
 
   return (
     <section className="border-b border-fiber bg-paper-raised">
-      {/*
-        One entrance for the whole block. Each line used to rise in a beat
-        apart, with a two-colour headline at 60px on top: the staggered fade-up
-        hero every template ships. The sentence does the work on its own, and
-        the pieces in the ribbon below are what should draw the eye.
-      */}
       <div className="rise-in mx-auto max-w-6xl px-4 pb-14 pt-14 sm:pt-20">
         <p className="eyebrow">Handmade in the Philippines</p>
         <h1 className="mt-3 max-w-5xl text-balance font-display text-4xl leading-[1.1] sm:text-5xl">

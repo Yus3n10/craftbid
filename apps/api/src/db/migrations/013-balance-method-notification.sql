@@ -1,8 +1,4 @@
 -- Tell the artist how the client will pay the balance.
---
--- The client picks pay-after-photos, cash on delivery or meet-up, and until
--- now the artist only found out by opening the commission. The choice decides
--- whether they ship before or after being paid, so it is worth a notification.
 
 ALTER TABLE notifications DROP CONSTRAINT ck_notifications_type;
 

@@ -6,10 +6,7 @@ import { deflateSync, crc32 } from "node:zlib";
  * call has different bytes, as two real receipts do: Craftbid refuses a
  * receipt file it has already seen, including one from an earlier test run.
  *
- * The difference is a 16 by 16 block of random pixels in the corner. It used
- * to be one pixel with one of 256 values, and uploads are re-encoded as lossy
- * WebP, which can turn nearby values into identical files: repeated runs on
- * one database then failed with "already been used on Craftbid", correctly.
+ * The difference is a 16 by 16 block of random pixels in the corner.
  */
 export function receiptPng(red: number): Buffer {
   const noise = randomBytes(16 * 16 * 3);

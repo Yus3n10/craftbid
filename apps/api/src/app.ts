@@ -78,16 +78,13 @@ function sameSecret(presented: string, expected: string): boolean {
  * The web app reaches this API through its own Cloudflare Worker. Render is
  * itself behind Cloudflare, and Cloudflare stamps every Worker subrequest to
  * another Cloudflare zone with one fixed CF-Connecting-IP (2a06:98c0:3600::103)
- * whoever the visitor was. Keyed on that, every visitor shared one bucket:
- * measured on production 2026-09-17, ten failed sign-ins by anyone would have
- * locked everyone out, and five sign-ups in ten minutes filled the site's
- * whole allowance.
+ * whoever the visitor was. Keyed on that, every visitor shared one bucket.
  *
  * So the Worker forwards the visitor's address in its own header, next to a
  * secret only it and this API hold. That address is believed only when the
- * secret matches. Without it, CF-Connecting-IP is used as before: on a request
- * straight to Render, Cloudflare sets it to the real caller and refuses one the
- * caller wrote (error 1000, measured the same day).
+ * secret matches. Without it, CF-Connecting-IP is used: on a request straight
+ * to Render, Cloudflare sets it to the real caller and refuses one the caller
+ * wrote (error 1000).
  */
 function clientAddress(request: FastifyRequest, proxySecret: string | undefined): string {
   if (proxySecret) {
@@ -240,10 +237,8 @@ export async function buildApp(
    *
    * Everything people write (the feed, requests, posts, profiles) is sent
    * `no-cache`: the browser may keep it but must ask the server before showing
-   * it again. It used to be max-age=30 with five minutes of
-   * stale-while-revalidate, and a reload's fetch was then answered from the
-   * browser's own copy, so new posts and requests did not appear on refresh.
-   * Only things that do not change when users act keep a real lifetime.
+   * it again. Only things that do not change when users act keep a real
+   * lifetime.
    */
   app.addHook("onSend", async (request, reply) => {
     if (request.method !== "GET") return;
@@ -251,7 +246,7 @@ export async function buildApp(
 
     // A session cookie counts even when its access token has lapsed or does
     // not verify. The first requests of a page go out before the refresh
-    // renews it, and answered as anonymous they were stored and replayed.
+    // renews it.
     const authenticated =
       Boolean(request.headers.authorization) ||
       Boolean(request.user) ||
@@ -385,8 +380,7 @@ export async function buildApp(
       database = "reachable";
     } catch (error) {
       // Logged rather than swallowed. A health check that hides why it is
-      // unhealthy is worse than no health check: the first deploy failure
-      // reported nothing at all.
+      // unhealthy is worse than no health check.
       request.log.error({ err: error }, "Health check could not reach database");
     }
 

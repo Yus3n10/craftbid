@@ -7,8 +7,6 @@ import * as notifications from "../modules/notifications/notifications.repositor
  * message from the other person unread for an hour. Once per unread stretch:
  * after a notice, that person is not told again until they have read the
  * conversation and something new has waited another hour.
- *
- * No email, by the developer's choice.
  */
 
 const WAIT_MS = 60 * 60_000;

@@ -278,8 +278,6 @@ export async function insertCommission(
       tracking: input.payment ? 1 : 0,
       down: input.payment?.downPaymentCentavos ?? null,
       balance: input.payment?.balanceCentavos ?? null,
-      // Photos, then payment, then shipping: the option that never asks the
-      // artist to send a finished piece before the balance is secured.
       balanceMethod: input.payment ? "transfer" : null,
     },
   );

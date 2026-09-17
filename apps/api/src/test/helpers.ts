@@ -16,8 +16,7 @@ import { setStorage, type ObjectStorage } from "../lib/storage/index.js";
  *
  * Most suites only care that a record points at an object. The upload tests
  * care what the bytes became, since re-encoding and EXIF stripping are the
- * whole point of that endpoint, and discarding them here meant those could
- * never be asserted.
+ * whole point of that endpoint.
  */
 const storedObjects = new Map<string, { body: Buffer; contentType: string }>();
 /**
@@ -259,8 +258,8 @@ export async function createArtistPost(artist: Session, caption = "Bridal bouque
 
 /**
  * A distinct test image. Each seed draws different stripes, so two seeds give
- * different bytes and different difference hashes, the way two real receipts
- * would, while one seed always gives the same picture.
+ * different bytes, the way two real receipts would, while one seed always
+ * gives the same picture.
  */
 export async function testImage(seed: number, format: "png" | "jpeg" = "png"): Promise<Buffer> {
   const { default: sharp } = await import("sharp");

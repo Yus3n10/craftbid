@@ -11,11 +11,9 @@ import { db, withTransaction } from "./query.js";
  * is no Java on the target machine — and adding one to the deploy image to run
  * a dozen DDL files would be a poor trade.
  *
- * Every statement is plain SQL that also parses on Oracle 19c, not just 23ai.
- * The production Autonomous Database version is not known yet (Always Free ADB
- * can be provisioned as either), so nothing here uses 23ai-only syntax:
- * no `CREATE TABLE IF NOT EXISTS`, and no native `BOOLEAN` — flags are
- * `NUMBER(1)` constrained to 0 or 1.
+ * Every statement is plain SQL that also parses on Oracle 19c, not just 23ai,
+ * so nothing here uses 23ai-only syntax: no `CREATE TABLE IF NOT EXISTS`, and
+ * no native `BOOLEAN` — flags are `NUMBER(1)` constrained to 0 or 1.
  */
 
 const MIGRATIONS_DIR = join(dirname(fileURLToPath(import.meta.url)), "migrations");
