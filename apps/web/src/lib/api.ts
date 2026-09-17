@@ -84,10 +84,15 @@ function deadlineSignal(ms: number): AbortSignal {
  */
 let refreshInFlight: Promise<boolean> | null = null;
 
-async function refreshSession(): Promise<boolean> {
+async function refreshSession(serverSawSession = false): Promise<boolean> {
   // Nothing to renew, so nothing to wait for. Skipping this takes a whole
   // round trip out of the first load for every signed-out visitor.
-  if (!mayHaveSession()) return false;
+  //
+  // Unless the server has just said a session cookie is there. Safari deletes
+  // a site's localStorage, and this hint with it, after seven days without a
+  // visit, while a "Keep me logged in" cookie lasts thirty: without this, that
+  // reader would look signed out on day eight with a session still valid.
+  if (!serverSawSession && !mayHaveSession()) return false;
 
   // Collapse concurrent 401s into one refresh, or a page issuing four queries
   // at once would fire four refreshes and rotate the token out from under
@@ -124,6 +129,10 @@ async function refreshSession(): Promise<boolean> {
             refreshToken: string;
           },
         );
+      } else {
+        // Writes the "has had a session" hint back, in case the browser had
+        // wiped it: later lapsed tokens then renew without asking the server.
+        storeTokens({});
       }
       return true;
     } catch {
@@ -199,7 +208,8 @@ export async function request<T>(
 
   // An expired access token is normal: refresh once, then replay.
   if (response.status === 401 && !retrying && path !== "/auth/refresh") {
-    if (await refreshSession()) {
+    // /auth/session answers 401 only when a session cookie was sent.
+    if (await refreshSession(path === "/auth/session")) {
       return request<T>(path, { ...options, retrying: true });
     }
   }

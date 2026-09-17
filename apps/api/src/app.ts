@@ -262,6 +262,10 @@ export async function buildApp(
     // or the reverse, on the same URL.
     reply.header("Vary", "Cookie, Authorization, Origin");
 
+    // A route that decided for itself (the session check, which must never
+    // be kept by a shared cache) keeps its own answer.
+    if (reply.hasHeader("Cache-Control")) return;
+
     const url = request.url.split("?")[0] ?? "";
 
     // Craft categories change when the product changes, not when users act.

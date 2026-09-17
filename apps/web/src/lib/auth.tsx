@@ -31,6 +31,15 @@ interface AuthValue {
 
 const AuthContext = createContext<AuthValue | null>(null);
 
+async function currentUserFromMe(): Promise<MeDto | null> {
+  try {
+    return await api.get<MeDto>("/auth/me");
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) return null;
+    throw error;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
 
@@ -38,11 +47,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: ["me"],
     queryFn: async () => {
       try {
-        return await api.get<MeDto>("/auth/me");
+        // /auth/session answers "nobody" with a 200. /auth/me answered it with
+        // a 401, which the browser printed as an error on every signed-out
+        // visit.
+        const result = await api.get<{ user?: MeDto | null }>("/auth/session");
+        if (result && "user" in result) return result.user ?? null;
+        return await currentUserFromMe();
       } catch (error) {
         // Signed out is the expected state for a first-time visitor, not a
         // failure worth retrying or surfacing.
         if (error instanceof ApiError && error.status === 401) return null;
+        // An API from before /auth/session: the site and the API deploy
+        // minutes apart.
+        if (error instanceof ApiError && error.status === 404) return currentUserFromMe();
         throw error;
       }
     },

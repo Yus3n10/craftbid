@@ -216,7 +216,16 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       const presented =
         request.cookies?.[REFRESH_COOKIE] ?? request.body?.refreshToken;
-      const tokens = await service.refresh(presented);
+      let tokens: service.SessionTokens;
+      try {
+        tokens = await service.refresh(presented);
+      } catch (error) {
+        // A refresh cookie that can no longer be renewed (revoked, expired,
+        // or its account closed) is dead weight: left in place, every later
+        // visit would try it and fail again.
+        if (error instanceof AppError && error.statusCode === 401) clearSession(reply);
+        throw error;
+      }
       setSession(reply, tokens);
       return reply.send({
         accessToken: tokens.accessToken,
@@ -246,6 +255,30 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     { preHandler: fastify.requireAuth },
     async (request) => getMe(request.user!.id),
   );
+
+  /**
+   * "Is anyone signed in?", for the web app's first request of every page.
+   *
+   * /auth/me says no with a 401, and a browser prints every 401 as a red error
+   * in the console, so every signed-out visit looked broken to anyone who
+   * opened it. Here "nobody" is an ordinary 200. A 401 is kept for the case it
+   * still means something: a credential was sent that no longer works (a
+   * lapsed access token, or only the refresh cookie left), so the app should
+   * renew the session and ask again.
+   */
+  app.get("/session", async (request, reply) => {
+    reply.header("Cache-Control", "private, no-store");
+    if (request.user) return { user: await getMe(request.user.id) };
+
+    const presentedSomething =
+      Boolean(request.headers.authorization) ||
+      Boolean(request.cookies?.[ACCESS_COOKIE]) ||
+      Boolean(request.cookies?.[REFRESH_COOKIE]);
+    if (presentedSomething) {
+      throw new AppError(401, "session_expired", "Session expired. Please sign in again.");
+    }
+    return { user: null };
+  });
 
   app.post(
     "/change-password",
