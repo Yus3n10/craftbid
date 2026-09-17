@@ -181,3 +181,19 @@ export function ImageIcon(props: IconProps) {
     </Icon>
   );
 }
+
+export function PauseIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M9 6v12M15 6v12" />
+    </Icon>
+  );
+}
+
+export function PlayIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M8 5.5v13l10.5-6.5z" />
+    </Icon>
+  );
+}

@@ -8,6 +8,7 @@ import { Button, ButtonLink } from "../components/ui/Button.js";
 import { Field, PasswordInput } from "../components/ui/Field.js";
 import { FormError } from "../components/ui/States.js";
 import { ThreadRule } from "../components/ui/Primitives.js";
+import { usePageMeta } from "../lib/pageMeta.js";
 
 /**
  * Where a password reset link lands.
@@ -17,6 +18,7 @@ import { ThreadRule } from "../components/ui/Primitives.js";
  * out of the address bar at once so it does not sit in history or a screenshot.
  */
 export function ResetPasswordPage() {
+  usePageMeta({ title: "Choose a new password" });
   const [params] = useSearchParams();
   const queryClient = useQueryClient();
   const token = useRef(params.get("token") ?? "");

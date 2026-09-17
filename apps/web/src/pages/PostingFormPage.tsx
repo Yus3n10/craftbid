@@ -10,6 +10,7 @@ import {
   type PostingDto,
 } from "@craftbid/shared";
 import { ApiError, api } from "../lib/api.js";
+import { usePageMeta } from "../lib/pageMeta.js";
 import { Page } from "../components/layout/Shell.js";
 import { Button } from "../components/ui/Button.js";
 import { Field, PesoInput, Select, TextArea, TextInput } from "../components/ui/Field.js";
@@ -19,6 +20,7 @@ import { ImageUploader, type UploadedImage } from "../components/ImageUploader.j
 export function PostingFormPage() {
   const { id } = useParams();
   const editing = Boolean(id);
+  usePageMeta({ title: editing ? "Edit request" : "Post a request" });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 

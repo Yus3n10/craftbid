@@ -23,6 +23,7 @@ import {
   PageHeading,
   RowSkeleton,
 } from "../components/ui/States.js";
+import { usePageMeta } from "../lib/pageMeta.js";
 
 function RatingSummary({
   average,
@@ -157,6 +158,7 @@ function ApplicationRow({
 }
 
 export function PostingApplicationsPage() {
+  usePageMeta({ title: "Compare bids" });
   const { id = "" } = useParams();
 
   const posting = useQuery({

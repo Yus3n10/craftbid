@@ -5,6 +5,7 @@ import { useUnsavedChanges, useUnsavedChangesState } from "../lib/unsavedChanges
 import { CRAFT_CATEGORIES, LIMITS, type ArtistPostDto } from "@craftbid/shared";
 import { ApiError, api } from "../lib/api.js";
 import { useAuth } from "../lib/auth.js";
+import { usePageMeta } from "../lib/pageMeta.js";
 import { Page } from "../components/layout/Shell.js";
 import { Button } from "../components/ui/Button.js";
 import { Field, Select, TextArea, TextInput } from "../components/ui/Field.js";
@@ -14,6 +15,7 @@ import { ImageUploader, type UploadedImage } from "../components/ImageUploader.j
 export function PostFormPage() {
   const { id } = useParams();
   const editing = Boolean(id);
+  usePageMeta({ title: editing ? "Edit post" : "New post" });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();

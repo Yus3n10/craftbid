@@ -8,12 +8,14 @@ import { ErrorBoundary } from "../ErrorBoundary.js";
 import { reloadIfUpdateWaiting } from "../../lib/appUpdates.js";
 import { useAuth } from "../../lib/auth.js";
 import { BugReportDialog } from "../BugReportDialog.js";
+import { usePageMetaReset } from "../../lib/pageMeta.js";
 
 export function Shell() {
   const { user } = useAuth();
   const [reportingBug, setReportingBug] = useState(false);
   const { pathname } = useLocation();
   const navigationType = useNavigationType();
+  usePageMetaReset();
 
   /**
    * A new page starts at its top, as it would after a full page load.
@@ -77,14 +79,14 @@ export function Shell() {
             <nav aria-label="Footer" className="flex flex-wrap gap-x-12 gap-y-8 text-sm">
               <div>
                 <h2 className="eyebrow mb-3">For clients</h2>
-                <ul className="space-y-2 text-ink-soft">
+                <ul className="text-ink-soft sm:space-y-2">
                   <li>
-                    <Link to="/postings/new" className="hover:text-ink hover:underline">
+                    <Link to="/postings/new" className="inline-flex min-h-11 items-center hover:text-ink hover:underline sm:min-h-0">
                       Post a request
                     </Link>
                   </li>
                   <li>
-                    <Link to="/discover" className="hover:text-ink hover:underline">
+                    <Link to="/discover" className="inline-flex min-h-11 items-center hover:text-ink hover:underline sm:min-h-0">
                       Browse work
                     </Link>
                   </li>
@@ -92,14 +94,14 @@ export function Shell() {
               </div>
               <div>
                 <h2 className="eyebrow mb-3">For artists</h2>
-                <ul className="space-y-2 text-ink-soft">
+                <ul className="text-ink-soft sm:space-y-2">
                   <li>
-                    <Link to="/postings" className="hover:text-ink hover:underline">
+                    <Link to="/postings" className="inline-flex min-h-11 items-center hover:text-ink hover:underline sm:min-h-0">
                       Find commissions
                     </Link>
                   </li>
                   <li>
-                    <Link to="/register" className="hover:text-ink hover:underline">
+                    <Link to="/register" className="inline-flex min-h-11 items-center hover:text-ink hover:underline sm:min-h-0">
                       Create a portfolio
                     </Link>
                   </li>
@@ -108,9 +110,9 @@ export function Shell() {
               {user && (
                 <div>
                   <h2 className="eyebrow mb-3">Help</h2>
-                  <ul className="space-y-2 text-ink-soft">
+                  <ul className="text-ink-soft sm:space-y-2">
                     <li>
-                      <button type="button" className="hover:text-ink hover:underline" onClick={() => setReportingBug(true)}>
+                      <button type="button" className="inline-flex min-h-11 items-center hover:text-ink hover:underline sm:min-h-0" onClick={() => setReportingBug(true)}>
                         Report a problem with the site
                       </button>
                     </li>

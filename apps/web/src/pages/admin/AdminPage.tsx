@@ -9,6 +9,7 @@ import { AdminPayments } from "./AdminPayments.js";
 import { AdminProblems } from "./AdminProblems.js";
 import { AdminReports } from "./AdminReports.js";
 import { AdminUsers } from "./AdminUsers.js";
+import { usePageMeta } from "../../lib/pageMeta.js";
 
 const TABS = [
   { key: "overview", label: "Overview" },
@@ -23,6 +24,7 @@ type Tab = (typeof TABS)[number]["key"];
 
 /** The staff screen. The tab lives in the address so a link can open straight to it. */
 export function AdminPage() {
+  usePageMeta({ title: "Admin" });
   const [params, setParams] = useSearchParams();
   const tab = (TABS.find((item) => item.key === params.get("tab"))?.key ?? "overview") as Tab;
 

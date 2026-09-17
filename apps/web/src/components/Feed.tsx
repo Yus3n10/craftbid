@@ -64,7 +64,11 @@ function OpenRequests() {
       <div className="pl-3">
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="font-display text-lg">Open requests</h2>
-          <Link to="/postings" className="text-xs text-indigo hover:underline">
+          {/* Negative margins give a 44px tap area without moving the heading. */}
+          <Link
+            to="/postings"
+            className="-mx-2 -my-3.5 inline-flex min-h-11 items-center px-2 text-xs text-indigo hover:underline"
+          >
             See all
           </Link>
         </div>

@@ -26,6 +26,7 @@ import { FieldMessages, FormError, PageHeading } from "../components/ui/States.j
 import { PayoutAccountsForm } from "../components/commission/PayoutAccountsForm.js";
 import type { UploadedImage } from "../components/ImageUploader.js";
 import { CroppedImageField } from "../components/CroppedImageField.js";
+import { usePageMeta } from "../lib/pageMeta.js";
 
 function Section({
   id,
@@ -55,6 +56,7 @@ function Section({
 }
 
 export function SettingsPage() {
+  usePageMeta({ title: "Settings" });
   const { user } = useAuth();
   const queryClient = useQueryClient();
 

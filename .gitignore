@@ -76,3 +76,6 @@ Thumbs.db
 # storage driver. Never committed, even in development.
 .storage-private/
 .outbox/
+
+# gstack skill output
+.gstack/

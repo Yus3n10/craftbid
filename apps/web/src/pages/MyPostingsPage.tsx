@@ -11,8 +11,10 @@ import {
   PageHeading,
   RowSkeleton,
 } from "../components/ui/States.js";
+import { usePageMeta } from "../lib/pageMeta.js";
 
 export function MyPostingsPage() {
+  usePageMeta({ title: "My requests" });
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["postings", "mine"],

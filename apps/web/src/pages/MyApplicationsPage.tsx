@@ -12,8 +12,10 @@ import {
   PageHeading,
   RowSkeleton,
 } from "../components/ui/States.js";
+import { usePageMeta } from "../lib/pageMeta.js";
 
 export function MyApplicationsPage() {
+  usePageMeta({ title: "My bids" });
   const queryClient = useQueryClient();
 
   const { data, isLoading, error, refetch } = useQuery({

@@ -11,15 +11,17 @@ still open.
 > workaround, the comment cleanup and the signed-out console error) are all
 > committed and deployed. **Share `https://craftbid-6w5p.onrender.com`**, not the
 > workers.dev address: PLDT and Smart users cannot reach the latter (21.1).
-> Section 20 corrects section 18.1, whose diagnosis was wrong. What is still
-> open is in 21.5.
+> Section 20 corrects section 18.1, whose diagnosis was wrong. **Section 22 is
+> built but not deployed, and needs migration 023 run on production first.**
+> What is still open is in 22.7.
 
-State at the time of writing: **everything below is committed, pushed and live.**
-Production database at migration 022. ImageKit "Restrict unnamed image
-transformations" is on (receipts still load). `PROXY_SHARED_SECRET` is set in
-Render, but **the Cloudflare side is not taking effect** (21.5). Email
-verification switched on in production through Brevo.
-**`OWNER_ALERT_EMAIL` must be set in Render** for the daily summary (section 9).
+State at the time of writing: everything up to and including section 21 is
+committed, pushed and live; section 22 is in the working tree only.
+Production database at migration 022, local at 023. ImageKit "Restrict unnamed
+image transformations" is on (receipts still load). `PROXY_SHARED_SECRET`
+matches on both sides since 2026-09-18 (21.5). Email verification switched on
+in production through Brevo. `OWNER_ALERT_EMAIL` and `PUBLIC_WEB_URL` are set
+in Render.
 
 ---
 
@@ -46,6 +48,7 @@ verification switched on in production through Brevo.
 19. Balance options change (shipped 2026-09-18)
 20. Second audit of 2026-09-17 and its fixes (shipped 2026-09-18)
 21. Reaching PLDT users, comment cleanup, console error (shipped 2026-09-18)
+22. The lower-priority items from the audits (built 2026-09-18, not deployed)
 
 ---
 
@@ -1766,3 +1769,94 @@ API 320, resilience 100, e2e 20, worker 15, typecheck clean.
   `email-verification.test.ts`. It runs six trials, because on a cold connection
   pool the requests happen to queue one after another and the race does not
   show; it failed before the fix. Suites: API 321, resilience 100.
+
+## 22. The lower-priority items from the audits (built 2026-09-18, not deployed)
+
+**Migration 023 must run on production before this code is pushed** (section 11).
+It adds `refresh_tokens.rotated_at` and `users.account_exists_notice_at`, both
+additive.
+
+### 22.1 Sign-up no longer says which emails are registered (18.9)
+- With verification on, a sign-up with an address that already has an account
+  answers exactly like a new one (202 `verification_sent`, no session, no
+  account created), and the owner is told by email instead:
+  - unconfirmed account: another verification link, under the usual resend
+    limits, so someone who lost the first email simply signs up again;
+  - confirmed account: `accountExistsEmail`, pointing at sign in and password
+    reset, at most once an hour per account (`users.account_exists_notice_at`,
+    claimed in one guarded UPDATE).
+- A taken **username** is still reported, because usernames are public.
+- With verification off (local development, no mailer) it still answers 409:
+  there is no inbox to tell instead.
+- `apps/api/src/test/registration-privacy.test.ts`.
+
+### 22.2 Refresh token reuse detection (18.9)
+- Every refresh now marks the token it spent with `rotated_at`. A rotated token
+  presented again **more than 60 seconds later** means a copy of it exists
+  somewhere else: every session of that account is revoked and the caller gets
+  a 401.
+- Within those 60 seconds it is treated as two tabs racing on one cookie (they
+  share a cookie jar, and a 401 would sign out the tab that won), so it is
+  given a session of its own. A sign-out or password change since the rotation
+  ends the grace early, or the old token would outlive them.
+- **The cost:** if a refresh response is lost in transit, that device keeps the
+  old token, and its next refresh after a minute signs the account out
+  everywhere. Signing in again fixes it. This is the standard trade for
+  detecting a stolen token at all.
+- A token revoked by signing out is still a plain 401 and revokes nothing else.
+- `apps/api/src/test/refresh-reuse.test.ts`; the rotation case in
+  `auth.test.ts` now ages the rotation before expecting the 401.
+
+### 22.3 Titles, descriptions and canonical links per route (18.6)
+- `apps/web/src/lib/pageMeta.ts`: `usePageMetaReset()` runs in `Shell` as a
+  layout effect, so it resets title, description, canonical and robots before
+  any page's own effect; `usePageMeta({title, description, noindex})` is called
+  by every page. A page whose data has not arrived passes nothing and keeps the
+  defaults.
+- Canonical always names the Render site (`SITE_ORIGIN`), whichever host served
+  the page. `index.html` deliberately carries **no** canonical tag: a fixed one
+  would tell crawlers that do not run JavaScript that every route is the home
+  page.
+- Not found: `<meta name="robots" content="noindex">` and an `h1`
+  (`EmptyState` takes `headingLevel`). Post detail has a screen-reader `h1`.
+- Em dashes gone from `<title>`, `og:title`, `twitter:title` and the ribbon's
+  tooltip. `Organization` JSON-LD is in `index.html`.
+
+### 22.4 Crawl files (18.7)
+- `apps/web/public/`: `robots.txt` (disallows admin, settings, messages,
+  commissions, my/, notifications, saved, activity, api/, verify-email,
+  reset-password; names the sitemap), `sitemap.xml` (home, requests, discover,
+  join), `llms.txt`, and a real `favicon.ico` (16, 32 and 48px PNGs in an ICO
+  container, built from `favicon.svg`).
+- **Check after deploying** that Render serves these as files rather than the
+  SPA page: `curl -sI https://craftbid-6w5p.onrender.com/robots.txt` should be
+  `text/plain`, not `text/html`. Render's `/*` rewrite should only apply when
+  no file matches; if it does not, the rewrite list needs explicit rules.
+- Not done: a dynamic sitemap of every open request, post and profile.
+
+### 22.5 Tap targets and the rest of 18.9
+- Footer links and the footer's bug-report button are 44px tall on phones
+  (`sm:min-h-0` keeps the desktop footer as it was); "See all" gets a 44px area
+  through negative margins, so nothing moves. "Keep me logged in" was already a
+  44px row.
+- The hero ribbon has a pause and play button (hover and focus already paused
+  it, but a phone has neither); it is hidden under reduced motion, where the
+  animation does not run.
+- Email and username boxes turn off spellcheck, autocorrect and
+  autocapitalisation (in `TextInput`, by `type="email"` or
+  `autoComplete="username"`).
+- Feed captions and share notes are capped at 75 characters a line.
+- `.gstack/` is in `.gitignore`.
+
+### 22.6 Suites
+typecheck clean, API 331, resilience 107, e2e 20, worker 15. Every new rule was
+mutation-checked (break it, watch the test fail, restore).
+
+### 22.7 Still open
+- Link previews for shared links (og tags per request, profile and post) are
+  **not possible on the Render Static Site**, which cannot run code per
+  request; the Worker version would only help workers.dev, which PLDT users
+  cannot reach. Revisit with a custom domain. The preview image still waits on
+  the client.
+- Legal review (18.8) is deferred until just before the public announcement.
+- A penetration test before real growth.

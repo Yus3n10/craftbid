@@ -53,12 +53,16 @@ export function EmptyState({
   description,
   action,
   className,
+  headingLevel = "h3",
 }: {
   title: string;
   description: string;
   action?: { label: string; to: string };
   className?: string;
+  /** "h1" when the empty state is the whole page, such as not found. */
+  headingLevel?: "h1" | "h3";
 }) {
+  const Heading = headingLevel;
   return (
     <div
       className={cx(
@@ -66,7 +70,7 @@ export function EmptyState({
         className,
       )}
     >
-      <h3 className="font-display text-xl text-ink">{title}</h3>
+      <Heading className="font-display text-xl text-ink">{title}</Heading>
       <ThreadRule className="mx-auto my-4 w-16" />
       <p className="mx-auto max-w-md text-ink-soft">{description}</p>
       {action && (

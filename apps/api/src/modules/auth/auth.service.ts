@@ -13,7 +13,7 @@ import {
 } from "../../lib/tokens.js";
 import * as users from "../users/users.repository.js";
 import * as sessions from "./auth.repository.js";
-import { passwordResetEmail, verificationEmail } from "./verification-email.js";
+import { accountExistsEmail, passwordResetEmail, verificationEmail } from "./verification-email.js";
 
 export interface SessionTokens {
   userId: string;
@@ -78,6 +78,12 @@ export async function register(
     // Letting the unique index decide, rather than checking first, avoids a
     // race where two simultaneous registrations both pass the check.
     if (error instanceof DbError && error.isUniqueViolation) {
+      if (error.constraintName === "UQ_USERS_EMAIL" && emailVerificationEnabled()) {
+        // Answered exactly like a new sign-up, so the form cannot be used to
+        // find out who has an account. The owner hears about it by email.
+        await notifyExistingAccount(input.email);
+        return { status: "verification_sent", email: input.email };
+      }
       if (error.constraintName === "UQ_USERS_EMAIL") {
         throw conflict("That email is already registered.", {
           email: "That email is already registered.",
@@ -105,6 +111,33 @@ export async function register(
   }
 
   return issueTokens(userId, input.role, input.remember === true);
+}
+
+/**
+ * Someone signed up with an address that has an account. Unconfirmed, the
+ * owner gets another verification link (under the usual resend limits);
+ * confirmed, a note pointing to sign in and password reset, once an hour.
+ */
+async function notifyExistingAccount(email: string): Promise<void> {
+  try {
+    const user = await users.findByEmail(email);
+    if (!user || user.status !== "active") return;
+    if (!user.emailVerifiedAt) {
+      await resendVerification({ email });
+      return;
+    }
+    if (!(await users.claimAccountExistsNotice(user.id))) return;
+    await getMailer().send(
+      accountExistsEmail({
+        to: user.email,
+        displayName: user.displayName,
+        signInLink: `${config.mail.publicWebUrl}/login`,
+        resetLink: `${config.mail.publicWebUrl}/forgot-password`,
+      }),
+    );
+  } catch (error) {
+    console.error("Existing account notice failed to send", error);
+  }
 }
 
 const VERIFICATION_HOURS = 24;
@@ -276,8 +309,20 @@ export async function refresh(token: string | undefined): Promise<SessionTokens>
   if (!token) throw unauthorized("Session expired. Please sign in again.");
 
   const record = await sessions.findByTokenHash(hashRefreshToken(token));
-  if (!record || record.revokedAt || record.expiresAt.getTime() < Date.now()) {
+  if (!record || record.expiresAt.getTime() < Date.now()) {
     throw unauthorized("Session expired. Please sign in again.");
+  }
+
+  if (record.revokedAt) {
+    // A token spent by a refresh long enough ago cannot be a second tab racing
+    // the first: someone holds a copy of it. Whoever that is may already hold
+    // the token it was exchanged for, so every session of the account ends.
+    if (record.rotated && !record.rotatedRecently) {
+      await sessions.revokeAllForUser(record.userId);
+    }
+    if (!record.rotatedRecently) {
+      throw unauthorized("Session expired. Please sign in again.");
+    }
   }
 
   const user = await users.findById(record.userId);
@@ -285,7 +330,10 @@ export async function refresh(token: string | undefined): Promise<SessionTokens>
     throw unauthorized("This account is not active.");
   }
 
-  await sessions.revokeToken(record.id);
+  // Losing a race against another refresh of the same token, or arriving
+  // within the grace period, still gets a session of its own: the cookie
+  // jar is shared, so a 401 here would sign out the tab that won as well.
+  if (!record.revokedAt) await sessions.rotateToken(record.id);
   // The replacement inherits the original choice. Taking it from the request
   // instead would let any refresh quietly turn a session that was meant to end
   // with the browser into a month-long one.

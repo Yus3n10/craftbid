@@ -275,6 +275,9 @@
     .ribbon-track {
       animation: none;
     }
+    .ribbon-toggle {
+      display: none;
+    }
     .lift,
     .lift-media,
     .press {

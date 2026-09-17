@@ -21,6 +21,7 @@ import {
 import { ErrorState, FormError, RowSkeleton } from "../components/ui/States.js";
 import { PaymentPanel } from "../components/commission/PaymentPanel.js";
 import { MessageButton } from "../components/chat/MessageButton.js";
+import { usePageMeta } from "../lib/pageMeta.js";
 
 function ReviewForm({ commission }: { commission: CommissionDto }) {
   const queryClient = useQueryClient();
@@ -91,6 +92,7 @@ function ReviewForm({ commission }: { commission: CommissionDto }) {
 }
 
 export function CommissionDetailPage() {
+  usePageMeta({ title: "Commission" });
   const { id = "" } = useParams();
   const { user } = useAuth();
   const queryClient = useQueryClient();

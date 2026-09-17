@@ -12,6 +12,7 @@ import {
 } from "@craftbid/shared";
 import { ApiError, api } from "../lib/api.js";
 import { useAuth } from "../lib/auth.js";
+import { shortDescription, usePageMeta } from "../lib/pageMeta.js";
 import { cx } from "../lib/cx.js";
 import { Page } from "../components/layout/Shell.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
@@ -314,6 +315,7 @@ export function PostingDetailPage() {
     queryKey: ["posting", id],
     queryFn: () => api.get<PostingDto>(`/postings/${id}`),
   });
+  usePageMeta({ title: posting?.title, description: shortDescription(posting?.description) });
 
   const cancelMutation = useMutation({
     mutationFn: () => api.post<PostingDto>(`/postings/${id}/cancel`),

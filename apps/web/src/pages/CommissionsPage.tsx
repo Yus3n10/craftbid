@@ -11,8 +11,10 @@ import {
   PageHeading,
   RowSkeleton,
 } from "../components/ui/States.js";
+import { usePageMeta } from "../lib/pageMeta.js";
 
 export function CommissionsPage() {
+  usePageMeta({ title: "Commissions" });
   const { user } = useAuth();
 
   const { data, isLoading, error, refetch } = useQuery({

@@ -9,8 +9,10 @@ import { Button } from "../components/ui/Button.js";
 import { Field, PasswordInput, TextInput } from "../components/ui/Field.js";
 import { FormError } from "../components/ui/States.js";
 import { ThreadRule } from "../components/ui/Primitives.js";
+import { usePageMeta } from "../lib/pageMeta.js";
 
 export function LoginPage() {
+  usePageMeta({ title: "Sign in" });
   const { user, login } = useAuth();
   const location = useLocation();
   const [email, setEmail] = useState("");

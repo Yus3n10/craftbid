@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import type { ArtistPostDto, Paginated } from "@craftbid/shared";
 import { api } from "../lib/api.js";
+import { PauseIcon, PlayIcon } from "./ui/Icons.js";
 
 /**
  * A slow band of real work along the foot of the hero.
@@ -25,6 +26,8 @@ export function WorkRibbon() {
    */
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(true);
+  // Hover and focus pause it too, but a phone has neither.
+  const [stopped, setStopped] = useState(false);
 
   useEffect(() => {
     const node = ref.current;
@@ -48,7 +51,7 @@ export function WorkRibbon() {
   return (
     <div
       ref={ref}
-      data-paused={!visible}
+      data-paused={!visible || stopped}
       className="ribbon relative overflow-hidden border-t border-fiber bg-paper py-5"
       aria-label="Recent work from artists on Craftbid"
     >
@@ -64,6 +67,17 @@ export function WorkRibbon() {
         aria-hidden="true"
         className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-paper to-transparent"
       />
+      <button
+        type="button"
+        onClick={() => setStopped((value) => !value)}
+        aria-pressed={stopped}
+        aria-label={stopped ? "Play the moving work ribbon" : "Pause the moving work ribbon"}
+        className="ribbon-toggle absolute right-1 bottom-1 z-20 grid size-11 place-items-center rounded-full text-ink-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-indigo"
+      >
+        <span className="grid size-7 place-items-center rounded-full border border-fiber bg-paper-raised">
+          {stopped ? <PlayIcon className="size-3.5" /> : <PauseIcon className="size-3.5" />}
+        </span>
+      </button>
 
       <ul className="ribbon-track flex w-max items-end gap-3">
         {run.map((post, index) => (
@@ -77,7 +91,7 @@ export function WorkRibbon() {
               to={`/artists/${post.artist.username}`}
               tabIndex={index >= posts.length ? -1 : undefined}
               className="block overflow-hidden rounded-sm border border-fiber bg-paper-sunk transition-colors hover:border-indigo"
-              title={`${post.caption} — ${post.artist.displayName}`}
+              title={`${post.caption}, by ${post.artist.displayName}`}
             >
               <img
                 src={post.coverImage!.url}

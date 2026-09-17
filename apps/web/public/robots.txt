@@ -1,0 +1,16 @@
+# Craftbid
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /settings
+Disallow: /messages
+Disallow: /commissions
+Disallow: /my/
+Disallow: /notifications
+Disallow: /saved
+Disallow: /activity
+Disallow: /api/
+Disallow: /verify-email
+Disallow: /reset-password
+
+Sitemap: https://craftbid-6w5p.onrender.com/sitemap.xml

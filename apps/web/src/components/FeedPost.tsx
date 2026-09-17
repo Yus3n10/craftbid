@@ -112,7 +112,8 @@ function OwnPost({ post }: { post: FeedItemDto }) {
         )}
 
         <div className="px-4 pb-3 pl-5">
-          <ClampedText className="break-words">
+          {/* Lines longer than about 75 characters are hard to track back. */}
+          <ClampedText className="max-w-[75ch] break-words">
             <p className="whitespace-pre-wrap">{post.caption}</p>
             {post.description && (
               <p className="mt-2 whitespace-pre-wrap text-sm text-ink-soft">

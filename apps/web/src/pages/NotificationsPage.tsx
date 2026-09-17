@@ -12,6 +12,7 @@ import {
   PageHeading,
   RowSkeleton,
 } from "../components/ui/States.js";
+import { usePageMeta } from "../lib/pageMeta.js";
 
 const COPY: Record<NotificationType, string> = {
   application_received: "An artist bid on your craft request.",
@@ -105,6 +106,7 @@ function linkFor(notification: NotificationDto): string {
 }
 
 export function NotificationsPage() {
+  usePageMeta({ title: "Notifications" });
   const queryClient = useQueryClient();
 
   const { data, isLoading, error, refetch } = useQuery({

@@ -11,6 +11,7 @@ import type {
 } from "@craftbid/shared";
 import { api } from "../lib/api.js";
 import { useAuth } from "../lib/auth.js";
+import { shortDescription, usePageMeta } from "../lib/pageMeta.js";
 import { materialColor } from "../lib/materials.js";
 import { Page } from "../components/layout/Shell.js";
 import { ButtonLink } from "../components/ui/Button.js";
@@ -238,6 +239,10 @@ export function ProfilePage() {
   const { data: profile, isLoading, error, refetch } = useQuery({
     queryKey: ["profile", username],
     queryFn: () => api.get<PublicProfileDto>(`/users/${username}`),
+  });
+  usePageMeta({
+    title: profile ? `${profile.displayName} (@${profile.username})` : undefined,
+    description: shortDescription(profile?.bio),
   });
 
   if (isLoading) {

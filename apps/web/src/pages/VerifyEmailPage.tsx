@@ -6,6 +6,7 @@ import { Page } from "../components/layout/Shell.js";
 import { ResendLink } from "../components/CheckYourEmail.js";
 import { ButtonLink } from "../components/ui/Button.js";
 import { ThreadRule } from "../components/ui/Primitives.js";
+import { usePageMeta } from "../lib/pageMeta.js";
 
 /**
  * Where the link in a verification email lands.
@@ -19,6 +20,7 @@ import { ThreadRule } from "../components/ui/Primitives.js";
  * left in the history, in a screenshot, or in a link copied from the page.
  */
 export function VerifyEmailPage() {
+  usePageMeta({ title: "Confirm your email" });
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { verifyEmail } = useAuth();

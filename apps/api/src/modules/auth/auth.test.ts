@@ -198,8 +198,17 @@ describe("authentication", () => {
     expect(first.statusCode).toBe(200);
     expect(first.json().refreshToken).not.toBe(original);
 
-    // Replaying the consumed token must fail: that is what limits the damage
-    // from a stolen one.
+    // Straight away, a spent token is a second tab racing the first, and gets
+    // a session of its own. A minute later it is a copy in someone else's
+    // hands: refused, and every session ends. See refresh-reuse.test.ts.
+    const racing = await app.inject({
+      method: "POST",
+      url: "/auth/refresh",
+      payload: { refreshToken: original },
+    });
+    expect(racing.statusCode).toBe(200);
+
+    await db.run(`UPDATE refresh_tokens SET rotated_at = rotated_at - INTERVAL '2' MINUTE WHERE rotated_at IS NOT NULL`);
     const replay = await app.inject({
       method: "POST",
       url: "/auth/refresh",

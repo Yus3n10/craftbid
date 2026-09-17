@@ -1,0 +1,17 @@
+# Craftbid
+
+> A Philippine marketplace where people commission handmade work from Filipino
+> craft artists: crochet, weaving, pottery, embroidery and more.
+
+A client posts a craft request with a starting budget in pesos and reference
+photos. Artists bid privately, each with a message and portfolio samples; no
+artist can see another artist's bid. The client picks one, which opens a
+commission, and pays the artist directly (half down, half after delivery or at
+a meet-up). Craftbid records each payment but never holds the money. Both sides
+review each other when the work is finished.
+
+## Pages
+- https://craftbid-6w5p.onrender.com/: work from artists, and open requests
+- https://craftbid-6w5p.onrender.com/postings: open craft requests
+- https://craftbid-6w5p.onrender.com/discover: portfolio work by artists
+- https://craftbid-6w5p.onrender.com/register: join as a client or an artist

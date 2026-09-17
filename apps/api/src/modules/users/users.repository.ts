@@ -151,6 +151,22 @@ export async function markEmailVerified(id: string, tx: Queryable): Promise<void
   );
 }
 
+/**
+ * Claims the right to send the "you already have an account" email, at most
+ * once an hour per account. One statement, so simultaneous sign-ups cannot
+ * both claim it.
+ */
+export async function claimAccountExistsNotice(id: string, q: Queryable = db): Promise<boolean> {
+  const changed = await q.run(
+    `UPDATE users SET account_exists_notice_at = SYSTIMESTAMP
+      WHERE id = :id
+        AND (account_exists_notice_at IS NULL
+             OR account_exists_notice_at < SYSTIMESTAMP - INTERVAL '1' HOUR)`,
+    { id: uuidToBuf(id) },
+  );
+  return changed === 1;
+}
+
 export async function touchUpdatedAt(id: string, q: Queryable = db): Promise<void> {
   await q.run(`UPDATE users SET updated_at = SYSTIMESTAMP WHERE id = :id`, {
     id: uuidToBuf(id),

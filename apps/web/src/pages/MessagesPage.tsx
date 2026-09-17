@@ -7,6 +7,7 @@ import { Page } from "../components/layout/Shell.js";
 import { Avatar, Card } from "../components/ui/Primitives.js";
 import { EmptyState, ErrorState, PageHeading, RowSkeleton } from "../components/ui/States.js";
 import { messageTime } from "../components/chat/messageTime.js";
+import { usePageMeta } from "../lib/pageMeta.js";
 
 /**
  * Every conversation this person has written or received a message in.
@@ -15,6 +16,7 @@ import { messageTime } from "../components/chat/messageTime.js";
  * list: an open conversation checks far more often.
  */
 export function MessagesPage() {
+  usePageMeta({ title: "Messages" });
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["conversations", "list"],
     queryFn: () => api.get<{ items: ConversationSummaryDto[] }>("/conversations"),

@@ -2,6 +2,7 @@ import { Suspense, lazy, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import type { UserRole } from "@craftbid/shared";
 import { useAuth } from "./lib/auth.js";
+import { usePageMeta } from "./lib/pageMeta.js";
 import { Page, Shell } from "./components/layout/Shell.js";
 import { CardSkeleton, EmptyState, RowSkeleton } from "./components/ui/States.js";
 
@@ -115,9 +116,13 @@ function RequireAuth({
 }
 
 function NotFound() {
+  // The server answers 200 for every path, so crawlers learn from this tag
+  // that the address is not a page.
+  usePageMeta({ title: "Page not found", noindex: true });
   return (
     <Page>
       <EmptyState
+        headingLevel="h1"
         title="That page does not exist"
         description="The link may be out of date, or the item was removed by its owner."
         action={{ label: "Browse craft requests", to: "/postings" }}

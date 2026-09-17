@@ -14,10 +14,12 @@ import {
   Pagination,
 } from "../components/ui/States.js";
 import { PostingCard } from "../components/PostingCard.js";
+import { usePageMeta } from "../lib/pageMeta.js";
 
 const LIMIT = 12;
 
 export function PostingsPage() {
+  usePageMeta({ title: "Craft requests", description: "Open craft requests from people in the Philippines who want something handmade. Artists bid privately." });
   const { user } = useAuth();
   const [params, setParams] = useSearchParams();
 

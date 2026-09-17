@@ -6,6 +6,7 @@ import { Button } from "../components/ui/Button.js";
 import { Field, TextInput } from "../components/ui/Field.js";
 import { FormError } from "../components/ui/States.js";
 import { ThreadRule } from "../components/ui/Primitives.js";
+import { usePageMeta } from "../lib/pageMeta.js";
 
 /**
  * Asking for a password reset link.
@@ -14,6 +15,7 @@ import { ThreadRule } from "../components/ui/Primitives.js";
  * page never says "we found you": it says where to look if there is one.
  */
 export function ForgotPasswordPage() {
+  usePageMeta({ title: "Forgot your password" });
   const [email, setEmail] = useState("");
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [error, setError] = useState<unknown>(null);

@@ -90,10 +90,14 @@ export function TextInput({
   className,
   ...rest
 }: InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean }) {
+  // Addresses and handles are not words: a spellchecker underlines them and
+  // a phone capitalises the first letter.
+  const identifier = rest.type === "email" || rest.autoComplete === "username";
   return (
     <input
       className={control(className, invalid ? "border-rust" : "border-fiber-strong")}
       aria-invalid={invalid || undefined}
+      {...(identifier ? { spellCheck: false, autoCapitalize: "none", autoCorrect: "off" } : {})}
       {...rest}
     />
   );

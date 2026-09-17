@@ -11,6 +11,7 @@ import {
   PageHeading,
   Pagination,
 } from "../components/ui/States.js";
+import { usePageMeta } from "../lib/pageMeta.js";
 
 const LIMIT = 12;
 
@@ -21,6 +22,7 @@ const LIMIT = 12;
  * moment something is saved.
  */
 export function SavedPostsPage() {
+  usePageMeta({ title: "Saved posts" });
   const [offset, setOffset] = useState(0);
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["feed", "saved", offset],

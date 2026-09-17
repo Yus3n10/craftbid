@@ -14,10 +14,12 @@ import {
   Pagination,
 } from "../components/ui/States.js";
 import { PostCard } from "../components/PostCard.js";
+import { usePageMeta } from "../lib/pageMeta.js";
 
 const LIMIT = 16;
 
 export function DiscoverPage() {
+  usePageMeta({ title: "Discover work", description: "Handmade work by Filipino craft artists: crochet, weaving, pottery, embroidery and more." });
   const { user } = useAuth();
   const [params, setParams] = useSearchParams();
 

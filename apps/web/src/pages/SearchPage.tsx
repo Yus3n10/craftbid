@@ -6,6 +6,7 @@ import { Page } from "../components/layout/Shell.js";
 import { Avatar, Card, ThreadRule } from "../components/ui/Primitives.js";
 import { EmptyState, ErrorState, RowSkeleton } from "../components/ui/States.js";
 import { PageHeading } from "../components/ui/States.js";
+import { usePageMeta } from "../lib/pageMeta.js";
 
 function Section({
   title,
@@ -52,6 +53,7 @@ function PersonRow({
 }
 
 export function SearchPage() {
+  usePageMeta({ title: "Search" });
   const [params] = useSearchParams();
   const q = params.get("q")?.trim() ?? "";
 

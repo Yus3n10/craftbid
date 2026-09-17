@@ -71,7 +71,7 @@ export function SharedPostCard({ post, share }: { post: FeedItemDto; share: Shar
 
         {share.caption && (
           <div className="px-4 pb-3 pl-5">
-            <ClampedText className="whitespace-pre-wrap break-words text-ink">{share.caption}</ClampedText>
+            <ClampedText className="max-w-[75ch] whitespace-pre-wrap break-words text-ink">{share.caption}</ClampedText>
           </div>
         )}
 

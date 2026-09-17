@@ -6,6 +6,10 @@ export interface RefreshTokenRecord {
   userId: string;
   expiresAt: Date;
   revokedAt: Date | null;
+  /** Spent by a refresh, rather than revoked by signing out. */
+  rotated: boolean;
+  /** Spent by a refresh within the grace period, measured on the database clock. */
+  rotatedRecently: boolean;
   /** "Keep me logged in" was ticked when this session began. */
   persistent: boolean;
 }
@@ -15,8 +19,17 @@ interface RefreshTokenRow {
   userId: Buffer;
   expiresAt: Date;
   revokedAt: Date | null;
+  rotated: number;
+  rotatedRecently: number;
   persistent: number;
 }
+
+/**
+ * How long a token that was just rotated still counts as a race rather than a
+ * stolen copy. Two tabs share one cookie and can both refresh with it at the
+ * same moment, most often when the API wakes from sleep.
+ */
+export const ROTATION_GRACE_SECONDS = 60;
 
 export async function storeRefreshToken(
   input: { userId: string; tokenHash: string; expiresAt: Date; persistent: boolean },
@@ -43,10 +56,20 @@ export async function findByTokenHash(
   q: Queryable = db,
 ): Promise<RefreshTokenRecord | null> {
   const row = await q.one<RefreshTokenRow>(
-    `SELECT id, user_id, expires_at, revoked_at, persistent
-       FROM refresh_tokens
+    `SELECT id, user_id, expires_at, revoked_at, persistent,
+            CASE WHEN rotated_at IS NULL THEN 0 ELSE 1 END AS rotated,
+            CASE WHEN rotated_at > SYSTIMESTAMP - NUMTODSINTERVAL(:graceSeconds, 'SECOND')
+                  -- A sign-out or password change since the rotation ends the
+                  -- grace: otherwise the old token would outlive them.
+                  AND NOT EXISTS (
+                    SELECT 1 FROM refresh_tokens later
+                     WHERE later.user_id = rt.user_id
+                       AND later.rotated_at IS NULL
+                       AND later.revoked_at >= rt.rotated_at)
+                 THEN 1 ELSE 0 END AS rotated_recently
+       FROM refresh_tokens rt
       WHERE token_hash = :tokenHash`,
-    { tokenHash },
+    { tokenHash, graceSeconds: ROTATION_GRACE_SECONDS },
   );
   if (!row) return null;
   return {
@@ -54,6 +77,8 @@ export async function findByTokenHash(
     userId: bufToUuid(row.userId)!,
     expiresAt: row.expiresAt,
     revokedAt: row.revokedAt,
+    rotated: Number(row.rotated) === 1,
+    rotatedRecently: Number(row.rotatedRecently) === 1,
     persistent: row.persistent === 1,
   };
 }
@@ -65,6 +90,20 @@ export async function revokeToken(id: string, q: Queryable = db): Promise<void> 
       WHERE id = :id AND revoked_at IS NULL`,
     { id: uuidToBuf(id) },
   );
+}
+
+/**
+ * Spends a token on a refresh. Returns whether this call spent it, so two
+ * refreshes racing on one token can tell which of them won.
+ */
+export async function rotateToken(id: string, q: Queryable = db): Promise<boolean> {
+  const changed = await q.run(
+    `UPDATE refresh_tokens
+        SET revoked_at = SYSTIMESTAMP, rotated_at = SYSTIMESTAMP
+      WHERE id = :id AND revoked_at IS NULL`,
+    { id: uuidToBuf(id) },
+  );
+  return changed === 1;
 }
 
 /** Signs the user out everywhere, used on password change or suspected theft. */

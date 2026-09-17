@@ -2,6 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import type { ArtistPostDto } from "@craftbid/shared";
 import { api } from "../lib/api.js";
+import { shortDescription, usePageMeta } from "../lib/pageMeta.js";
 import { Page } from "../components/layout/Shell.js";
 import { ErrorState, RowSkeleton } from "../components/ui/States.js";
 import { FeedPost } from "../components/FeedPost.js";
@@ -19,6 +20,10 @@ export function PostDetailPage() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["post", id],
     queryFn: () => api.get<ArtistPostDto>(`/posts/${id}`),
+  });
+  usePageMeta({
+    title: data ? `Work by ${data.artist.displayName}` : undefined,
+    description: shortDescription(data?.caption || data?.description),
   });
 
   if (isLoading) {
@@ -39,6 +44,8 @@ export function PostDetailPage() {
 
   return (
     <Page width="narrow">
+      {/* The card already shows who made it; the heading is for screen readers and search. */}
+      <h1 className="sr-only">Work by {data.artist.displayName}</h1>
       <FeedPost post={data} />
       <p className="mt-8 text-sm text-ink-faint">
         <Link to="/discover" className="hover:text-ink hover:underline">

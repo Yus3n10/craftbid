@@ -18,6 +18,7 @@ import {
   Pagination,
   RowSkeleton,
 } from "../components/ui/States.js";
+import { usePageMeta } from "../lib/pageMeta.js";
 
 const LIMIT = 30;
 
@@ -140,6 +141,7 @@ function ActivityRow({ item }: { item: ActivityItemDto }) {
  * and when, grouped by day like Facebook's activity log. Private to them.
  */
 export function ActivityPage() {
+  usePageMeta({ title: "Activity history" });
   const [kind, setKind] = useState<ActivityKind | "all">("all");
   const [offset, setOffset] = useState(0);
 

@@ -14,6 +14,7 @@ import { ErrorState, FormError, RowSkeleton } from "../components/ui/States.js";
 import { ImageIcon } from "../components/ui/Icons.js";
 import { PrivateImage } from "../components/commission/PrivateImage.js";
 import { messageTime } from "../components/chat/messageTime.js";
+import { usePageMeta } from "../lib/pageMeta.js";
 
 /** How often an open conversation asks for new messages, while it is visible. */
 const POLL_MS = 5_000;
@@ -92,6 +93,7 @@ function Header({ conversation }: { conversation: ConversationDto }) {
  * which the free hosting would drop whenever the server sleeps anyway.
  */
 export function ConversationPage() {
+  usePageMeta({ title: "Messages" });
   const { id = "" } = useParams();
   const queryClient = useQueryClient();
   const [messages, setMessages] = useState<MessageDto[]>([]);

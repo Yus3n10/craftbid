@@ -14,6 +14,7 @@ import { Button } from "../components/ui/Button.js";
 import { Field, PasswordInput, TextInput } from "../components/ui/Field.js";
 import { FormError } from "../components/ui/States.js";
 import { ThreadRule } from "../components/ui/Primitives.js";
+import { usePageMeta } from "../lib/pageMeta.js";
 
 const ROLES: { value: UserRole; title: string; description: string }[] = [
   {
@@ -29,6 +30,7 @@ const ROLES: { value: UserRole; title: string; description: string }[] = [
 ];
 
 export function RegisterPage() {
+  usePageMeta({ title: "Join Craftbid", description: "Join Craftbid to commission handmade work, or to bid on requests as a Filipino craft artist." });
   const { user, register } = useAuth();
   const [params] = useSearchParams();
 
