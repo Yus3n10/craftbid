@@ -124,7 +124,7 @@ Rules that came from the developer during this project, keep them:
 
 | What | Where |
 |---|---|
-| Repository | `D:\Claude Local\raxtan` (a copy of this handoff also exists under `C:\Users\LENOVO\Claude Local\raxtan`; the D: repo is the real one) |
+| Repository | `D:\Claude Local\raxtan`. `C:\Users\LENOVO\Claude Local` is a **junction** to `D:\Claude Local`, so the C: path is the same repository, not a copy: editing either edits one file. Commands work from either path |
 | Local env (development, local Oracle in Docker) | `D:\Claude Local\raxtan\.env` (gitignored) |
 | Production env (points at the cloud database) | `D:\Claude Local\raxtan\.env.adb` (gitignored) |
 | Oracle wallet for the cloud database | `D:\Ptheusen Personal\craftbid-wallet\` (never inside the repo) |
