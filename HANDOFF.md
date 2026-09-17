@@ -257,7 +257,8 @@ raxtan/
       search.routes.ts              search
     src/test/                       Integration tests against real Oracle
   apps/web/                         React 19 + Vite + Tailwind 4 client
-    index.html                      Fonts, Open Graph/Twitter text metadata
+    index.html                      Open Graph/Twitter text metadata, Organization JSON-LD
+    public/                         _headers, robots.txt, sitemap.xml, llms.txt, favicon (svg + ico)
     src/main.tsx                    Data router, providers, update watcher
     src/App.tsx                     Route table (all pages lazy-loaded), RequireAuth, RequireStaff
     src/index.css                   Design tokens (indigo/abaca palette), fonts
@@ -267,6 +268,7 @@ raxtan/
     src/lib/compressImage.ts        compressForChat: 1600px WebP (JPEG fallback) before upload
     src/lib/auth.tsx                AuthProvider: login, register, verifyEmail, logout
     src/lib/session.ts              Bearer mode (desktop) vs cookies (web), session hint
+    src/lib/pageMeta.ts             Per-route title, description, canonical, noindex (22.3)
     src/lib/authPrompt.tsx          "You need an account" / "Confirm your email" popups
     src/lib/unsavedChanges.tsx      Leave-without-saving blocker, sign-out warning state
     src/lib/appUpdates.ts           Reloads into a new deploy without a second refresh
@@ -336,6 +338,7 @@ future code path can forget it.
 | 021 | balance-after-delivery | balance_method limited to 'transfer' (now meaning pay after delivery) and 'meetup'; cod rows moved to transfer |
 | 020 | staff-tools | job_runs; conversations.client_/artist_nudged_for_read; resolve_problem and payment_file_viewed actions; problem and payment targets; chat_unread type |
 | 022 | password-reset | password_reset_tokens (SHA-256 only, single use, 1 hour). Section 20 |
+| 023 | session-and-signup-safety | refresh_tokens.rotated_at (reuse detection); users.account_exists_notice_at (one "you already have an account" email an hour). Section 22 |
 
 Rules enforced by the database:
 
@@ -369,7 +372,7 @@ safe: Cloudflare and Render deploy at different moments, and a renamed field
 would break bid lists for a few minutes on every deploy.
 
 **Migrations are not run by deploying.** Run them on production before pushing
-the code that needs them (section 11). Production is at 020.
+the code that needs them (section 11). Production is at 023.
 
 ---
 
@@ -382,7 +385,7 @@ with 403 `account_inactive` if the account is suspended or removed, and with a
 401 if the token's role no longer matches the account (after a role switch).
 
 **Auth** (`/auth`)
-- `POST /auth/register`: 202 `{status:"verification_sent"}` when verification is on (no session); 201 with session when off. Limit 5 per 10 min.
+- `POST /auth/register`: 202 `{status:"verification_sent"}` when verification is on (no session); 201 with session when off. Limit 5 per 10 min. **An email that already has an account gets the same 202 and no new account**, and the owner is emailed instead (22.1); a taken username is still 409.
 - `POST /auth/verify-email` `{token}`: confirms, signs in. 400 invalid, 409 used/already verified, 410 expired. Limit 20 per 10 min.
 - `POST /auth/resend-verification` `{email?}`: always 204, sends in the background. Limit 5 per 15 min, plus 1/min and 5/hour per account.
 - `POST /auth/login` (10 per 10 min; 403 `account_suspended` after a correct password on a suspended account), `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` (includes `isStaff`), `GET /auth/session` (200 `{user}` or `{user: null}` when no session cookie was sent; 401 only when a credential was sent that no longer works; what the web app asks on every load, see 21.3), `POST /auth/change-password` (5 per 15 min; revokes all sessions).
@@ -495,6 +498,10 @@ in `main.tsx`) and precached by the service worker.
 - Access token (JWT, 15 minutes) and refresh token (rotated on every use) in
   httpOnly cookies `craftbid_at` and `craftbid_rt`. Refresh tokens stored as
   SHA-256 only.
+- **Reuse detection:** a spent token presented again more than 60 seconds later
+  revokes every session of that account. Inside those 60 seconds it is two tabs
+  racing one cookie and gets its own session, unless a sign-out or password
+  change happened since. Full reasoning and the cost in 22.2.
 - **Keep me logged in** is off by default. Unticked: session cookies, and the
   server forgets the session after 12 idle hours. Ticked: 30 days. The choice
   lives on the refresh token and is inherited on rotation.
@@ -527,7 +534,10 @@ in `main.tsx`) and precached by the service worker.
 
 ### Email verification (live)
 - Switched on when `MAIL_DRIVER` is not `none`. Production uses `brevo`.
-- Register creates the account and emails a link; nobody is signed in yet.
+- Register creates the account and emails a link; nobody is signed in yet. An
+  address that already has an account gets the same answer, and its owner gets
+  either another link (unconfirmed) or a "you already have an account" email
+  (confirmed, once an hour), so the form reveals nothing (22.1).
 - The link opens `/verify-email`, which **POSTs** the token (mail scanners fetch
   links but do not run pages), then strips it from the address bar.
 - Tokens: 32 random bytes, SHA-256 stored, single-use, 24 hours.
@@ -871,7 +881,9 @@ The order that has worked every time:
 
 ## 12. Testing
 
-Counts at `87ceeb3`:
+Counts at `bf92b31` (API 331, resilience 107, e2e 20, worker 15). The
+descriptions below were written at `87ceeb3`; everything since is in sections 19
+to 22.
 
 | Suite | Count | What it covers |
 |---|---|---|
@@ -1569,7 +1581,7 @@ confirmed.
 
 A second, independent audit ran on 2026-09-17 against the code and live
 production, and its fixes were built on 2026-09-18. Committed and deployed on 2026-09-18 in
-its own commit after section 19; production is at migration 022.
+its own commit after section 19, which took production to migration 022.
 Suites after these changes: API 315, resilience 95, e2e 20, worker 15,
 typecheck clean.
 
