@@ -11,13 +11,11 @@ still open.
 > workaround, the comment cleanup and the signed-out console error) are all
 > committed and deployed. **Share `https://craftbid-6w5p.onrender.com`**, not the
 > workers.dev address: PLDT and Smart users cannot reach the latter (21.1).
-> Section 20 corrects section 18.1, whose diagnosis was wrong. **Section 22 is
-> built but not deployed, and needs migration 023 run on production first.**
-> What is still open is in 22.7.
+> Section 20 corrects section 18.1, whose diagnosis was wrong. What is still
+> open is in 22.7.
 
-State at the time of writing: everything up to and including section 21 is
-committed, pushed and live; section 22 is in the working tree only.
-Production database at migration 022, local at 023. ImageKit "Restrict unnamed
+State at the time of writing: **everything below is committed, pushed and live.**
+Production database at migration 023. ImageKit "Restrict unnamed
 image transformations" is on (receipts still load). `PROXY_SHARED_SECRET`
 matches on both sides since 2026-09-18 (21.5). Email verification switched on
 in production through Brevo. `OWNER_ALERT_EMAIL` and `PUBLIC_WEB_URL` are set
@@ -48,7 +46,7 @@ in Render.
 19. Balance options change (shipped 2026-09-18)
 20. Second audit of 2026-09-17 and its fixes (shipped 2026-09-18)
 21. Reaching PLDT users, comment cleanup, console error (shipped 2026-09-18)
-22. The lower-priority items from the audits (built 2026-09-18, not deployed)
+22. The lower-priority items from the audits (shipped 2026-09-18)
 
 ---
 
@@ -1770,11 +1768,27 @@ API 320, resilience 100, e2e 20, worker 15, typecheck clean.
   pool the requests happen to queue one after another and the race does not
   show; it failed before the fix. Suites: API 321, resilience 100.
 
-## 22. The lower-priority items from the audits (built 2026-09-18, not deployed)
+## 22. The lower-priority items from the audits (shipped 2026-09-18)
 
-**Migration 023 must run on production before this code is pushed** (section 11).
-It adds `refresh_tokens.rotated_at` and `users.account_exists_notice_at`, both
-additive.
+Committed as `bf92b31`, CI green, production at migration 023 (it adds
+`refresh_tokens.rotated_at` and `users.account_exists_notice_at`, both
+additive, and was applied before the push).
+
+**Verified on production after the deploy:** `/robots.txt` and `/llms.txt`
+served as `text/plain`, `/sitemap.xml` as `application/xml`, `/favicon.ico` as
+`image/vnd.microsoft.icon`, so Render's `/*` rewrite does not swallow them;
+`<title>` and `og:title` without em dashes; per-route title, description and
+canonical (`/postings` reads "Craft requests · Craftbid", canonical
+`/postings`); an unknown address gives "Page not found · Craftbid" with
+`robots: noindex` and an `h1`, and the tag is gone again on a real page; the
+four footer links measure 44px at 375px wide. The hero ribbon and its new pause
+button do not appear on production yet: it needs four portfolio posts with
+cover images and there is one (checked through `/api/posts?limit=12`), so that
+control is covered by the resilience suite only.
+
+**Browser-pane trap:** the service worker served the previous build until the
+address carried a cache-busting query. `curl` showed the new build at once. A
+first check that looks unchanged after a deploy is probably this.
 
 ### 22.1 Sign-up no longer says which emails are registered (18.9)
 - With verification on, a sign-up with an address that already has an account
@@ -1828,10 +1842,7 @@ additive.
   reset-password; names the sitemap), `sitemap.xml` (home, requests, discover,
   join), `llms.txt`, and a real `favicon.ico` (16, 32 and 48px PNGs in an ICO
   container, built from `favicon.svg`).
-- **Check after deploying** that Render serves these as files rather than the
-  SPA page: `curl -sI https://craftbid-6w5p.onrender.com/robots.txt` should be
-  `text/plain`, not `text/html`. Render's `/*` rewrite should only apply when
-  no file matches; if it does not, the rewrite list needs explicit rules.
+- Render serves all four as files, confirmed after the deploy (section 22 head).
 - Not done: a dynamic sitemap of every open request, post and profile.
 
 ### 22.5 Tap targets and the rest of 18.9
