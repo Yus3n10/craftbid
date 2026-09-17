@@ -1746,13 +1746,11 @@ typecheck clean.
 API 320, resilience 100, e2e 20, worker 15, typecheck clean.
 
 ### 21.5 Still open
-- **Cloudflare `PROXY_SHARED_SECRET` is not taking effect**: calls through the
-  workers.dev site still count in a separate bucket from direct calls. The
-  developer added it as a Secret and redeployed on 2026-09-18, and the check
-  (one resend-verification call direct, one through workers.dev, compare
-  `x-ratelimit-remaining`) still showed separate buckets afterwards. The API
-  compares the value byte for byte, so the likely cause is a stray space or
-  newline in one of the two copies. Only affects the workers.dev site.
+- Fixed 2026-09-18: `PROXY_SHARED_SECRET` now matches. The first attempt still
+  showed separate buckets (the API compares byte for byte); a freshly generated
+  value pasted into both Render and Cloudflare fixed it. Check: one
+  resend-verification call direct, one through workers.dev, one direct again;
+  `x-ratelimit-remaining` must go down by one each time (it went 4, 3, 2).
 - Done 2026-09-18: `PUBLIC_WEB_URL` in Render is the Render site address;
   `OWNER_ALERT_EMAIL` is set; the "sd" share is removed; the staff display name
   is now "Yusen Main". "Test Post" stays by the developer's choice. Legal review
