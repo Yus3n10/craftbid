@@ -6,16 +6,18 @@ pick this project up cold: what it is, where every piece lives, how it is
 deployed, what broke and how it was fixed, what the client decided, and what is
 still open.
 
-> **Start here if you are picking this up on or after 2026-09-18.** The
-> balance-option change (section 19) and the second audit's fixes (section 20)
-> were committed and deployed on 2026-09-18, as two commits on `master`. Section
-> 20 corrects section 18.1, whose diagnosis was wrong. What is still open is in
-> 20.7 and the legal review items.
+> **Start here if you are picking this up on or after 2026-09-18.** Sections 19
+> and 20 (balance options, second audit fixes) and section 21 (the PLDT
+> workaround, the comment cleanup and the signed-out console error) are all
+> committed and deployed. **Share `https://craftbid-6w5p.onrender.com`**, not the
+> workers.dev address: PLDT and Smart users cannot reach the latter (21.1).
+> Section 20 corrects section 18.1, whose diagnosis was wrong. What is still
+> open is in 21.5.
 
 State at the time of writing: **everything below is committed, pushed and live.**
-Production database at migration 022. `PROXY_SHARED_SECRET` set in Render and
-as a Cloudflare Worker secret, and ImageKit "Restrict unnamed image
-transformations" switched on, by the developer on 2026-09-18. Email
+Production database at migration 022. ImageKit "Restrict unnamed image
+transformations" is on (receipts still load). `PROXY_SHARED_SECRET` is set in
+Render, but **the Cloudflare side is not taking effect** (21.5). Email
 verification switched on in production through Brevo.
 **`OWNER_ALERT_EMAIL` must be set in Render** for the daily summary (section 9).
 
@@ -43,6 +45,7 @@ verification switched on in production through Brevo.
 18. Audit of 2026-09-17: findings and the fix plan
 19. Balance options change (shipped 2026-09-18)
 20. Second audit of 2026-09-17 and its fixes (shipped 2026-09-18)
+21. Reaching PLDT users, comment cleanup, console error (shipped 2026-09-18)
 
 ---
 
@@ -77,9 +80,10 @@ artist. Tests fail if any of that changes.
 
 | | |
 |---|---|
-| Live site | https://craftbid.pgeagoni.workers.dev |
+| Live site (share this one) | https://craftbid-6w5p.onrender.com (Render Static Site `craftbid`, see 21.1) |
+| Live site (Cloudflare) | https://craftbid.pgeagoni.workers.dev (unreachable for some PLDT/Smart users) |
 | API (direct) | https://craftbid-api.onrender.com |
-| API (as the site calls it) | https://craftbid.pgeagoni.workers.dev/api |
+| API (as the sites call it) | `/api` on either site's own origin |
 | Health check | https://craftbid-api.onrender.com/health |
 | Repository | https://github.com/Yus3n10/craftbid (branch `master`, commits go straight to master) |
 | Local path | `D:\Claude Local\raxtan` (folder still has the project's old name) |
@@ -380,7 +384,7 @@ with 403 `account_inactive` if the account is suspended or removed, and with a
 - `POST /auth/register`: 202 `{status:"verification_sent"}` when verification is on (no session); 201 with session when off. Limit 5 per 10 min.
 - `POST /auth/verify-email` `{token}`: confirms, signs in. 400 invalid, 409 used/already verified, 410 expired. Limit 20 per 10 min.
 - `POST /auth/resend-verification` `{email?}`: always 204, sends in the background. Limit 5 per 15 min, plus 1/min and 5/hour per account.
-- `POST /auth/login` (10 per 10 min; 403 `account_suspended` after a correct password on a suspended account), `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` (includes `isStaff`), `POST /auth/change-password` (5 per 15 min; revokes all sessions).
+- `POST /auth/login` (10 per 10 min; 403 `account_suspended` after a correct password on a suspended account), `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` (includes `isStaff`), `GET /auth/session` (200 `{user}` or `{user: null}` when no session cookie was sent; 401 only when a credential was sent that no longer works; what the web app asks on every load, see 21.3), `POST /auth/change-password` (5 per 15 min; revokes all sessions).
 
 **Users and profiles**
 - `GET /users/:username` (suspended profiles still show; removed ones 404), `PATCH /me/profile` (a new avatar must be square and a new cover 3:1), `PATCH /me/artist-profile` (artist), `PUT /me/links`.
@@ -739,14 +743,14 @@ in `main.tsx`) and precached by the service worker.
 | `ACCESS_TOKEN_TTL` | 15m | |
 | `REFRESH_TOKEN_TTL_DAYS` | 30 | Keep me logged in |
 | `SESSION_REFRESH_TTL_HOURS` | 12 | Without Keep me logged in |
-| `CORS_ORIGINS` | http://localhost:5173 | Exact origins, comma separated, no trailing slash |
+| `CORS_ORIGINS` | http://localhost:5173 | Exact origins, comma separated, no trailing slash. Production: `https://craftbid.pgeagoni.workers.dev,https://craftbid-6w5p.onrender.com` |
 | `STORAGE_DRIVER` | local | `imagekit` in production (local is refused there) |
 | `STORAGE_LOCAL_DIR`, `STORAGE_PUBLIC_BASE_URL` | .storage, http://localhost:4000/media | Local only |
 | `IMAGEKIT_PUBLIC_KEY`, `IMAGEKIT_PRIVATE_KEY`, `IMAGEKIT_URL_ENDPOINT` | | Private key must start with `private_` |
 | `MAIL_DRIVER` | none | `none` turns verification off; `log`, `outbox` (dev/tests); `brevo` (production) |
 | `BREVO_API_KEY`, `MAIL_FROM_EMAIL` | | Required with `brevo` |
 | `MAIL_FROM_NAME` | Craftbid | |
-| `PUBLIC_WEB_URL` | http://localhost:5173 | Where email links point |
+| `PUBLIC_WEB_URL` | http://localhost:5173 | Where email links point. Production should be `https://craftbid-6w5p.onrender.com` so PLDT users can open them (21.1) |
 | `OWNER_ALERT_EMAIL` | unset | Daily summary recipient; unset skips the summary with a log line |
 | `PROXY_SHARED_SECRET` | unset | 32+ chars, same value as the Worker secret of that name. Lets rate limits tell visitors apart behind the Worker (20.1). Unset logs a warning in production and every visitor shares one bucket |
 
@@ -1654,11 +1658,9 @@ typecheck clean.
    profile); request a password reset to a real inbox.
 
 ### 20.7 Still open from the second audit (needs the developer or client)
-- ImageKit accepts unsigned unnamed transformations: a 57 KB image was served
-  as a 15.4 MB PNG, so ~1,300 requests can exhaust 20 GB/month. Turn on
-  "Restrict unnamed transformations" in the ImageKit dashboard, then open one
-  receipt in the admin screen (receipts use a signed `tr:orig-true` URL, and
-  whether signed URLs are exempt was not confirmed).
+- Done 2026-09-18: ImageKit "Restrict unnamed image transformations" is on. A
+  new unnamed transform now answers 400, and receipts (signed `tr:orig-true`)
+  still load in the admin screen.
 - Production test content on the public home page ("Test Post" with a puppy
   photo, open for bids; the share captioned "sd") and the display name "Yusen
   Admin", which advertises the staff account.
@@ -1670,3 +1672,85 @@ typecheck clean.
 - Lower: registration says which emails are registered; refresh tokens have no
   reuse detection; resend-verification has the same limit race 20.3 fixed for
   resets; tap targets from 18.9; SEO items 18.6 and 18.7.
+
+## 21. Reaching PLDT users, comment cleanup, console error (shipped 2026-09-18)
+
+### 21.1 PLDT and Smart users could not open the site
+- **Symptom:** some people got a white page in Messenger's browser or
+  `ERR_CONNECTION_TIMED_OUT` on a PC; others on the same ISP were fine. Two
+  affected users were on PLDT, one also failed on Smart 5G (same backbone);
+  Converge, Sky and Globe users were unaffected.
+- **Cause (measured with the affected user's traceroutes):** the workers.dev
+  address resolves to two Cloudflare IPs. `104.21.9.202` routes normally from
+  PLDT; `172.67.189.143` fails at PLDT's second hop with "Destination host
+  unreachable". A device that picks that IP waits until it times out. Cloudflare
+  Community has earlier reports of PLDT losing routes to single Cloudflare
+  addresses. Nothing in Craftbid's code causes it, and workers.dev IPs cannot be
+  chosen.
+- **Workaround in place:** a free **Render Static Site** named `craftbid`,
+  `https://craftbid-6w5p.onrender.com`, built from `master` on every push
+  (Render's IPs route fine from PLDT; `craftbid-api.onrender.com/health` loaded
+  for the affected user). Settings, all in the Render dashboard:
+  - Build command: `npm install -g pnpm@10.34.5 && pnpm install --frozen-lockfile && pnpm --filter @craftbid/shared build && pnpm --filter @craftbid/web build`
+  - Publish directory: `apps/web/dist`
+  - Rewrites, in this order: `/api/*` to `https://craftbid-api.onrender.com/*`;
+    `/*` to `/index.html`
+  - Headers on `/*`: `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`,
+    `Referrer-Policy: strict-origin-when-cross-origin`. A `Cache-Control:
+    no-cache` row was added but Render still sends `public, max-age=0,
+    s-maxage=300`, so after a deploy some visitors may reload once within five
+    minutes (the app recovers by itself, 13.8).
+  - The API's `CORS_ORIGINS` includes this origin; without it every POST was
+    403 "did not come from an allowed origin".
+- **Verified on production (WebKit, iPhone 13 profile):** sign-in, reload,
+  refresh, a protected page and sign-out work through the rewrite; Set-Cookie
+  arrives as `HttpOnly; Secure; SameSite=Lax`; signed-in reads stay
+  `private, no-store`; a foreign Origin is refused; rate limits count each
+  visitor separately (direct calls and calls through this site share one bucket).
+- **The developer was asked to set `PUBLIC_WEB_URL` to this address** so
+  verification and reset emails open for PLDT users; confirm it in Render.
+- Longer term: a custom domain pointed at Render without Cloudflare's proxy, or
+  reporting the route to PLDT with the traceroutes.
+
+### 21.2 Comment cleanup (`b443dea`)
+- Every comment block (about 1,370) was reviewed by hand. Removed or trimmed:
+  incident diaries and dates, "used to" histories, references to the brief, the
+  developer or the client, and stale claims. Kept: comments that state a real
+  constraint (security, Oracle behaviour, deploy traps, privacy rules).
+- Nothing shipped to a browser carries developer commentary: `index.html` has no
+  HTML comments, `_headers` holds only rules (Render serves it as a plain file),
+  and `vite.config.ts` sets `sourcemapExcludeSources: true`, so the 44 source
+  maps keep their mappings but no longer embed the original source.
+- Verified as behaviour-preserving: every changed TypeScript and SQL file
+  prints identically with comments stripped; all suites green; CI green.
+- The AI-agent instruction line was removed from the plan documents.
+
+### 21.3 The 401 in every signed-out visitor's console
+- The web app asked `/auth/me` on every load, and a signed-out visitor got a
+  401, which browsers print in red. `GET /auth/session` answers "nobody signed
+  in" with 200 `{user: null}` and keeps 401 for a credential that no longer
+  works, so the app still renews an expired session. The web app falls back to
+  `/auth/me` if the API is older, for the minutes between the two deploys.
+- Also fixed: when the server says a session cookie was sent, the app renews
+  even without the local "has had a session" hint (Safari clears localStorage
+  after seven days without a visit while "Keep me logged in" lasts thirty), and
+  writes the hint back after a successful renewal. A refresh that fails with 401
+  now clears the session cookies, so a revoked session stops failing on every
+  visit.
+- The anonymous `/auth/session` response is `private, no-store`: the cache hook
+  in `app.ts` now keeps a Cache-Control header a route set itself.
+- Tests: `session-check.test.ts` (API) and `session-check.spec.ts` (resilience),
+  including a mutation check that the forced renewal matters.
+
+### 21.4 Suites
+API 320, resilience 100, e2e 20, worker 15, typecheck clean.
+
+### 21.5 Still open
+- **Cloudflare `PROXY_SHARED_SECRET` is not taking effect**: calls through the
+  workers.dev site still count in a separate bucket from direct calls (checked
+  again 2026-09-18). Check it exists in Workers & Pages, craftbid, Settings,
+  Variables and Secrets with type **Secret** and the exact value set in Render;
+  a plain Variable is wiped by every deploy. Only affects the workers.dev site.
+- Confirm `PUBLIC_WEB_URL` in Render is the Render site address (21.1).
+- `og:url` in `apps/web/index.html` still names the workers.dev address.
+- Everything in 20.7 other than ImageKit (test content, legal review, lower items).
