@@ -73,5 +73,19 @@ export const resendVerificationSchema = z.preprocess(
   z.object({ email: emailSchema.optional() }),
 );
 
+/** Asking for a password reset link. */
+export const forgotPasswordSchema = z.object({ email: emailSchema });
+
+/** Setting a new password with the token from a reset link. */
+export const resetPasswordSchema = z.object({
+  token: z.string().regex(/^[A-Za-z0-9_-]{43}$/, "This link is not valid."),
+  password: passwordSchema,
+});
+
+/** Closing your own account. The password proves it is really you. */
+export const deleteAccountSchema = z.object({
+  password: z.string().min(1, "Enter your password."),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;

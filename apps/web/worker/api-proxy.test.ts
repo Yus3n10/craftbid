@@ -86,6 +86,39 @@ describe("what the API is told", () => {
     assert.equal(headers.get("x-forwarded-for"), null);
   });
 
+  it("vouches for the visitor's address with the shared secret", () => {
+    // Render sits behind Cloudflare too, and Cloudflare replaces
+    // CF-Connecting-IP on this hop with one address for every visitor. These
+    // two headers are how the API tells visitors apart.
+    const headers = upstreamHeaders(
+      new Headers(),
+      `${SITE}/api/auth/login`,
+      "203.0.113.7",
+      "a-proxy-secret-of-reasonable-length-123",
+    );
+    assert.equal(headers.get("x-craftbid-proxy"), "a-proxy-secret-of-reasonable-length-123");
+    assert.equal(headers.get("x-craftbid-client-ip"), "203.0.113.7");
+  });
+
+  it("never passes on proxy headers the visitor sent", () => {
+    const forged = new Headers({
+      "x-craftbid-proxy": "guessed",
+      "x-craftbid-client-ip": "1.2.3.4",
+    });
+    const withoutSecret = upstreamHeaders(forged, `${SITE}/api/auth/login`, "203.0.113.7");
+    assert.equal(withoutSecret.get("x-craftbid-proxy"), null);
+    assert.equal(withoutSecret.get("x-craftbid-client-ip"), null);
+
+    const withoutAddress = upstreamHeaders(
+      forged,
+      `${SITE}/api/auth/login`,
+      null,
+      "a-proxy-secret-of-reasonable-length-123",
+    );
+    assert.equal(withoutAddress.get("x-craftbid-proxy"), null);
+    assert.equal(withoutAddress.get("x-craftbid-client-ip"), null);
+  });
+
   it("bypasses every shared cache and hands redirects back to the browser", () => {
     const get = buildUpstreamRequest(new Request(`${SITE}/api/feed`), API, null);
     assert.equal(get.init.cache, "no-store");
@@ -181,6 +214,30 @@ describe("the Worker entry", () => {
       const response = await worker.fetch(new Request(`${SITE}/api/auth/me`), env);
       assert.equal(response.status, 200);
       assert.equal(upstream, `${API}/auth/me`);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+
+  it("forwards the secret from its environment", async () => {
+    const realFetch = globalThis.fetch;
+    let sent: Headers | undefined;
+    globalThis.fetch = (async (_url: string, init: RequestInit) => {
+      sent = new Headers(init.headers);
+      return new Response("{}", { status: 200 });
+    }) as typeof fetch;
+    try {
+      const env = {
+        API_ORIGIN: API,
+        PROXY_SHARED_SECRET: "a-proxy-secret-of-reasonable-length-123",
+        ASSETS: { fetch: async () => new Response("asset") },
+      };
+      await worker.fetch(
+        new Request(`${SITE}/api/auth/login`, { headers: { "cf-connecting-ip": "198.51.100.9" } }),
+        env,
+      );
+      assert.equal(sent?.get("x-craftbid-proxy"), "a-proxy-secret-of-reasonable-length-123");
+      assert.equal(sent?.get("x-craftbid-client-ip"), "198.51.100.9");
     } finally {
       globalThis.fetch = realFetch;
     }

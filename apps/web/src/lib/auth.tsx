@@ -25,6 +25,8 @@ interface AuthValue {
   /** Asks for another link, to the signed-in account or to the given address. */
   resendVerification: (email?: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** Closes this account for good (the password confirms it), then signs out here. */
+  closeAccount: (password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthValue | null>(null);
@@ -121,13 +123,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       api.post<void>("/auth/logout", {
         refreshToken: getRefreshToken() ?? undefined,
       }),
-    onSuccess: () => {
-      clearTokens();
-      queryClient.setQueryData(["me"], null);
-      // Anything cached could be another user's view of the same route.
-      queryClient.clear();
-    },
+    onSuccess: () => forgetSession(),
   });
+
+  /** What signing out leaves behind, shared by sign-out and closing the account. */
+  function forgetSession() {
+    clearTokens();
+    queryClient.setQueryData(["me"], null);
+    // Anything cached could be another user's view of the same route.
+    queryClient.clear();
+  }
 
   const value: AuthValue = {
     user: data ?? null,
@@ -140,6 +145,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     logout: async () => {
       await logoutMutation.mutateAsync();
+    },
+    closeAccount: async (password) => {
+      await api.post<void>("/me/delete-account", { password });
+      forgetSession();
     },
   };
 

@@ -21,6 +21,7 @@ import { Field, Select, TextArea, TextInput } from "../components/ui/Field.js";
 import { Card, RoleBadge, ThreadRule } from "../components/ui/Primitives.js";
 import { ProfileChecklist } from "../components/ProfileChecklist.js";
 import { AccountTypeSection } from "../components/AccountTypeSection.js";
+import { CloseAccountSection } from "../components/CloseAccountSection.js";
 import { FieldMessages, FormError, PageHeading } from "../components/ui/States.js";
 import { PayoutAccountsForm } from "../components/commission/PayoutAccountsForm.js";
 import type { UploadedImage } from "../components/ImageUploader.js";
@@ -495,6 +496,8 @@ export function SettingsPage() {
         </Section>
 
         <AccountTypeSection me={user} />
+
+        <CloseAccountSection />
       </div>
     </Page>
   );

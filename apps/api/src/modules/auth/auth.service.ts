@@ -13,7 +13,7 @@ import {
 } from "../../lib/tokens.js";
 import * as users from "../users/users.repository.js";
 import * as sessions from "./auth.repository.js";
-import { verificationEmail } from "./verification-email.js";
+import { passwordResetEmail, verificationEmail } from "./verification-email.js";
 
 export interface SessionTokens {
   userId: string;
@@ -298,4 +298,93 @@ export async function changePassword(
     // someone takes when they think an account is compromised.
     await sessions.revokeAllForUser(userId, tx);
   });
+}
+
+const RESET_MINUTES = 60;
+
+/**
+ * Emails a password reset link.
+ *
+ * Answers nothing either way: the route replies before this runs, so neither
+ * the response nor its timing says whether an address has an account. The
+ * limits (one a minute, three an hour per account) are enforced silently for
+ * the same reason, and keep this from being used to flood someone's inbox.
+ */
+export async function requestPasswordReset(email: string): Promise<void> {
+  if (!emailVerificationEnabled()) return;
+
+  const user = await users.findByEmail(email);
+  if (!user || user.status !== "active") return;
+
+  const token = generateRefreshToken();
+  const claimed = await withTransaction(async (tx) => {
+    // Locking the account row makes the limit check and the new link one
+    // step. Two requests at the same moment otherwise both saw no recent link
+    // and both sent one (measured in the test).
+    await tx.run(`SELECT id FROM users WHERE id = :id FOR UPDATE`, { id: uuidToBuf(user.id) });
+    const recent = await sessions.recentPasswordResetTokens(user.id, tx);
+    if (recent.lastHour >= 3) return false;
+    if (recent.lastSentAt && Date.now() - recent.lastSentAt.getTime() < 60_000) return false;
+    await sessions.storePasswordResetToken(
+      {
+        userId: user.id,
+        tokenHash: hashRefreshToken(token),
+        expiresAt: new Date(Date.now() + RESET_MINUTES * 60_000),
+      },
+      tx,
+    );
+    return true;
+  });
+  if (!claimed) return;
+  await getMailer().send(
+    passwordResetEmail({
+      to: user.email,
+      displayName: user.displayName,
+      link: `${config.mail.publicWebUrl}/reset-password?token=${token}`,
+      minutesValid: RESET_MINUTES,
+    }),
+  );
+}
+
+/**
+ * Sets a new password from a reset link.
+ *
+ * Every session is revoked, since a reset is often what someone does when they
+ * think another person is in their account, and nobody is signed in: the
+ * person signs in with the new password, which also proves they typed it as
+ * they meant to. Holding the link proves the inbox, so an unconfirmed email
+ * becomes confirmed.
+ */
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  const record = await sessions.findPasswordResetToken(hashRefreshToken(token));
+  if (!record) {
+    throw new AppError(400, "link_invalid", "This link is not valid. Ask for a new one.");
+  }
+  if (record.usedAt) {
+    throw new AppError(409, "link_used", "This link was already used. Ask for a new one if you still need it.");
+  }
+  if (record.expiresAt.getTime() < Date.now()) {
+    throw new AppError(410, "link_expired", "This link has expired. Ask for a new one.");
+  }
+
+  const user = await users.findById(record.userId);
+  if (!user || user.status !== "active") {
+    throw new AppError(400, "link_invalid", "This link is not valid. Ask for a new one.");
+  }
+
+  const passwordHash = await hashPassword(newPassword);
+  const spent = await withTransaction(async (tx) => {
+    if (!(await sessions.spendPasswordResetToken(record.id, tx))) return false;
+    await tx.run(
+      `UPDATE users SET password_hash = :passwordHash, updated_at = SYSTIMESTAMP WHERE id = :id`,
+      { passwordHash, id: uuidToBuf(user.id) },
+    );
+    await sessions.spendAllPasswordResetTokens(user.id, tx);
+    await sessions.revokeAllForUser(user.id, tx);
+    await users.markEmailVerified(user.id, tx);
+    return true;
+  });
+  if (!spent) {
+    throw new AppError(409, "link_used", "This link was already used. Ask for a new one if you still need it.");
+  }
 }

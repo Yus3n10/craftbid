@@ -325,11 +325,18 @@
     opacity: 0.85;
   }
 
+  /*
+   * Small labels: "Starting budget", "Their price", "Help". These were 11px
+   * tracked capitals in the faintest ink, used 61 times, including on the
+   * prices people decide by. That is the stock template look, and it made the
+   * most important numbers' labels the hardest text on the page to read.
+   * Sentence case at 13px in the body's softer ink reads as a label without
+   * shouting or disappearing.
+   */
   .eyebrow {
-    font-size: 0.6875rem;
+    font-size: 0.8125rem;
+    line-height: 1.25rem;
     font-weight: 600;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--color-ink-faint);
+    color: var(--color-ink-soft);
   }
 }

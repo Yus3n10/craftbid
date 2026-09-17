@@ -12,6 +12,7 @@ import { CommentThread } from "./CommentThread.js";
 import { FeedPost } from "./FeedPost.js";
 import { ReactionBar, ReactionSummaryLine } from "./ReactionBar.js";
 import { ShareMenu } from "./ShareMenu.js";
+import { ShareMoreMenu } from "./PostMenus.js";
 
 /**
  * The original post, loaded fresh, in its own card: its own reactions and
@@ -66,6 +67,7 @@ export function SharedPostCard({ post, share }: { post: FeedItemDto; share: Shar
             </p>
             <p className="text-xs text-ink-faint">{daysAgo(share.createdAt)}</p>
           </div>
+          <ShareMoreMenu post={post} sharerId={share.user.id} />
         </header>
 
         {share.caption && (

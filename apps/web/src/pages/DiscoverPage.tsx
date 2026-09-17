@@ -45,7 +45,7 @@ export function DiscoverPage() {
       <PageHeading
         eyebrow="For clients"
         title="Discover work"
-        description="Pieces made by artists on Craftbid. Find someone whose hand you like, then invite them to bid on your request."
+        description="Pieces made by artists on Craftbid. Find someone whose work you like, then post a request in their craft."
         actions={
           user?.role === "artist" ? (
             <ButtonLink to="/posts/new">Add to portfolio</ButtonLink>

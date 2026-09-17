@@ -78,6 +78,14 @@ export function LoginPage() {
               />
             )}
           </Field>
+          <p className="-mt-3 text-sm">
+            <Link
+              to="/forgot-password"
+              className="inline-block py-2 font-medium text-indigo hover:underline"
+            >
+              Forgot your password?
+            </Link>
+          </p>
 
           {!BEARER_MODE && <RememberMe checked={remember} onChange={setRemember} />}
 

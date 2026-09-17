@@ -31,6 +31,8 @@ const CommissionsPage = lazy(async () => ({ default: (await import("./pages/Comm
 const CommissionDetailPage = lazy(async () => ({ default: (await import("./pages/CommissionDetailPage.js")).CommissionDetailPage }));
 const NotificationsPage = lazy(async () => ({ default: (await import("./pages/NotificationsPage.js")).NotificationsPage }));
 const SettingsPage = lazy(async () => ({ default: (await import("./pages/SettingsPage.js")).SettingsPage }));
+const ForgotPasswordPage = lazy(async () => ({ default: (await import("./pages/ForgotPasswordPage.js")).ForgotPasswordPage }));
+const ResetPasswordPage = lazy(async () => ({ default: (await import("./pages/ResetPasswordPage.js")).ResetPasswordPage }));
 const VerifyEmailPage = lazy(async () => ({ default: (await import("./pages/VerifyEmailPage.js")).VerifyEmailPage }));
 const SavedPostsPage = lazy(async () => ({ default: (await import("./pages/SavedPostsPage.js")).SavedPostsPage }));
 const ActivityPage = lazy(async () => ({ default: (await import("./pages/ActivityPage.js")).ActivityPage }));
@@ -145,6 +147,8 @@ export function App() {
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
         <Route path="verify-email" element={<VerifyEmailPage />} />
+        <Route path="forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="reset-password" element={<ResetPasswordPage />} />
 
         <Route path="postings" element={<PostingsPage />} />
         <Route

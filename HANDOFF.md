@@ -6,15 +6,17 @@ pick this project up cold: what it is, where every piece lives, how it is
 deployed, what broke and how it was fixed, what the client decided, and what is
 still open.
 
-> **Start here if you are picking this up on or after 2026-09-17.** Two things
-> are unfinished: the balance-option change is built but NOT committed or
-> deployed (section 19), and a security, SEO and AI-slop audit produced a fix
-> list that has NOT been started (section 18). Do section 19 first, then 18.
+> **Start here if you are picking this up on or after 2026-09-18.** The
+> balance-option change (section 19) and the second audit's fixes (section 20)
+> were committed and deployed on 2026-09-18, as two commits on `master`. Section
+> 20 corrects section 18.1, whose diagnosis was wrong. What is still open is in
+> 20.7 and the legal review items.
 
-State at the time of writing: **everything below is committed, pushed and live,
-except what section 19 lists.**
-Latest feature commit `87ceeb3` on `master`. CI green. Production database at
-migration 020. Email verification switched on in production through Brevo.
+State at the time of writing: **everything below is committed, pushed and live.**
+Production database at migration 022. `PROXY_SHARED_SECRET` set in Render and
+as a Cloudflare Worker secret, and ImageKit "Restrict unnamed image
+transformations" switched on, by the developer on 2026-09-18. Email
+verification switched on in production through Brevo.
 **`OWNER_ALERT_EMAIL` must be set in Render** for the daily summary (section 9).
 
 ---
@@ -39,7 +41,8 @@ migration 020. Email verification switched on in production through Brevo.
 16. Open items and future plans
 17. Code worth knowing
 18. Audit of 2026-09-17: findings and the fix plan
-19. Uncommitted work at the time of writing
+19. Balance options change (shipped 2026-09-18)
+20. Second audit of 2026-09-17 and its fixes (shipped 2026-09-18)
 
 ---
 
@@ -327,6 +330,7 @@ future code path can forget it.
 | 019 | chat-images | chat_files; messages.file_id (unique, cascade); messages.body nullable; ck_messages_content (text or image) |
 | 021 | balance-after-delivery | balance_method limited to 'transfer' (now meaning pay after delivery) and 'meetup'; cod rows moved to transfer |
 | 020 | staff-tools | job_runs; conversations.client_/artist_nudged_for_read; resolve_problem and payment_file_viewed actions; problem and payment targets; chat_unread type |
+| 022 | password-reset | password_reset_tokens (SHA-256 only, single use, 1 hour). Section 20 |
 
 Rules enforced by the database:
 
@@ -744,6 +748,7 @@ in `main.tsx`) and precached by the service worker.
 | `MAIL_FROM_NAME` | Craftbid | |
 | `PUBLIC_WEB_URL` | http://localhost:5173 | Where email links point |
 | `OWNER_ALERT_EMAIL` | unset | Daily summary recipient; unset skips the summary with a log line |
+| `PROXY_SHARED_SECRET` | unset | 32+ chars, same value as the Worker secret of that name. Lets rate limits tell visitors apart behind the Worker (20.1). Unset logs a warning in production and every visitor shares one bucket |
 
 No other variables were added for chat, moderation, cropping, the home feed,
 chat images or the jobs.
@@ -1319,6 +1324,13 @@ and deploy only when told.
   present, autocomplete on auth forms, `prefers-reduced-motion` honoured.
 
 ### 18.1 BLOCKER: rate limits bypassable on the public Render origin
+
+> **Corrected in section 20.1.** Measured on production: this bypass does not
+> work (Cloudflare refuses a client-written CF-Connecting-IP with error 1000,
+> and a fake X-Forwarded-For opens no new bucket). The real bug is the
+> opposite: every visitor through the site shares one bucket. The text below
+> is kept as the original audit said it.
+
 - **Where:** `apps/api/src/app.ts:69` (`clientAddress`), `app.ts:100`
   (`trustProxy: true`), `apps/web/worker/api-proxy.ts` (`upstreamHeaders`).
 - **Problem:** `craftbid-api.onrender.com` answers the internet directly.
@@ -1501,10 +1513,10 @@ and deploy only when told.
 - A professional penetration test is advised before real growth, since the site
   holds payment records and receipts.
 
-## 19. Uncommitted work at the time of writing
+## 19. Balance options change (shipped 2026-09-18)
 
-**Balance options changed (2026-09-16), built and all suites green, NOT
-committed, NOT deployed.** Decision 14 in section 14 and section 8 "Payment
+**Balance options changed (2026-09-16). Committed and deployed 2026-09-18,
+production migrated to 021.** Decision 14 in section 14 and section 8 "Payment
 records" describe it. Files:
 
 - `packages/shared/src/constants.ts` (BALANCE_METHODS `["transfer", "meetup"]`,
@@ -1550,3 +1562,114 @@ confirmed.
 - Chromium writes canvas WebP as VP8X, not VP8 (13.36).
 - Production checks run from Playwright scripts in the session scratchpad; they
   are not in the repo (see 16, suggested build 4).
+
+## 20. Second audit of 2026-09-17 and its fixes
+
+A second, independent audit ran on 2026-09-17 against the code and live
+production, and its fixes were built on 2026-09-18. Committed and deployed on 2026-09-18 in
+its own commit after section 19; production is at migration 022.
+Suites after these changes: API 315, resilience 95, e2e 20, worker 15,
+typecheck clean.
+
+### 20.1 Every visitor shared one rate-limit bucket (replaces 18.1)
+- Measured: with IPv4 pinned, one address was limited calling Render directly
+  and still had a fresh bucket through the site. Cloudflare documents that a
+  Worker subrequest to another Cloudflare zone (onrender.com is one) carries
+  `CF-Connecting-IP: 2a06:98c0:3600::103` for every visitor.
+- Effect before the fix: 10 wrong passwords by anyone locked all sign-ins for
+  10 minutes; 5 sign-ups per 10 minutes, 30 bids per hour and 300 requests a
+  minute were site-wide.
+- Fix: the Worker sends `x-craftbid-client-ip` and `x-craftbid-proxy: <secret>`
+  and removes any the visitor sent (`worker/api-proxy.ts`); `clientAddress` in
+  `app.ts` believes the address only when the secret matches (constant-time).
+  Without the secret nothing changes, so a deploy cannot lock anyone out.
+- **Needs `PROXY_SHARED_SECRET` set in Render AND as a Cloudflare Worker secret**
+  (dashboard: Workers, craftbid, Settings, Variables and Secrets, type Secret).
+- Also added: a per-account failed sign-in throttle (`lib/login-throttle.ts`,
+  10 failures in 15 minutes locks that account's sign-in, right password
+  included; in memory; off in tests like the limiter).
+
+### 20.2 Bid and request state races
+- Reproduced: accept and withdraw on one bid, sent together, both answered 200
+  (same for accept and decline). Status was read, then overwritten without a
+  condition.
+- Fix: `transitionStatus` in applications and postings repositories (`WHERE
+  status = :from`, false means someone else got there first, answered 409).
+  Used by accept, decline, withdraw, client cancel and staff removal.
+- **Lock order matters:** accept claims the request row before the bid row, the
+  same order cancel uses. The opposite order deadlocked (Oracle waits about 3
+  seconds per deadlock before failing one side).
+- Tests: `marketplace-races.test.ts` (12 concurrent trials per case).
+
+### 20.3 Password reset (new)
+- `POST /auth/forgot-password {email}`: always 204, sends in the background, at
+  most 1 a minute and 3 an hour per account (checked under a row lock; two
+  simultaneous requests sent two emails before it). `POST /auth/reset-password
+  {token, password}`: 204; 400 `link_invalid`, 409 `link_used`, 410
+  `link_expired`. Revokes every session, spends every reset link, marks the
+  email confirmed, does not sign in.
+- Web: `/forgot-password`, `/reset-password` (token stripped from the address
+  bar), "Forgot your password?" on sign in. Migration 022.
+
+### 20.4 Closing your own account (new)
+- `POST /me/delete-account {password}` (`modules/users/account-deletion.*`).
+  Refused with a commission in progress, an open problem, or staff access.
+  Settles like staff removal (requests cancelled, bids withdrawn, posts and
+  comments hidden, shares and reactions deleted), re-checks for a new
+  commission inside the transaction, then scrubs email and username (freed for
+  a new account), name ("Removed account"), bio, location, pictures, links,
+  payout details, saved posts, interest scores, notifications and tokens.
+  Commissions, payment records, reviews and chat stay for the other person.
+- Web: "Close your account" section at the bottom of Settings.
+- Not done: images in ImageKit are not deleted.
+
+### 20.5 Smaller fixes
+- `SameSite=Lax` everywhere (`lib/tokens.ts`); the Origin check stays. **Verify
+  sign-in, refresh and sign-out on production WebKit after deploy** (13.2, 13.11).
+- `apps/web/public/_headers`: frame refusal, nosniff, Referrer-Policy,
+  Permissions-Policy. Verified with `wrangler dev`, including SPA fallback
+  routes; check with `curl -sI` on production after deploy.
+- sharp 0.35.4 (libvips and libheif advisories).
+- Copy: Join page no longer says the account type cannot be switched; Discover
+  no longer mentions inviting artists; footer "Browse work".
+- Design: `.eyebrow` is 13px sentence case in `ink-soft` (was 11px tracked
+  capitals in the faintest ink on 61 labels, including prices); the signed-out
+  hero is one entrance, one colour, 48px, with each sentence on its own line;
+  the category strip shows on phones only (the feed sidebar lists the same
+  crafts beside the feed on wide screens).
+- `release.yml` third-party actions pinned to commit SHAs.
+- Removing your own things from the feed (reported by the developer 2026-09-18):
+  the "..." menu (`components/PostMenus.tsx`) now gives a post's artist
+  "Edit post" and "Delete post", and a shared card's sharer "Remove share",
+  each with a confirmation. Before, a share could only be removed from inside
+  the Share dropdown, and no screen called `DELETE /posts/:id` at all, so
+  artists could not delete their own posts. Other people still see Report.
+  Resilience tests in `shares-and-captions.spec.ts`; suite now 98.
+
+### 20.6 To ship section 20 (after section 19)
+1. Generate a 32+ character random value. Add it as `PROXY_SHARED_SECRET` in
+   Render and as a Worker secret in Cloudflare.
+2. `ENV_FILE=.env.adb pnpm --filter @craftbid/api migrate`, then
+   `migrate:status` shows 022.
+3. Commit and push. Watch CI and both deploys.
+4. Check: `curl -sI https://craftbid.pgeagoni.workers.dev/` shows
+   `x-frame-options: DENY`; sign in, refresh and sign out on WebKit (iPhone 13
+   profile); request a password reset to a real inbox.
+
+### 20.7 Still open from the second audit (needs the developer or client)
+- ImageKit accepts unsigned unnamed transformations: a 57 KB image was served
+  as a 15.4 MB PNG, so ~1,300 requests can exhaust 20 GB/month. Turn on
+  "Restrict unnamed transformations" in the ImageKit dashboard, then open one
+  receipt in the admin screen (receipts use a signed `tr:orig-true` URL, and
+  whether signed URLs are exempt was not confirmed).
+- Production test content on the public home page ("Test Post" with a puppy
+  photo, open for bids; the share captioned "sd") and the display name "Yusen
+  Admin", which advertises the staff account.
+- Legal review (Philippine lawyer): privacy notice and terms; whether the
+  interest-ranked feed counts as profiling that needs NPC registration (NPC
+  Circular 2022-04); whether Craftbid is an "e-marketplace" under RA 11967
+  section 21 (seller name with government ID, address, contact details); a
+  breach procedure (NPC Circular 16-03, 72 hours).
+- Lower: registration says which emails are registered; refresh tokens have no
+  reuse detection; resend-verification has the same limit race 20.3 fixed for
+  resets; tap targets from 18.9; SEO items 18.6 and 18.7.

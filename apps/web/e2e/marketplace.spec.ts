@@ -59,10 +59,10 @@ test.describe("marketplace", () => {
     ).toBeVisible();
     await expect(page.getByRole("heading", { name: "I want something made" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "I make things" })).toBeVisible();
-    // Categories are now listed in two places on the home page: the strip
-    // under the hero and the feed's sidebar. Either proves the point.
+    // Categories are listed once per screen: the strip under the hero on a
+    // phone, the feed's sidebar on a wide screen. Whichever is showing counts.
     await expect(
-      page.getByRole("link", { name: "Crochet", exact: true }).first(),
+      page.getByRole("link", { name: "Crochet", exact: true }).filter({ visible: true }).first(),
     ).toBeVisible();
   });
 

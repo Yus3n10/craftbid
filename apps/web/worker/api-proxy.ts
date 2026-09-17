@@ -56,18 +56,30 @@ export function upstreamUrl(requestUrl: string, apiOrigin: string): string {
  *   Cloudflare sets itself on this request; this is for logs.)
  * - X-Forwarded-Host and -Proto describe the site the browser was on.
  * - Host is dropped, so the runtime sets it from the upstream URL.
+ * - X-Craftbid-Client-Ip carries the visitor's address, vouched for by
+ *   X-Craftbid-Proxy. Render is on Cloudflare as well, and Cloudflare sets
+ *   CF-Connecting-IP on this hop to one address shared by every visitor, so
+ *   without these the API's rate limits treat the whole site as one person.
+ *   Whatever the visitor sent under either name is removed first.
  */
 export function upstreamHeaders(
   incoming: Headers,
   requestUrl: string,
   clientIp: string | null,
+  proxySecret?: string,
 ): Headers {
   const headers = new Headers(incoming);
   const url = new URL(requestUrl);
 
   headers.delete("host");
   headers.delete("x-forwarded-for");
+  headers.delete("x-craftbid-proxy");
+  headers.delete("x-craftbid-client-ip");
   if (clientIp) headers.set("x-forwarded-for", clientIp);
+  if (clientIp && proxySecret) {
+    headers.set("x-craftbid-proxy", proxySecret);
+    headers.set("x-craftbid-client-ip", clientIp);
+  }
   headers.set("x-forwarded-host", url.host);
   headers.set("x-forwarded-proto", url.protocol.replace(":", ""));
 
@@ -98,13 +110,14 @@ export function buildUpstreamRequest(
   request: Request,
   apiOrigin: string,
   clientIp: string | null,
+  proxySecret?: string,
 ): UpstreamRequest {
   const hasBody = request.method !== "GET" && request.method !== "HEAD";
   return {
     url: upstreamUrl(request.url, apiOrigin),
     init: {
       method: request.method,
-      headers: upstreamHeaders(request.headers, request.url, clientIp),
+      headers: upstreamHeaders(request.headers, request.url, clientIp, proxySecret),
       body: hasBody ? request.body : null,
       redirect: "manual",
       cache: "no-store",
@@ -136,11 +149,13 @@ export async function proxyToApi(
   request: Request,
   apiOrigin: string,
   fetchImpl: typeof fetch = fetch,
+  proxySecret?: string,
 ): Promise<Response> {
   const { url, init } = buildUpstreamRequest(
     request,
     apiOrigin,
     request.headers.get("cf-connecting-ip"),
+    proxySecret,
   );
   try {
     // Returned as is: status, body and every Set-Cookie header pass through.

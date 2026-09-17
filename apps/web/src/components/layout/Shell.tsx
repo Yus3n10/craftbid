@@ -89,7 +89,7 @@ export function Shell() {
                   </li>
                   <li>
                     <Link to="/discover" className="hover:text-ink hover:underline">
-                      Browse artists
+                      Browse work
                     </Link>
                   </li>
                 </ul>

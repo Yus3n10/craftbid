@@ -33,10 +33,9 @@ describe("authorization boundaries", () => {
   });
 
   /**
-   * Session cookies are SameSite=None in production, since the web app and the
-   * API are on different domains and a Lax cookie is never sent between them.
-   * That makes an Origin check the thing standing between a logged-in user and
-   * any site that wants to act as them.
+   * Session cookies are SameSite=Lax, and the Origin check stands behind that
+   * in case a browser sends the cookie anyway. It is tested on its own so it
+   * keeps working whatever the cookie attribute becomes.
    */
   describe("cross-site request forgery", () => {
     it("refuses a cookie-authenticated write from a foreign origin", async () => {

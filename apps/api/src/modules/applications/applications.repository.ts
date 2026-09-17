@@ -344,6 +344,29 @@ export async function attachSamples(
   }
 }
 
+/**
+ * Moves a bid out of `from` into `to`, and only if it is still in `from`.
+ *
+ * The caller checked the status before its transaction began, and the other
+ * party can act in between: an artist withdrawing while the client accepts,
+ * or a double tap sending accept and decline together. False means someone
+ * else got there first and nothing was changed.
+ */
+export async function transitionStatus(
+  id: string,
+  from: ApplicationStatus,
+  to: ApplicationStatus,
+  tx: Queryable,
+): Promise<boolean> {
+  const changed = await tx.run(
+    `UPDATE applications SET status = :toStatus, updated_at = SYSTIMESTAMP
+      WHERE id = :id AND status = :fromStatus`,
+    { id: uuidToBuf(id), toStatus: to, fromStatus: from },
+  );
+  return changed === 1;
+}
+
+/** Unconditional; for the seed script. Services use transitionStatus. */
 export async function setStatus(
   id: string,
   status: ApplicationStatus,

@@ -13,6 +13,12 @@ import { keepApiAwake, type ScheduledController } from "./keepalive.ts";
 interface Env {
   /** The API's own origin. Set in wrangler.jsonc, not a secret. */
   API_ORIGIN: string;
+  /**
+   * A Worker secret (`wrangler secret put PROXY_SHARED_SECRET`), the same
+   * value as the API's. Lets the API believe the visitor address this Worker
+   * forwards; see upstreamHeaders.
+   */
+  PROXY_SHARED_SECRET?: string;
   /** Bound by Cloudflare so this script can still serve the built site. */
   ASSETS: { fetch: (request: Request) => Promise<Response> };
 }
@@ -20,7 +26,9 @@ interface Env {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     if (isApiPath(new URL(request.url).pathname)) {
-      return proxyToApi(request, env.API_ORIGIN);
+      // Wrapped rather than passed as `fetch`: a detached fetch can throw
+      // "Illegal invocation" in the Workers runtime.
+      return proxyToApi(request, env.API_ORIGIN, (url, init) => fetch(url, init), env.PROXY_SHARED_SECRET);
     }
     // Anything else that reaches here gets exactly what the asset server
     // would have given it, so routing through the script changes nothing.

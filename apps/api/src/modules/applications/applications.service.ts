@@ -142,6 +142,19 @@ export async function accept(
 
   try {
     await withTransaction(async (tx) => {
+      // Both checks above were read before this transaction. Claiming the bid
+      // and the request here, conditionally, is what stops a withdrawal or a
+      // decline that lands in between from being overwritten.
+      //
+      // The request row first, then bids: cancelling a request locks in the
+      // same order, and the opposite order deadlocked the two (measured).
+      if (!(await postingsRepo.transitionStatus(context.postingId, "open", "in_progress", tx))) {
+        throw conflict("This request is no longer open. Refresh to see where it stands.");
+      }
+      if (!(await repo.transitionStatus(applicationId, "pending", "accepted", tx))) {
+        throw conflict("This bid changed a moment ago. Refresh to see where it stands.");
+      }
+
       // Collected before they are rejected, so each artist can be told.
       const losingArtists = await tx.many<{ artistId: Buffer }>(
         `SELECT artist_id FROM applications
@@ -152,7 +165,6 @@ export async function accept(
         },
       );
 
-      await repo.setStatus(applicationId, "accepted", tx);
       await postingsRepo.rejectPendingApplications(
         context.postingId,
         tx,
@@ -172,8 +184,6 @@ export async function accept(
         },
         tx,
       );
-
-      await postingsRepo.setStatus(context.postingId, "in_progress", tx);
 
       await notifications.notify(
         {
@@ -225,7 +235,9 @@ export async function reject(
   }
 
   await withTransaction(async (tx) => {
-    await repo.setStatus(applicationId, "rejected", tx);
+    if (!(await repo.transitionStatus(applicationId, "pending", "rejected", tx))) {
+      throw conflict("This bid changed a moment ago. Refresh to see where it stands.");
+    }
     await notifications.notify(
       {
         userId: context.artistId,
@@ -259,7 +271,11 @@ export async function withdraw(
     throw badRequest(`This application has already been ${context.status}.`);
   }
 
-  await withTransaction((tx) => repo.setStatus(applicationId, "withdrawn", tx));
+  await withTransaction(async (tx) => {
+    if (!(await repo.transitionStatus(applicationId, "pending", "withdrawn", tx))) {
+      throw conflict("This bid changed a moment ago. Refresh to see where it stands.");
+    }
+  });
 
   const application = await repo.findById(applicationId);
   if (!application) throw notFound();

@@ -1,4 +1,4 @@
-import sharp from "sharp";
+import sharp, { type Metadata, type Sharp } from "sharp";
 import { UPLOAD } from "@craftbid/shared";
 import { newId } from "../../db/ids.js";
 import { badRequest } from "../../lib/errors.js";
@@ -78,8 +78,8 @@ export async function normaliseImage(
     throw badRequest("That file is not a JPEG, PNG or WebP image.");
   }
 
-  let pipeline: sharp.Sharp;
-  let metadata: sharp.Metadata;
+  let pipeline: Sharp;
+  let metadata: Metadata;
   try {
     // limitInputPixels caps decoded size, so a small file that expands to an
     // enormous bitmap cannot exhaust memory on a 512 MB host.

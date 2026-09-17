@@ -58,3 +58,48 @@ export function verificationEmail(input: {
     html,
   };
 }
+
+/** The password reset email. Same plain shape as the verification email. */
+export function passwordResetEmail(input: {
+  to: string;
+  displayName: string;
+  link: string;
+  minutesValid: number;
+}): MailMessage {
+  const name = input.displayName.trim() || "there";
+  const text = [
+    `Hi ${name},`,
+    "",
+    "Someone asked to reset the password for your Craftbid account. To choose a new one, open:",
+    input.link,
+    "",
+    `The link works once and expires in ${input.minutesValid} minutes.`,
+    "If you did not ask for this, ignore this email. Your password stays the same.",
+    "",
+    "Craftbid",
+  ].join("\n");
+
+  const html = `<!doctype html>
+<html>
+  <body style="margin:0;padding:24px;background:#f7f4ee;font-family:Arial,Helvetica,sans-serif;color:#1a1f1d">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fffdf8;border:1px solid #ded5c4;border-radius:10px">
+      <tr><td style="padding:28px">
+        <p style="margin:0 0 16px;font-size:16px">Hi ${escapeHtml(name)},</p>
+        <p style="margin:0 0 24px;font-size:16px;line-height:1.5">Someone asked to reset the password for your Craftbid account.</p>
+        <p style="margin:0 0 24px"><a href="${escapeHtml(input.link)}" style="display:inline-block;background:#1f3a4d;color:#fffdf8;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:bold">Choose a new password</a></p>
+        <p style="margin:0 0 8px;font-size:13px;color:#4a5450;line-height:1.5">The link works once and expires in ${input.minutesValid} minutes. If the button does not work, copy this into your browser:</p>
+        <p style="margin:0 0 24px;font-size:13px;word-break:break-all"><a href="${escapeHtml(input.link)}" style="color:#1f3a4d">${escapeHtml(input.link)}</a></p>
+        <p style="margin:0;font-size:13px;color:#68726d">If you did not ask for this, ignore this email. Your password stays the same.</p>
+      </td></tr>
+    </table>
+  </body>
+</html>`;
+
+  return {
+    to: input.to,
+    toName: input.displayName,
+    subject: "Reset your Craftbid password",
+    text,
+    html,
+  };
+}

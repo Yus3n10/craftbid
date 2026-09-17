@@ -164,7 +164,7 @@ test.describe("on a phone", () => {
     const away = await headerBox(page);
     expect(away.y + away.height, "hidden after reading down").toBeLessThanOrEqual(1);
 
-    await page.getByRole("contentinfo").getByRole("link", { name: "Browse artists" }).click();
+    await page.getByRole("contentinfo").getByRole("link", { name: "Browse work" }).click();
     await expect(page).toHaveURL(/\/discover/);
     await expect(page.getByRole("heading", { name: "Discover work", level: 1 })).toBeVisible();
 

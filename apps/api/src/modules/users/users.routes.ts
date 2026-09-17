@@ -2,14 +2,16 @@ import type { FastifyPluginAsync } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import {
+  deleteAccountSchema,
   roleSwitchSchema,
   updateArtistProfileSchema,
   updateExternalLinksSchema,
   updateProfileSchema,
   usernameSchema,
 } from "@craftbid/shared";
-import { REFRESH_COOKIE } from "../../lib/tokens.js";
+import { ACCESS_COOKIE, REFRESH_COOKIE, clearCookieOptions } from "../../lib/tokens.js";
 import { setSession } from "../auth/auth.routes.js";
+import { closeOwnAccount } from "./account-deletion.service.js";
 import * as roleSwitch from "./role-switch.service.js";
 import * as service from "./users.service.js";
 
@@ -51,6 +53,23 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
       schema: { body: updateExternalLinksSchema },
     },
     async (request) => service.setExternalLinks(request.user!.id, request.body.links),
+  );
+
+  // POST rather than DELETE /me: a body on DELETE is dropped by some proxies,
+  // and the password has to arrive.
+  app.post(
+    "/me/delete-account",
+    {
+      preHandler: fastify.requireAuth,
+      schema: { body: deleteAccountSchema },
+      config: { rateLimit: { max: 5, timeWindow: "15 minutes" } },
+    },
+    async (request, reply) => {
+      await closeOwnAccount(request.user!.id, request.body.password);
+      reply.clearCookie(ACCESS_COOKIE, clearCookieOptions());
+      reply.clearCookie(REFRESH_COOKIE, clearCookieOptions());
+      return reply.code(204).send();
+    },
   );
 
   app.get(

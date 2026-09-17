@@ -72,6 +72,15 @@ const envSchema = z
     // Who gets the daily summary of reports, bug reports and commission
     // problems. Unset means the summary is skipped, with a log line.
     OWNER_ALERT_EMAIL: z.string().trim().email().optional(),
+
+    // Shared with the site's Worker, which uses it to vouch for the visitor
+    // address it forwards (see clientAddress in app.ts). Unset, every visitor
+    // who comes through the site shares one rate-limit bucket.
+    PROXY_SHARED_SECRET: z
+      .string()
+      .trim()
+      .min(32, "PROXY_SHARED_SECRET must be at least 32 characters")
+      .optional(),
   })
   .superRefine((env, ctx) => {
     if (env.STORAGE_DRIVER === "imagekit") {
@@ -183,6 +192,9 @@ export const config = {
     accessTokenTtl: env.ACCESS_TOKEN_TTL,
     refreshTokenTtlDays: env.REFRESH_TOKEN_TTL_DAYS,
     sessionRefreshTtlHours: env.SESSION_REFRESH_TTL_HOURS,
+  },
+  proxy: {
+    sharedSecret: env.PROXY_SHARED_SECRET,
   },
   corsOrigins: env.CORS_ORIGINS.split(",")
     .map((origin) => origin.trim())

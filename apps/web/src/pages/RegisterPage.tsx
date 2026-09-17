@@ -94,8 +94,8 @@ export function RegisterPage() {
       <h1 className="font-display text-3xl">Join Craftbid</h1>
       <ThreadRule className="mt-4 w-16" />
       <p className="mt-4 text-ink-soft">
-        Choose how you will use Craftbid. This decides what you can do, and it
-        cannot be switched later.
+        Choose how you will use Craftbid. This decides what you can do. You can
+        switch later in Settings, once you have nothing open.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-6" noValidate>

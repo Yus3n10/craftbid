@@ -129,8 +129,12 @@ export async function removePosting(staffId: string, postingId: string, input: M
     );
   }
   await withTransaction(async (tx) => {
+    if (!(await repo.removePosting(postingId, tx))) {
+      throw badRequest(
+        "An artist is already working on this request, or it is closed. Handle it through the commission instead.",
+      );
+    }
     await postingsRepo.rejectPendingApplications(postingId, tx);
-    await repo.removePosting(postingId, tx);
     await notifications.notify(
       {
         userId: posting.clientId,

@@ -19,38 +19,24 @@ function Hero() {
   return (
     <section className="border-b border-fiber bg-paper-raised">
       {/*
-        The four lines arrive in the order they are read, roughly a beat apart.
-        Slower than the grids elsewhere because this is the first thing anyone
-        sees and there is nothing behind it competing for attention.
+        One entrance for the whole block. Each line used to rise in a beat
+        apart, with a two-colour headline at 60px on top: the staggered fade-up
+        hero every template ships. The sentence does the work on its own, and
+        the pieces in the ribbon below are what should draw the eye.
       */}
-      <div className="mx-auto max-w-6xl px-4 pb-14 pt-16 sm:pt-24">
-        <p className="eyebrow rise-in" style={{ animationDelay: "0ms" }}>
-          Handmade in the Philippines
-        </p>
-        <h1 className="mt-4 max-w-3xl font-display text-4xl leading-[1.08] sm:text-6xl">
-          <span className="block rise-in" style={{ animationDelay: "80ms" }}>
-            Someone wants a thing made by hand.
-          </span>
-          <span
-            className="block rise-in text-indigo"
-            style={{ animationDelay: "180ms" }}
-          >
-            Someone can make it.
-          </span>
+      <div className="rise-in mx-auto max-w-6xl px-4 pb-14 pt-14 sm:pt-20">
+        <p className="eyebrow">Handmade in the Philippines</p>
+        <h1 className="mt-3 max-w-5xl text-balance font-display text-4xl leading-[1.1] sm:text-5xl">
+          <span className="block">Someone wants a thing made by hand.</span>
+          <span className="block">Someone can make it.</span>
         </h1>
-        <p
-          className="rise-in mt-6 max-w-xl text-lg text-ink-soft"
-          style={{ animationDelay: "280ms" }}
-        >
+        <p className="mt-6 max-w-xl text-lg text-ink-soft">
           Craftbid is where Filipino crafters and the people who commission them
           find each other. Post what you want made, or bid on work that suits
           your hands.
         </p>
 
-        <div
-          className="rise-in mt-12 grid gap-px overflow-hidden rounded-lg border border-fiber bg-fiber sm:grid-cols-2"
-          style={{ animationDelay: "380ms" }}
-        >
+        <div className="mt-10 grid gap-px overflow-hidden rounded-lg border border-fiber bg-fiber sm:grid-cols-2">
           <div className="bg-paper p-7">
             <h2 className="font-display text-2xl">I want something made</h2>
             <p className="mt-2 text-sm text-ink-soft">
@@ -89,9 +75,15 @@ function Hero() {
   );
 }
 
+/**
+ * Phones only. On a wide screen the feed's sidebar lists the same crafts right
+ * beside it, and showing both put the list on screen twice. On a phone that
+ * sidebar sits below the whole feed, so this strip is how a visitor finds a
+ * craft.
+ */
 function CategoryStrip() {
   return (
-    <section className="border-b border-fiber">
+    <section className="border-b border-fiber lg:hidden">
       <div className="mx-auto max-w-6xl px-4 py-10">
         <h2 className="eyebrow mb-4">Crafts on Craftbid</h2>
         <ul className="flex flex-wrap gap-2">

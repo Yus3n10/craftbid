@@ -222,6 +222,31 @@ describe("authentication", () => {
     expect(refresh.statusCode).toBe(401);
   });
 
+  it("sends session cookies as SameSite=Lax, the same in every environment", async () => {
+    // The web app calls the API on its own origin through the site Worker, so
+    // nothing needs a cross-site cookie any more. SameSite=None let a framed or
+    // cross-site page carry the session; Lax does not. There is deliberately
+    // no production-only branch left for this test to miss.
+    const app = await getTestApp();
+    const registration = await app.inject({
+      method: "POST",
+      url: "/auth/register",
+      payload: {
+        email: "samesite@example.com",
+        username: "samesiteuser",
+        password: "a sufficiently long password",
+        displayName: "Same Site",
+        role: "client",
+      },
+    });
+    const cookies = registration.headers["set-cookie"] as string[];
+    for (const name of ["craftbid_at", "craftbid_rt"]) {
+      const header = cookies.find((value) => value.startsWith(`${name}=`))!.toLowerCase();
+      expect(header).toContain("samesite=lax");
+      expect(header).toContain("httponly");
+    }
+  });
+
   it("clears cookies with the attributes they were set with", async () => {
     const app = await getTestApp();
 

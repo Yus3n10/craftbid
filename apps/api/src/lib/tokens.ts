@@ -102,18 +102,15 @@ export function cookieOptions(maxAgeSeconds?: number) {
     httpOnly: true,
     secure: config.isProduction,
     /**
-     * The web app and the API sit on different registrable domains, because
-     * the free tiers that host them have no way to share one. Every API call
-     * is therefore cross-site, and a Lax cookie is not sent on those: signing
-     * in succeeded and the very next request came back 401.
-     *
-     * "none" is what makes the session usable at all here, and it requires
-     * Secure, which is why it is tied to production. The CSRF exposure it
-     * would otherwise open is closed by requireTrustedOrigin in app.ts, which
-     * rejects any cookie-authenticated mutation that does not carry an
-     * allowed Origin.
+     * Lax everywhere. This was "none" in production while the web app called
+     * the API on its own domain, which made every call cross-site. Since
+     * 2026-09-12 the site calls /api on its own origin through its Worker, so
+     * the cookies are first-party and Lax is sent on every request the app
+     * makes and on links followed into the site. "none" had kept the session
+     * attached to cross-site and framed requests for no remaining reason.
+     * The Origin check in app.ts still guards cookie-authenticated writes.
      */
-    sameSite: config.isProduction ? ("none" as const) : ("lax" as const),
+    sameSite: "lax" as const,
     path: "/",
     /**
      * Absent unless "Keep me logged in" was ticked. A cookie with neither
@@ -130,8 +127,8 @@ export function cookieOptions(maxAgeSeconds?: number) {
  *
  * A browser only overwrites a cookie when the incoming Set-Cookie matches the
  * existing one on name, domain, path AND SameSite. Clearing with just a path,
- * which is what this did, produced a Set-Cookie without SameSite=None or
- * Secure. The browser either treats that as a different cookie or rejects it
+ * which is what this did (while cookies were SameSite=None), produced a
+ * Set-Cookie without SameSite=None or Secure. The browser either treats that as a different cookie or rejects it
  * outright, since SameSite=None without Secure is invalid, and the session
  * survived a sign-out that had already returned 204.
  *

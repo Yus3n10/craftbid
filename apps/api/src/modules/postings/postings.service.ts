@@ -8,7 +8,7 @@ import type {
 import { LIMITS } from "@craftbid/shared";
 import { newId } from "../../db/ids.js";
 import { withTransaction } from "../../db/query.js";
-import { badRequest, forbidden, notFound } from "../../lib/errors.js";
+import { badRequest, conflict, forbidden, notFound } from "../../lib/errors.js";
 import * as imagesRepo from "../images/images.repository.js";
 import type { AuthUser } from "../../plugins/auth.plugin.js";
 import * as repo from "./postings.repository.js";
@@ -199,7 +199,11 @@ export async function cancelPosting(
   }
 
   await withTransaction(async (tx) => {
-    await repo.setStatus(postingId, "cancelled", tx);
+    // Conditional on the status read above, so an artist being chosen in the
+    // same moment is not overwritten by a cancel that did not know about it.
+    if (!(await repo.transitionStatus(postingId, existing.status, "cancelled", tx))) {
+      throw conflict("This request changed a moment ago. Refresh and try again.");
+    }
     // Accepted applications are left alone: cancelling mid-commission is
     // handled through the commission, which owns that state.
     await repo.rejectPendingApplications(postingId, tx);

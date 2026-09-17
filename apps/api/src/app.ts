@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { isIP } from "node:net";
 import cookie from "@fastify/cookie";
@@ -17,6 +18,7 @@ import { config } from "./config.js";
 import { DbError } from "./db/query.js";
 import { AppError } from "./lib/errors.js";
 import { ACCESS_COOKIE, REFRESH_COOKIE } from "./lib/tokens.js";
+import { createLoginThrottle, type LoginThrottle } from "./lib/login-throttle.js";
 import { localStorageRoot } from "./lib/storage/local.js";
 import authPlugin from "./plugins/auth.plugin.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
@@ -42,6 +44,13 @@ interface ValidationEntry {
   params?: { issue?: { path?: (string | number)[]; message?: string } };
 }
 
+declare module "fastify" {
+  interface FastifyInstance {
+    /** Per-account failed sign-in counts; null when rate limiting is off. */
+    loginThrottle: LoginThrottle | null;
+  }
+}
+
 export interface BuildAppOptions {
   /**
    * Defaults to on everywhere except tests, which register dozens of accounts
@@ -49,24 +58,51 @@ export interface BuildAppOptions {
    * covered by rate-limit.test.ts, which builds an app with this forced on.
    */
   enableRateLimit?: boolean;
+  /** Defaults to PROXY_SHARED_SECRET; tests pass their own. */
+  proxySharedSecret?: string;
+}
+
+/** Headers the site's Worker sets on every request it forwards. */
+export const PROXY_SECRET_HEADER = "x-craftbid-proxy";
+export const PROXY_CLIENT_IP_HEADER = "x-craftbid-client-ip";
+
+function sameSecret(presented: string, expected: string): boolean {
+  const a = Buffer.from(presented);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 /**
  * Who a request is from, for rate limiting.
  *
- * The web app reaches this API through its own Cloudflare Worker, so the
- * connection Render sees comes from Cloudflare, and keying limits on it would
- * put every user in one bucket: ten failed sign-ins anywhere would lock
- * everyone out. Cloudflare documents that a Worker's request to a host outside
- * Cloudflare carries the visitor's address in CF-Connecting-IP, and sets that
- * header itself, so a visitor cannot choose it by going through the Worker.
+ * The web app reaches this API through its own Cloudflare Worker. Render is
+ * itself behind Cloudflare, and Cloudflare stamps every Worker subrequest to
+ * another Cloudflare zone with one fixed CF-Connecting-IP (2a06:98c0:3600::103)
+ * whoever the visitor was. Keyed on that, every visitor shared one bucket:
+ * measured on production 2026-09-17, ten failed sign-ins by anyone would have
+ * locked everyone out, and five sign-ups in ten minutes filled the site's
+ * whole allowance.
  *
- * Someone calling Render directly can send any CF-Connecting-IP they like, but
- * they could already send any X-Forwarded-For they liked, which is what
- * trustProxy keyed on before, so this trusts nothing new. Anything that is not
- * a well-formed address falls back to the connection.
+ * So the Worker forwards the visitor's address in its own header, next to a
+ * secret only it and this API hold. That address is believed only when the
+ * secret matches. Without it, CF-Connecting-IP is used as before: on a request
+ * straight to Render, Cloudflare sets it to the real caller and refuses one the
+ * caller wrote (error 1000, measured the same day).
  */
-function clientAddress(request: FastifyRequest): string {
+function clientAddress(request: FastifyRequest, proxySecret: string | undefined): string {
+  if (proxySecret) {
+    const presented = request.headers[PROXY_SECRET_HEADER];
+    const visitor = request.headers[PROXY_CLIENT_IP_HEADER];
+    if (
+      typeof presented === "string" &&
+      sameSecret(presented, proxySecret) &&
+      typeof visitor === "string" &&
+      isIP(visitor.trim()) !== 0
+    ) {
+      return visitor.trim();
+    }
+  }
+
   const forwarded = request.headers["cf-connecting-ip"];
   if (typeof forwarded === "string" && isIP(forwarded.trim()) !== 0) {
     return forwarded.trim();
@@ -78,6 +114,7 @@ export async function buildApp(
   options: BuildAppOptions = {},
 ): Promise<FastifyInstance> {
   const enableRateLimit = options.enableRateLimit ?? !config.isTest;
+  const proxySecret = options.proxySharedSecret ?? config.proxy.sharedSecret;
   const app = Fastify({
     logger: config.isTest
       ? false
@@ -87,6 +124,7 @@ export async function buildApp(
           redact: [
             "req.headers.authorization",
             "req.headers.cookie",
+            'req.headers["x-craftbid-proxy"]',
             "req.body.password",
             "req.body.currentPassword",
             "req.body.newPassword",
@@ -146,10 +184,10 @@ export async function buildApp(
   /**
    * CSRF defence for cookie-authenticated writes.
    *
-   * Session cookies are SameSite=None in production, because the web app and
-   * the API are on different registrable domains and a Lax cookie is never
-   * sent between them. That alone would let any site trigger a state-changing
-   * request with the user's session attached. CORS is not the protection
+   * Session cookies are SameSite=Lax, which already keeps them off most
+   * cross-site writes, but not every browser enforces SameSite the same way
+   * and the desktop build calls from another origin. So the Origin is checked
+   * as well, and does not depend on the cookie attribute. CORS is not the protection
    * people assume: it governs reading the response, not sending the request,
    * and multipart uploads are a "simple" request that never triggers a
    * preflight at all.
@@ -174,13 +212,21 @@ export async function buildApp(
     }
   });
 
+  // Off with the rate limiter, for the same reason: the rest of the suite
+  // signs in with wrong passwords on purpose.
+  app.decorate("loginThrottle", enableRateLimit ? createLoginThrottle() : null);
   if (enableRateLimit) {
     await app.register(rateLimit, {
       global: true,
       max: 300,
       timeWindow: "1 minute",
-      keyGenerator: clientAddress,
+      keyGenerator: (request) => clientAddress(request, proxySecret),
     });
+    if (config.isProduction && !proxySecret) {
+      app.log.warn(
+        "PROXY_SHARED_SECRET is not set: visitors coming through the site share one rate-limit bucket.",
+      );
+    }
   }
 
   /**

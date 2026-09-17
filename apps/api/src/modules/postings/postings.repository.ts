@@ -396,6 +396,25 @@ export async function updatePosting(
   await tx.run(`UPDATE postings SET ${sets.join(", ")} WHERE id = :id`, binds);
 }
 
+/**
+ * Moves a request out of `from` into `to`, only if it is still in `from`.
+ * False means it changed since the caller read it (see the bid version in
+ * applications.repository.ts).
+ */
+export async function transitionStatus(
+  id: string,
+  from: PostingStatus,
+  to: PostingStatus,
+  tx: Queryable,
+): Promise<boolean> {
+  const changed = await tx.run(
+    `UPDATE postings SET status = :toStatus, updated_at = SYSTIMESTAMP
+      WHERE id = :id AND status = :fromStatus`,
+    { id: uuidToBuf(id), toStatus: to, fromStatus: from },
+  );
+  return changed === 1;
+}
+
 export async function setStatus(
   id: string,
   status: PostingStatus,

@@ -1,0 +1,17 @@
+# Headers for the built site, applied by Cloudflare's static asset server.
+# They do not reach /api/* (the Worker script answers those, and the API sets
+# its own through helmet).
+#
+# Framing is refused so another site cannot lay a decoy over a button such as
+# "Yes, I received it" or a staff moderation action. The session cookies are
+# SameSite=Lax, which keeps them out of cross-site frames in current browsers;
+# this does not depend on that.
+#
+# No script-src policy yet. Add one only after checking ImageKit images, the
+# service worker and the bundled fonts still load under it.
+/*
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'; base-uri 'self'; object-src 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()

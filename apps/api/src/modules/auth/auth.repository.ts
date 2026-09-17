@@ -177,3 +177,81 @@ export async function recentVerificationTokens(
   );
   return { lastHour: Number(row?.cnt ?? 0), lastSentAt: row?.lastSentAt ?? null };
 }
+
+export interface PasswordResetTokenRecord {
+  id: string;
+  userId: string;
+  expiresAt: Date;
+  usedAt: Date | null;
+}
+
+export async function storePasswordResetToken(
+  input: { userId: string; tokenHash: string; expiresAt: Date },
+  q: Queryable = db,
+): Promise<void> {
+  await q.run(
+    `INSERT INTO password_reset_tokens (id, user_id, token_hash, expires_at)
+     VALUES (:id, :userId, :tokenHash, :expiresAt)`,
+    {
+      id: uuidToBuf(newId()),
+      userId: uuidToBuf(input.userId),
+      tokenHash: input.tokenHash,
+      expiresAt: input.expiresAt,
+    },
+  );
+}
+
+export async function findPasswordResetToken(
+  tokenHash: string,
+  q: Queryable = db,
+): Promise<PasswordResetTokenRecord | null> {
+  const row = await q.one<{ id: Buffer; userId: Buffer; expiresAt: Date; usedAt: Date | null }>(
+    `SELECT id, user_id, expires_at, used_at
+       FROM password_reset_tokens
+      WHERE token_hash = :tokenHash`,
+    { tokenHash },
+  );
+  if (!row) return null;
+  return {
+    id: bufToUuid(row.id)!,
+    userId: bufToUuid(row.userId)!,
+    expiresAt: row.expiresAt,
+    usedAt: row.usedAt,
+  };
+}
+
+/**
+ * Spends one reset link, and only if it is still unspent, so two submissions
+ * racing on the same link cannot both set a password.
+ */
+export async function spendPasswordResetToken(id: string, tx: Queryable): Promise<boolean> {
+  const changed = await tx.run(
+    `UPDATE password_reset_tokens SET used_at = SYSTIMESTAMP
+      WHERE id = :id AND used_at IS NULL`,
+    { id: uuidToBuf(id) },
+  );
+  return changed === 1;
+}
+
+/** After a reset, or when an account closes, every other reset link stops working. */
+export async function spendAllPasswordResetTokens(userId: string, tx: Queryable): Promise<void> {
+  await tx.run(
+    `UPDATE password_reset_tokens SET used_at = SYSTIMESTAMP
+      WHERE user_id = :userId AND used_at IS NULL`,
+    { userId: uuidToBuf(userId) },
+  );
+}
+
+/** Reset links sent to this person recently, and when the last one went. */
+export async function recentPasswordResetTokens(
+  userId: string,
+  q: Queryable = db,
+): Promise<{ lastHour: number; lastSentAt: Date | null }> {
+  const row = await q.one<{ cnt: number; lastSentAt: Date | null }>(
+    `SELECT COUNT(*) AS cnt, MAX(created_at) AS last_sent_at
+       FROM password_reset_tokens
+      WHERE user_id = :userId AND created_at > SYSTIMESTAMP - INTERVAL '1' HOUR`,
+    { userId: uuidToBuf(userId) },
+  );
+  return { lastHour: Number(row?.cnt ?? 0), lastSentAt: row?.lastSentAt ?? null };
+}

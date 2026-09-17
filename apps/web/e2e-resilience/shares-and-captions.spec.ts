@@ -156,3 +156,73 @@ test.describe("captions", () => {
     await expect(page.getByRole("button", { name: "See more" })).toHaveCount(0);
   });
 });
+
+test.describe("removing your own", () => {
+  test("the person who shared a post can remove the share, and the original is left alone", async ({ page }) => {
+    let feed: object[] = [SHARED_ITEM];
+    const calls = await stubApi(page, [], (route, path, method) => {
+      if (path === "/auth/me") return route.fulfill(json({ ...base, ...SHARER, email: "paolo@example.com" }));
+      if (path === "/feed") return route.fulfill(json({ items: feed, total: feed.length, limit: 12, offset: 0 }));
+      if (path === `/posts/${POST_ID}/share` && method === "DELETE") {
+        feed = [];
+        return route.fulfill({ status: 204 });
+      }
+      return undefined;
+    });
+    await page.goto("/");
+
+    const card = page.getByRole("article", { name: /Paolo Cruz shared/ });
+    await card.getByRole("button", { name: "More options for this share" }).click();
+    await card.getByRole("button", { name: "Remove share" }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Remove this share?" });
+    await expect(dialog).toContainText("Lito Weaves's original post stays.");
+    await dialog.getByRole("button", { name: "Remove share" }).click();
+
+    await expect(page.getByRole("article", { name: /Paolo Cruz shared/ })).toHaveCount(0);
+    expect(calls.filter((call) => call.method === "DELETE").map((call) => call.path)).toEqual([`/posts/${POST_ID}/share`]);
+  });
+
+  test("nobody else is offered to remove someone's share", async ({ page }) => {
+    await stubApi(page, [SHARED_ITEM]);
+    await page.goto("/");
+    const card = page.getByRole("article", { name: /Paolo Cruz shared/ });
+    await expect(card).toBeVisible();
+    await expect(card.getByRole("button", { name: "More options for this share" })).toHaveCount(0);
+  });
+
+  test("an artist can delete their own post after confirming, and is offered to edit it", async ({ page }) => {
+    let feed: object[] = [post("Abaca table runner")];
+    const calls = await stubApi(page, [], (route, path, method) => {
+      if (path === "/auth/me") {
+        return route.fulfill(json({ ...base, ...ARTIST, role: "artist", email: "lito@example.com", artist: { acceptingCommissions: true, categories: [], skills: [] } }));
+      }
+      if (path === "/feed") return route.fulfill(json({ items: feed, total: feed.length, limit: 12, offset: 0 }));
+      if (path === `/posts/${POST_ID}` && method === "DELETE") {
+        feed = [];
+        return route.fulfill({ status: 204 });
+      }
+      return undefined;
+    });
+    await page.goto("/");
+
+    const card = page.getByRole("article").filter({ hasText: "Abaca table runner" });
+    await card.getByRole("button", { name: "More options for this post" }).click();
+    await expect(card.getByRole("button", { name: "Edit post" })).toBeVisible();
+    // Your own work is not something to report.
+    await expect(card.getByRole("button", { name: "Report", exact: true })).toHaveCount(0);
+    await card.getByRole("button", { name: "Delete post" }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Delete this post?" });
+    await dialog.getByRole("button", { name: "Keep it" }).click();
+    await expect(dialog).toBeHidden();
+    expect(calls.some((call) => call.method === "DELETE")).toBe(false);
+
+    await card.getByRole("button", { name: "More options for this post" }).click();
+    await card.getByRole("button", { name: "Delete post" }).click();
+    await page.getByRole("dialog", { name: "Delete this post?" }).getByRole("button", { name: "Delete post" }).click();
+
+    await expect(page.getByText("Abaca table runner")).toHaveCount(0);
+    expect(calls.filter((call) => call.method === "DELETE").map((call) => call.path)).toEqual([`/posts/${POST_ID}`]);
+  });
+});

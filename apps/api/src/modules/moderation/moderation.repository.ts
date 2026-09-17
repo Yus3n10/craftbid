@@ -91,10 +91,17 @@ export async function findPosting(id: string, q: Queryable = db) {
     : null;
 }
 
-export async function removePosting(id: string, tx: Queryable): Promise<void> {
-  await tx.run(`UPDATE postings SET status = 'cancelled', removed_at = SYSTIMESTAMP, updated_at = SYSTIMESTAMP WHERE id = :id`, {
-    id: uuidToBuf(id),
-  });
+/**
+ * Only an open request is removed. False means an artist was chosen (or the
+ * request closed) after staff opened it, and nothing was changed.
+ */
+export async function removePosting(id: string, tx: Queryable): Promise<boolean> {
+  const changed = await tx.run(
+    `UPDATE postings SET status = 'cancelled', removed_at = SYSTIMESTAMP, updated_at = SYSTIMESTAMP
+      WHERE id = :id AND status = 'open'`,
+    { id: uuidToBuf(id) },
+  );
+  return changed === 1;
 }
 
 export async function findComment(id: string, q: Queryable = db) {

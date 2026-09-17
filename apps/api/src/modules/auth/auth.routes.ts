@@ -2,13 +2,16 @@ import type { FastifyPluginAsync, FastifyReply } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import {
+  forgotPasswordSchema,
   loginSchema,
   passwordSchema,
   registerSchema,
+  resetPasswordSchema,
   resendVerificationSchema,
   verifyEmailSchema,
 } from "@craftbid/shared";
 import { config } from "../../config.js";
+import { AppError } from "../../lib/errors.js";
 import {
   ACCESS_COOKIE,
   REFRESH_COOKIE,
@@ -142,13 +145,61 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   app.post(
+    "/forgot-password",
+    {
+      schema: { body: forgotPasswordSchema },
+      config: { rateLimit: { max: 5, timeWindow: "15 minutes" } },
+    },
+    async (request, reply) => {
+      // Not awaited, for the same reason as resend-verification: the work
+      // differs for a registered address, and waiting would let the response
+      // time say who has an account.
+      service.requestPasswordReset(request.body.email).catch((error: unknown) => {
+        request.log.error({ err: error }, "Sending a password reset link failed");
+      });
+      return reply.code(204).send();
+    },
+  );
+
+  app.post(
+    "/reset-password",
+    {
+      schema: { body: resetPasswordSchema },
+      config: { rateLimit: { max: 20, timeWindow: "10 minutes" } },
+    },
+    async (request, reply) => {
+      await service.resetPassword(request.body.token, request.body.password);
+      // Whatever session this browser had was just revoked with the others.
+      clearSession(reply);
+      return reply.code(204).send();
+    },
+  );
+
+  app.post(
     "/login",
     {
       schema: { body: loginSchema },
       config: { rateLimit: { max: 10, timeWindow: "10 minutes" } },
     },
     async (request, reply) => {
-      const tokens = await service.login(request.body);
+      const throttle = fastify.loginThrottle;
+      const email = request.body.email;
+      if (throttle?.isLocked(email)) {
+        throw new AppError(
+          429,
+          "rate_limited",
+          "Too many sign-in attempts for this account. Wait 15 minutes, or reset your password.",
+        );
+      }
+
+      let tokens: service.SessionTokens;
+      try {
+        tokens = await service.login(request.body);
+      } catch (error) {
+        if (error instanceof AppError && error.statusCode === 401) throttle?.recordFailure(email);
+        throw error;
+      }
+      throttle?.clear(email);
       setSession(reply, tokens);
       return reply.send({
         user: await getMe(tokens.userId),

@@ -88,3 +88,5 @@ services:
         sync: false
       - key: IMAGEKIT_URL_ENDPOINT
         sync: false
+      - key: PROXY_SHARED_SECRET
+        sync: false
