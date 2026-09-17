@@ -116,12 +116,28 @@ async function sendVerification(
   persistent: boolean,
 ): Promise<void> {
   const token = generateRefreshToken();
-  await sessions.storeVerificationToken({
-    userId,
-    tokenHash: hashRefreshToken(token),
-    expiresAt: new Date(Date.now() + VERIFICATION_HOURS * 3_600_000),
-    persistent,
-  });
+  await storeVerification(userId, token, persistent);
+  await mailVerification(email, displayName, token);
+}
+
+function storeVerification(
+  userId: string,
+  token: string,
+  persistent: boolean,
+  q?: Parameters<typeof sessions.storeVerificationToken>[1],
+): Promise<void> {
+  return sessions.storeVerificationToken(
+    {
+      userId,
+      tokenHash: hashRefreshToken(token),
+      expiresAt: new Date(Date.now() + VERIFICATION_HOURS * 3_600_000),
+      persistent,
+    },
+    q,
+  );
+}
+
+async function mailVerification(email: string, displayName: string, token: string): Promise<void> {
   await getMailer().send(
     verificationEmail({
       to: email,
@@ -194,12 +210,21 @@ export async function resendVerification(
     "userId" in target ? await users.findById(target.userId) : await users.findByEmail(target.email);
   if (!user || user.status !== "active" || user.emailVerifiedAt) return;
 
-  const recent = await sessions.recentVerificationTokens(user.id);
-  if (recent.lastHour >= 5) return;
-  if (recent.lastSentAt && Date.now() - recent.lastSentAt.getTime() < 60_000) return;
+  const token = generateRefreshToken();
+  const claimed = await withTransaction(async (tx) => {
+    // The same lock as password reset: without it, requests at the same moment
+    // all pass the limit check and each sends a link.
+    await tx.run(`SELECT id FROM users WHERE id = :id FOR UPDATE`, { id: uuidToBuf(user.id) });
+    const recent = await sessions.recentVerificationTokens(user.id, tx);
+    if (recent.lastHour >= 5) return false;
+    if (recent.lastSentAt && Date.now() - recent.lastSentAt.getTime() < 60_000) return false;
+    await storeVerification(user.id, token, false, tx);
+    return true;
+  });
+  if (!claimed) return;
 
   try {
-    await sendVerification(user.id, user.email, user.displayName, false);
+    await mailVerification(user.email, user.displayName, token);
   } catch (error) {
     console.error("Verification email failed to send", error);
   }

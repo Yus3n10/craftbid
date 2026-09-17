@@ -1747,10 +1747,24 @@ API 320, resilience 100, e2e 20, worker 15, typecheck clean.
 
 ### 21.5 Still open
 - **Cloudflare `PROXY_SHARED_SECRET` is not taking effect**: calls through the
-  workers.dev site still count in a separate bucket from direct calls (checked
-  again 2026-09-18). Check it exists in Workers & Pages, craftbid, Settings,
-  Variables and Secrets with type **Secret** and the exact value set in Render;
-  a plain Variable is wiped by every deploy. Only affects the workers.dev site.
-- Confirm `PUBLIC_WEB_URL` in Render is the Render site address (21.1).
-- `og:url` in `apps/web/index.html` still names the workers.dev address.
-- Everything in 20.7 other than ImageKit (test content, legal review, lower items).
+  workers.dev site still count in a separate bucket from direct calls. The
+  developer added it as a Secret and redeployed on 2026-09-18, and the check
+  (one resend-verification call direct, one through workers.dev, compare
+  `x-ratelimit-remaining`) still showed separate buckets afterwards. The API
+  compares the value byte for byte, so the likely cause is a stray space or
+  newline in one of the two copies. Only affects the workers.dev site.
+- Done 2026-09-18: `PUBLIC_WEB_URL` in Render is the Render site address;
+  `OWNER_ALERT_EMAIL` is set; the "sd" share is removed; the staff display name
+  is now "Yusen Main". "Test Post" stays by the developer's choice. Legal review
+  is deferred until just before the public announcement.
+- Everything else in 20.7 under "Lower".
+
+### 21.6 og:url and the resend-verification race (2026-09-18)
+- `og:url` in `apps/web/index.html` now names the Render site.
+- `resendVerification` now locks the account row and checks the limits inside
+  the same transaction that stores the new link, as `requestPasswordReset`
+  does. Measured before the fix: 8 simultaneous resends sent up to 4 emails.
+  Test: "sends one link when several resends arrive at the same moment" in
+  `email-verification.test.ts`. It runs six trials, because on a cold connection
+  pool the requests happen to queue one after another and the race does not
+  show; it failed before the fix. Suites: API 321, resilience 100.

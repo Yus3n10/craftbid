@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { db } from "../db/query.js";
 import { createBrevoMailer, setMailer, type MailMessage, type Mailer } from "../lib/mail/index.js";
+import { resendVerification } from "../modules/auth/auth.service.js";
 import { verificationEmail } from "../modules/auth/verification-email.js";
 import {
   authHeaders,
@@ -261,6 +262,20 @@ describe("email verification, switched on", () => {
     expect(response.statusCode).toBe(204);
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(sent).toHaveLength(1);
+  });
+
+  it("sends one link when several resends arrive at the same moment", async () => {
+    await registerUnverified("client", "doubletap");
+    // The first rounds run on a cold connection pool, which happens to queue
+    // the requests one after another, so the race needs several trials.
+    for (let trial = 0; trial < 6; trial += 1) {
+      await db.run(`UPDATE email_verification_tokens SET created_at = created_at - INTERVAL '2' HOUR`);
+      const before = sent.length;
+      await Promise.all(
+        Array.from({ length: 8 }, () => resendVerification({ email: "doubletap@example.com" })),
+      );
+      expect(sent.length - before).toBe(1);
+    }
   });
 
   it("sends nothing to an address that is already verified", async () => {
