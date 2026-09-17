@@ -104,12 +104,13 @@ export const submitPaymentSchema = z.object({
 });
 export type SubmitPaymentInput = z.infer<typeof submitPaymentSchema>;
 
+/** Photos are optional: marking it finished is what moves the commission on. */
 export const markFinishedSchema = z.object({
   photoFileIds: z
     .array(uuidSchema)
-    .min(LIMITS.finishedPhotos.min, "Add at least one photo of the finished piece.")
     .max(LIMITS.finishedPhotos.max)
-    .refine((ids) => new Set(ids).size === ids.length, "Each photo can be added once."),
+    .refine((ids) => new Set(ids).size === ids.length, "Each photo can be added once.")
+    .default([]),
 });
 
 export const shippingSchema = z.object({

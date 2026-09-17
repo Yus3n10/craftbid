@@ -337,13 +337,29 @@ describe("the work and the balance", () => {
     expect(await notificationTypes(client)).toContain("work_finished");
   });
 
-  it("is paid after the finished piece is shown, then completes", async () => {
+  it("can be marked finished without any photos", async () => {
+    const commissionId = await startCommission(client, artist);
+    await submitGcashPayment(client, commissionId, "down");
+    await confirmPayment(artist, commissionId, "down");
+
+    const finished = await inject(artist, "POST", `/commissions/${commissionId}/finished`, {});
+    expect(finished.statusCode).toBe(204);
+    const view = await tracking(client, commissionId);
+    expect(view.stage).toBe("awaiting_balance");
+    expect(view.finishedPhotoIds).toEqual([]);
+  });
+
+  it("is paid after the piece is delivered, then completes", async () => {
     const commissionId = await startCommission(client, artist);
     await submitGcashPayment(client, commissionId, "down");
     await confirmPayment(artist, commissionId, "down");
 
     expect((await submitGcashPayment(client, commissionId, "balance")).statusCode).toBe(400);
     await finishWork(artist, commissionId);
+
+    // Not before it has been sent: the client pays once it arrives.
+    expect((await submitGcashPayment(client, commissionId, "balance")).statusCode).toBe(400);
+    expect((await inject(artist, "PUT", `/commissions/${commissionId}/shipping`, { courier: "J&T Express" })).statusCode).toBe(204);
 
     expect((await submitGcashPayment(client, commissionId, "balance")).statusCode).toBe(201);
     expect((await inject(client, "POST", `/commissions/${commissionId}/complete`)).statusCode).toBe(400);
@@ -355,17 +371,15 @@ describe("the work and the balance", () => {
     expect(completed.json().status).toBe("completed");
   });
 
-  it("ships a transferred balance only after it is confirmed", async () => {
+  it("ships as soon as the piece is finished, before the balance", async () => {
     const commissionId = await startCommission(client, artist);
     await submitGcashPayment(client, commissionId, "down");
     await confirmPayment(artist, commissionId, "down");
-    await finishWork(artist, commissionId);
 
     const early = await inject(artist, "PUT", `/commissions/${commissionId}/shipping`, { courier: "J&T Express" });
     expect(early.statusCode).toBe(400);
 
-    await submitGcashPayment(client, commissionId, "balance");
-    await confirmPayment(artist, commissionId, "balance");
+    await finishWork(artist, commissionId);
     const shipped = await inject(artist, "PUT", `/commissions/${commissionId}/shipping`, {
       courier: "J&T Express",
       trackingNumber: "JT0001234567",
@@ -375,24 +389,11 @@ describe("the work and the balance", () => {
     expect(await notificationTypes(client)).toContain("commission_shipped");
   });
 
-  it("settles cash on delivery through the artist, who ships before the courier collects", async () => {
+  it("offers only paying after delivery or at a meet-up", async () => {
     const commissionId = await startCommission(client, artist);
-    expect((await inject(client, "PUT", `/commissions/${commissionId}/balance-method`, { method: "cod" })).statusCode).toBe(204);
-    await submitGcashPayment(client, commissionId, "down");
-    await confirmPayment(artist, commissionId, "down");
-    await finishWork(artist, commissionId);
-
-    // Nothing for the client to submit: the courier collects it.
-    expect((await submitGcashPayment(client, commissionId, "balance")).statusCode).toBe(400);
-    expect((await inject(artist, "PUT", `/commissions/${commissionId}/shipping`, { courier: "LBC" })).statusCode).toBe(204);
-
-    expect((await inject(client, "POST", `/commissions/${commissionId}/balance-received`)).statusCode).toBe(403);
-    expect((await inject(artist, "POST", `/commissions/${commissionId}/balance-received`)).statusCode).toBe(204);
-
-    const view = await tracking(client, commissionId);
-    expect(view.stage).toBe("ready_to_complete");
-    expect(view.payments[0]).toMatchObject({ kind: "balance", method: "cod", status: "confirmed", recordedBy: "artist" });
-    expect((await inject(client, "POST", `/commissions/${commissionId}/complete`)).statusCode).toBe(200);
+    expect((await tracking(client, commissionId)).balanceMethod).toBe("transfer");
+    expect((await inject(client, "PUT", `/commissions/${commissionId}/balance-method`, { method: "cod" })).statusCode).toBe(400);
+    expect((await inject(client, "PUT", `/commissions/${commissionId}/balance-method`, { method: "meetup" })).statusCode).toBe(204);
   });
 
   it("hands over a meet-up piece in person, with nothing to ship", async () => {
@@ -402,7 +403,10 @@ describe("the work and the balance", () => {
     await confirmPayment(artist, commissionId, "down");
     await finishWork(artist, commissionId);
 
+    // Paid in cash at the meet-up: nothing for the client to submit.
+    expect((await submitGcashPayment(client, commissionId, "balance")).statusCode).toBe(400);
     expect((await inject(artist, "PUT", `/commissions/${commissionId}/shipping`, { courier: "LBC" })).statusCode).toBe(400);
+    expect((await inject(client, "POST", `/commissions/${commissionId}/balance-received`)).statusCode).toBe(403);
     expect((await inject(artist, "POST", `/commissions/${commissionId}/balance-received`)).statusCode).toBe(204);
     expect((await tracking(artist, commissionId)).payments[0]!.method).toBe("cash");
   });
@@ -410,7 +414,7 @@ describe("the work and the balance", () => {
   it("tells the artist which balance option the client chose, only when it changes", async () => {
     const commissionId = await startCommission(client, artist);
     const current = (await tracking(client, commissionId)).balanceMethod;
-    const other = current === "cod" ? "meetup" : "cod";
+    const other = current === "meetup" ? "transfer" : "meetup";
 
     const chosen = async () => {
       const response = await inject(artist, "GET", "/notifications?limit=50");
@@ -433,14 +437,14 @@ describe("the work and the balance", () => {
 
   it("fixes the balance option once the artist has confirmed the down payment", async () => {
     const commissionId = await startCommission(client, artist);
-    expect((await inject(artist, "PUT", `/commissions/${commissionId}/balance-method`, { method: "cod" })).statusCode).toBe(403);
+    expect((await inject(artist, "PUT", `/commissions/${commissionId}/balance-method`, { method: "meetup" })).statusCode).toBe(403);
 
     await submitGcashPayment(client, commissionId, "down");
     // Still changeable while the artist has not confirmed.
     expect((await inject(client, "PUT", `/commissions/${commissionId}/balance-method`, { method: "meetup" })).statusCode).toBe(204);
 
     await confirmPayment(artist, commissionId, "down");
-    expect((await inject(client, "PUT", `/commissions/${commissionId}/balance-method`, { method: "cod" })).statusCode).toBe(400);
+    expect((await inject(client, "PUT", `/commissions/${commissionId}/balance-method`, { method: "transfer" })).statusCode).toBe(400);
     expect((await tracking(client, commissionId)).balanceMethod).toBe("meetup");
   });
 });

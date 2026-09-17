@@ -9,7 +9,8 @@ import { receiptPng } from "./images.js";
  *
  * The API tests prove each rule. This proves a person can actually get
  * through the screens: find where to pay, send the details with a receipt,
- * see the artist confirm, see the finished piece, pay the rest, and finish.
+ * see the artist confirm, the piece finished and sent, pay the rest once it
+ * arrives, and finish.
  */
 
 const PASSWORD = "a sufficiently long password";
@@ -106,32 +107,28 @@ test("a commission goes from a bid to complete through the payment record", asyn
   await expect(artist.getByText(downReference).first()).toBeVisible();
   await artist.getByRole("button", { name: "Yes, I received it" }).click();
 
-  // --- The work --------------------------------------------------------------
-  await expect(artist.getByRole("button", { name: "The piece is finished" })).toBeVisible({ timeout: 20_000 });
-  await artist
-    .locator('input[type="file"]')
-    .setInputFiles({ name: "piece.png", mimeType: "image/png", buffer: receiptPng(120) });
-  await expect(artist.getByRole("img", { name: "Finished piece" })).toBeVisible({ timeout: 20_000 });
+  // --- The work: finished without photos, then sent --------------------------------
+  await expect(artist.getByRole("button", { name: "The piece is finished" })).toBeEnabled({ timeout: 20_000 });
   await artist.getByRole("button", { name: "The piece is finished" }).click();
-  await expect(artist.getByText(/Waiting for the client to send the balance/)).toBeVisible({ timeout: 20_000 });
+  await artist.getByLabel("Courier").fill("J&T Express");
+  await artist.getByLabel("Tracking number").fill("JT0001234567");
+  await artist.getByRole("button", { name: "It has been sent" }).click();
+  await expect(artist.getByText(/Waiting for the client to receive the piece/)).toBeVisible({ timeout: 20_000 });
 
-  // --- The balance -------------------------------------------------------------
+  // --- The balance, once it arrives ----------------------------------------------------
   await client.reload();
-  await expect(client.getByText(/Your piece is finished/)).toBeVisible({ timeout: 20_000 });
-  await expect(client.getByRole("button", { name: /Photo of the finished piece/ })).toBeVisible();
+  await expect(client.getByText(/Once your piece arrives/)).toBeVisible({ timeout: 20_000 });
+  await expect(client.getByText("JT0001234567")).toBeVisible();
+  await expect(client.getByText(/photos/i)).toHaveCount(0);
   await sendPaymentDetails(client, uniqueReference(), receiptPng(200));
   await expect(client.getByText(/Waiting for the artist to confirm your balance/)).toBeVisible({ timeout: 20_000 });
 
   await artist.reload();
   await artist.getByRole("button", { name: "Yes, I received it" }).click();
-  await artist.getByLabel("Courier").fill("J&T Express");
-  await artist.getByLabel("Tracking number").fill("JT0001234567");
-  await artist.getByRole("button", { name: "It has been sent" }).click();
   await expect(artist.getByText(/Waiting for the client to confirm they received the piece/)).toBeVisible({ timeout: 20_000 });
 
   // --- Complete -----------------------------------------------------------------
   await client.reload();
-  await expect(client.getByText("JT0001234567")).toBeVisible();
   await client.getByRole("button", { name: "I received the piece" }).click();
   await expect(client.getByRole("heading", { name: "Leave a review" })).toBeVisible({ timeout: 20_000 });
   await expect(client.getByText("Received").first()).toBeVisible();

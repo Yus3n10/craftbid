@@ -370,11 +370,7 @@ export async function submitPayment(
       }
     } else {
       if (context.balanceMethod !== "transfer") {
-        throw badRequest(
-          context.balanceMethod === "cod"
-            ? "The balance is paid to the courier on delivery, and the artist records it."
-            : "The balance is paid in cash when you meet, and the artist records it.",
-        );
+        throw badRequest("The balance is paid in cash when you meet, and the artist records it.");
       }
       if (stage === "balance_submitted") {
         throw conflict("A balance payment is already waiting for the artist to confirm.");
@@ -383,8 +379,12 @@ export async function submitPayment(
         throw badRequest(
           stage === "ready_to_complete"
             ? "The balance has already been confirmed."
-            : "The balance is paid once the artist has shown the finished piece.",
+            : "The balance is paid once the piece has been delivered.",
         );
+      }
+      // Pay after delivery: nothing is owed until the artist has sent it.
+      if (!context.shippedAt) {
+        throw badRequest("The balance is paid once the piece has been delivered. The artist has not sent it yet.");
       }
     }
 
@@ -517,9 +517,9 @@ export async function decidePayment(
 }
 
 /**
- * The artist records a cash-on-delivery or meet-up balance as received. There
- * is no client submission for these: the courier or the client hands the money
- * over, and the artist is the only one who can say it arrived.
+ * The artist records a meet-up balance as received. There is no client
+ * submission for it: the client hands over cash, and the artist is the only
+ * one who can say it arrived.
  */
 export async function recordInPersonBalance(commissionId: string, userId: string): Promise<void> {
   await withTransaction(async (tx) => {
@@ -545,7 +545,7 @@ export async function recordInPersonBalance(commissionId: string, userId: string
         {
           id: newId(),
           commissionId,
-          method: context.balanceMethod === "cod" ? "cod" : "cash",
+          method: "cash",
           amountCentavos: context.balanceCentavos!,
           recordedBy: userId,
         },
@@ -605,9 +605,8 @@ export async function markFinished(
 }
 
 /**
- * The artist records how the piece was sent. With a transferred balance that
- * waits until the balance is confirmed: photos, then payment, then shipping,
- * so the artist is never asked to send a finished piece on trust.
+ * The artist records how the piece was sent, once it is finished. With payment
+ * after delivery this comes before the balance: the client pays once it arrives.
  */
 export async function setShipping(
   commissionId: string,
@@ -625,11 +624,6 @@ export async function setShipping(
       throw badRequest("This piece is handed over in person, so there is nothing to ship.");
     }
     if (!context.finishedAt) throw badRequest("Mark the piece as finished first.");
-
-    const stage = computeStage(await repo.listPayments(commissionId, tx), context.finishedAt);
-    if (context.balanceMethod === "transfer" && stage !== "ready_to_complete") {
-      throw badRequest("Ship once you have confirmed the balance.");
-    }
 
     await repo.setShipping(commissionId, courier, trackingNumber, tx);
     await notifications.notify(

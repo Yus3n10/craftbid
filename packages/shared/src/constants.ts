@@ -106,14 +106,21 @@ export const PAYMENT_STATUSES = ["submitted", "confirmed", "rejected"] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
 /**
- * How the balance is settled.
+ * How the balance is settled, chosen by the client before the down payment is
+ * confirmed.
  *
- * "transfer": the artist shows photos of the finished piece, the client pays,
- * then the artist ships. "cod": the courier collects the balance on delivery.
- * "meetup": cash when they meet. None of them asks the artist to ship before
- * the balance is secured, which is the risk that pays for everything else.
+ * "transfer": pay after delivery. The artist finishes and ships the piece; once
+ * it arrives the client sends the rest by GCash, Maya or bank and records it,
+ * and the artist confirms. "meetup": the client pays the rest in cash when they
+ * meet, and the artist records it.
+ *
+ * The stored value stays "transfer" although it now means paying after
+ * delivery: the site and the API deploy minutes apart, so renaming a value the
+ * two exchange would break the step in between. Cash on delivery to a courier,
+ * and paying after seeing photos before shipping, were removed on 2026-09-16 at
+ * the developer's request.
  */
-export const BALANCE_METHODS = ["transfer", "cod", "meetup"] as const;
+export const BALANCE_METHODS = ["transfer", "meetup"] as const;
 export type BalanceMethod = (typeof BALANCE_METHODS)[number];
 
 export const PROBLEM_REASONS = [
@@ -318,7 +325,7 @@ export const LIMITS = {
   postingImages: { min: 0, max: 5 },
   artistPostImages: { min: 1, max: 5 },
   applicationSamples: { max: 6 },
-  finishedPhotos: { min: 1, max: 5 },
+  finishedPhotos: { min: 0, max: 5 },
   problemDetails: { min: 10, max: 2000 },
   referenceNumber: { min: 6, max: 40 },
   payoutAccountName: { min: 2, max: 80 },

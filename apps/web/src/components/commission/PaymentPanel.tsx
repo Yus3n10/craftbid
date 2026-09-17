@@ -40,21 +40,17 @@ const METHOD_LABEL: Record<string, string> = {
   cash: "Cash (meet-up)",
 };
 
+/** The value "transfer" is kept for paying after delivery; see BALANCE_METHODS. */
 const BALANCE_OPTIONS: { value: BalanceMethod; title: string; detail: string }[] = [
   {
     value: "transfer",
-    title: "Pay after seeing photos",
-    detail: "The artist shows you the finished piece, you send the rest, then they ship it.",
-  },
-  {
-    value: "cod",
-    title: "Cash on delivery",
-    detail: "Pay the rest to the courier when your parcel arrives.",
+    title: "Pay after delivery",
+    detail: "The artist ships the finished piece. Once it arrives, send the rest by GCash, Maya or bank.",
   },
   {
     value: "meetup",
     title: "Meet-up",
-    detail: "Pay the rest in cash when you meet the artist.",
+    detail: "Meet the artist to get the piece, and pay the rest in cash there.",
   },
 ];
 
@@ -452,8 +448,8 @@ function FinishForm({ commissionId }: { commissionId: string }) {
   return (
     <div className="space-y-3">
       <p className="text-sm text-ink">
-        When the piece is done, add photos so the client can see it before paying the rest. Only
-        the two of you can see them.
+        When the piece is done, mark it finished. You can add photos too if you like. Only the two
+        of you can see them.
       </p>
       {photos.length > 0 && (
         <div className="grid grid-cols-3 gap-2">
@@ -464,7 +460,7 @@ function FinishForm({ commissionId }: { commissionId: string }) {
       )}
       {photos.length < LIMITS.finishedPhotos.max && (
         <label className="block">
-          <span className="sr-only">Add photos of the finished piece</span>
+          <span className="sr-only">Add photos of the finished piece (optional)</span>
           <input
             type="file"
             accept="image/jpeg,image/png,image/webp"
@@ -478,14 +474,14 @@ function FinishForm({ commissionId }: { commissionId: string }) {
       {uploading && <p className="text-sm text-ink-faint">Uploading…</p>}
       <FormError error={uploadError} />
       <FormError error={finish.error} />
-      <Button className="w-full" disabled={photos.length === 0 || uploading} loading={finish.isPending} onClick={() => finish.mutate()}>
+      <Button className="w-full" disabled={uploading} loading={finish.isPending} onClick={() => finish.mutate()}>
         The piece is finished
       </Button>
     </div>
   );
 }
 
-function ShippingForm({ commissionId, cod }: { commissionId: string; cod: boolean }) {
+function ShippingForm({ commissionId }: { commissionId: string }) {
   const refresh = useRefresh(commissionId);
   const [courier, setCourier] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
@@ -506,9 +502,8 @@ function ShippingForm({ commissionId, cod }: { commissionId: string; cod: boolea
       }}
     >
       <p className="text-sm text-ink">
-        {cod
-          ? "Send it cash on delivery, then add the courier and tracking number so the client can follow it."
-          : "Ship it now, then add the courier and tracking number so the client can follow it."}
+        Ship it now, then add the courier and tracking number so the client can follow it. The
+        client pays the balance once it arrives.
       </p>
       <FormError error={ship.error} />
       <Field label="Courier" error={fields.courier} required>
@@ -630,7 +625,7 @@ function CurrentStep({ commission, isClient }: { commission: CommissionDto; isCl
           <div className="space-y-3">
             <WaitingNote>Waiting for the client to send the down payment of {down}.</WaitingNote>
             <p className="text-sm text-ink-soft">
-              {/* Starts as "after photos" until the client picks, so this
+              {/* Starts as "after delivery" until the client picks, so this
                   names the current option rather than claiming a choice. */}
               How the balance will be paid:{" "}
               <strong className="text-ink">
@@ -686,19 +681,30 @@ function CurrentStep({ commission, isClient }: { commission: CommissionDto; isCl
 
     case "in_progress":
       return isClient ? (
-        <WaitingNote>The artist is making your piece. You will see photos here when it is finished.</WaitingNote>
+        <WaitingNote>The artist is making your piece. You will be told when it is finished.</WaitingNote>
       ) : (
         <FinishForm commissionId={commission.id} />
       );
 
     case "awaiting_balance":
+      // Pay after delivery: the artist ships first, and the client pays once it arrives.
       if (tracking.balanceMethod === "transfer") {
+        if (!tracking.shipping) {
+          return isClient ? (
+            <WaitingNote>
+              Your piece is finished. The artist will ship it and add the tracking details here. You
+              pay the balance of {balance} once it arrives.
+            </WaitingNote>
+          ) : (
+            <ShippingForm commissionId={commission.id} />
+          );
+        }
         return isClient ? (
           <div className="space-y-5">
             {rejectedNotice}
             <p className="text-sm text-ink">
-              Your piece is finished. Send the balance of <strong className="tabular">{balance}</strong>,
-              and the artist ships it once they confirm.
+              Once your piece arrives, send the balance of <strong className="tabular">{balance}</strong> and
+              record it here. The artist confirms when it reaches them.
             </p>
             <PayToList accounts={tracking.payTo} />
             {tracking.payTo.length > 0 && (
@@ -706,30 +712,16 @@ function CurrentStep({ commission, isClient }: { commission: CommissionDto; isCl
             )}
           </div>
         ) : (
-          <WaitingNote>
-            Waiting for the client to send the balance of {balance}. Do not ship until you have
-            confirmed it.
-          </WaitingNote>
+          <WaitingNote>Waiting for the client to receive the piece and send the balance of {balance}.</WaitingNote>
         );
       }
       if (isClient) {
-        return (
-          <WaitingNote>
-            {tracking.balanceMethod === "cod"
-              ? `Your piece will come cash on delivery. Pay ${balance} to the courier when it arrives.`
-              : `Pay the balance of ${balance} in cash when you meet the artist.`}
-          </WaitingNote>
-        );
+        return <WaitingNote>Your piece is finished. Pay the balance of {balance} in cash when you meet the artist.</WaitingNote>;
       }
       return (
         <div className="space-y-5">
-          {tracking.balanceMethod === "cod" && !tracking.shipping && <ShippingForm commissionId={commission.id} cod />}
           <div className="space-y-2">
-            <p className="text-sm text-ink">
-              {tracking.balanceMethod === "cod"
-                ? `When the courier sends you the ${balance}, record it here.`
-                : `When the client pays you the ${balance} in cash, record it here.`}
-            </p>
+            <p className="text-sm text-ink">When the client pays you the {balance} in cash at the meet-up, record it here.</p>
             <FormError error={received.error} />
             <Button variant="secondary" className="w-full" loading={received.isPending} onClick={() => received.mutate()}>
               I received the balance
@@ -740,13 +732,11 @@ function CurrentStep({ commission, isClient }: { commission: CommissionDto; isCl
 
     case "ready_to_complete":
       if (isClient) {
-        const waitingToShip = tracking.balanceMethod === "transfer" && !tracking.shipping;
         return (
           <div className="space-y-3">
             <p className="text-sm text-ink">
-              {waitingToShip
-                ? "The balance is confirmed and the artist will ship your piece. Once you have it, mark this complete."
-                : "Once you have the piece, mark this complete. You can then both leave a review."}
+              The balance is confirmed. Once you have the piece, mark this complete. You can then both
+              leave a review.
             </p>
             <FormError error={complete.error} />
             <Button className="w-full" loading={complete.isPending} onClick={() => complete.mutate()}>
@@ -755,11 +745,7 @@ function CurrentStep({ commission, isClient }: { commission: CommissionDto; isCl
           </div>
         );
       }
-      return tracking.balanceMethod === "transfer" && !tracking.shipping ? (
-        <ShippingForm commissionId={commission.id} cod={false} />
-      ) : (
-        <WaitingNote>Waiting for the client to confirm they received the piece.</WaitingNote>
-      );
+      return <WaitingNote>Waiting for the client to confirm they received the piece.</WaitingNote>;
   }
 }
 
@@ -885,7 +871,7 @@ export function PaymentPanel({ commission, isClient }: { commission: CommissionD
             <li>You pay the artist directly. Craftbid does not hold the money and cannot refund it.</li>
             <li>Half is paid first to start the work. The artist confirms when it arrives.</li>
             <li>Once the artist confirms the down payment and starts, it cannot be refunded.</li>
-            <li>The other half is paid before the piece is shipped, by cash on delivery, or in person.</li>
+            <li>The other half is paid after the piece reaches you, by GCash, Maya or bank, or in cash at a meet-up.</li>
             <li>If something goes wrong, report a problem and the commission pauses until it is sorted out.</li>
           </ul>
         </details>

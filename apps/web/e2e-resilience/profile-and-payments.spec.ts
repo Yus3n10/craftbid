@@ -224,19 +224,25 @@ test.describe("choosing how to pay the balance", () => {
     await expect(group).toBeVisible();
     await expect(group.getByRole("button", { name: "Save changes" })).toHaveCount(0);
 
-    await group.getByRole("radio", { name: /Cash on delivery/ }).check();
+    // Two options only: after delivery, or at a meet-up.
+    await expect(group.getByRole("radio")).toHaveCount(2);
+    await expect(group.getByRole("radio", { name: /Pay after delivery/ })).toBeChecked();
+    await expect(page.getByText(/photos/i)).toHaveCount(0);
+    await expect(page.getByText(/Cash on delivery/)).toHaveCount(0);
+
+    await group.getByRole("radio", { name: /Meet-up/ }).check();
     expect(puts, "picking an option saved it straight away").toHaveLength(0);
     await group.getByRole("button", { name: "Save changes" }).click();
 
     await expect(group.getByText("Saved. The artist has been notified.")).toBeVisible();
-    expect(puts).toEqual([{ method: "cod" }]);
+    expect(puts).toEqual([{ method: "meetup" }]);
     await expect(group.getByRole("button", { name: "Save changes" })).toHaveCount(0);
-    await expect(group.getByRole("radio", { name: /Cash on delivery/ })).toBeChecked();
+    await expect(group.getByRole("radio", { name: /Meet-up/ })).toBeChecked();
 
     // Back to the saved option: nothing to save, no button.
-    await group.getByRole("radio", { name: /Meet-up/ }).check();
+    await group.getByRole("radio", { name: /Pay after delivery/ }).check();
     await expect(group.getByRole("button", { name: "Save changes" })).toBeVisible();
-    await group.getByRole("radio", { name: /Cash on delivery/ }).check();
+    await group.getByRole("radio", { name: /Meet-up/ }).check();
     await expect(group.getByRole("button", { name: "Save changes" })).toHaveCount(0);
   });
 });

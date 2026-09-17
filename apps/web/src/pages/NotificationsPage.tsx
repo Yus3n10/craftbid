@@ -30,7 +30,7 @@ const COPY: Record<NotificationType, string> = {
   payment_submitted: "The client recorded a payment. Check that you received it.",
   payment_confirmed: "A payment was confirmed as received.",
   payment_rejected: "The artist says a payment did not arrive. Check the details.",
-  work_finished: "Your piece is finished. See the photos.",
+  work_finished: "Your piece is finished.",
   commission_shipped: "Your piece is on its way.",
   problem_reported: "A problem was reported on a commission.",
   problem_closed: "A reported problem on a commission was closed.",
@@ -49,8 +49,7 @@ const REACTION_COPY: Record<string, string> = {
 
 /** Says which option, since it changes what the artist does next. */
 const BALANCE_METHOD_COPY: Record<string, string> = {
-  transfer: "The client will pay the balance after seeing photos of the finished piece. Ship once it arrives.",
-  cod: "The client will pay the balance cash on delivery, to the courier.",
+  transfer: "The client will pay the balance after the piece arrives. Ship it once it is finished.",
   meetup: "The client will pay the balance in cash when you meet.",
 };
 

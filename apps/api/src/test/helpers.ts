@@ -472,7 +472,7 @@ export async function finishWork(artist: Session, commissionId: string): Promise
 
 /**
  * Runs a posting all the way to a completed commission, through the payment
- * records a real pair would go through: down payment confirmed, finished photos,
+ * records a real pair would go through: down payment confirmed, finished, shipped,
  * balance confirmed, then the client completes.
  */
 export async function completeCommission(
@@ -486,6 +486,16 @@ export async function completeCommission(
   expectStatus(await submitGcashPayment(client, commissionId, "down"), 201, "down payment");
   expectStatus(await confirmPayment(artist, commissionId, "down"), 204, "confirm down payment");
   expectStatus(await finishWork(artist, commissionId), 204, "mark finished");
+  expectStatus(
+    await instance.inject({
+      method: "PUT",
+      url: `/commissions/${commissionId}/shipping`,
+      headers: authHeaders(artist),
+      payload: { courier: "J&T Express" },
+    }),
+    204,
+    "ship",
+  );
   expectStatus(await submitGcashPayment(client, commissionId, "balance"), 201, "balance");
   expectStatus(await confirmPayment(artist, commissionId, "balance"), 204, "confirm balance");
   expectStatus(
