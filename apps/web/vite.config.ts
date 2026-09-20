@@ -60,7 +60,19 @@ export default defineConfig(({ mode }) => {
         workbox: {
           // Never cache API responses: a marketplace showing yesterday's
           // postings and bids is worse than one that waits for the network.
-          navigateFallbackDenylist: [/^\/api/],
+          // Real files and Cloudflare's own endpoints are not app routes. The
+          // fallback used to answer every navigation with the app shell, so
+          // opening /robots.txt on a device that had visited the site showed
+          // the app's not-found page instead of the file, and /cdn-cgi/trace
+          // could not be used to diagnose a network problem (section 23).
+          navigateFallbackDenylist: [
+            /^\/api/,
+            /^\/cdn-cgi\//,
+            /^\/robots\.txt$/,
+            /^\/sitemap\.xml$/,
+            /^\/llms\.txt$/,
+            /^\/favicon\.ico$/,
+          ],
           // The app shell plus the Latin font files, so a repeat visit needs no
           // network for type. Other subsets load on demand by unicode-range.
           globPatterns: ["**/*.{js,css,html,svg,png}", "**/*-latin-{opsz,wght}-normal-*.woff2"],
