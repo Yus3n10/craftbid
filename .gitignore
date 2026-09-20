@@ -82,3 +82,10 @@ Thumbs.db
 
 # Brag video output
 brag-output*
+
+# Private working notes: never pushed. Kept on disk only.
+HANDOFF.md
+PROMPTS.md
+NOTES.md
+PRIVATE.md
+/private/
