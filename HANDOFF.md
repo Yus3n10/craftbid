@@ -11,8 +11,10 @@ still open.
 > workaround, the comment cleanup and the signed-out console error) are all
 > committed and deployed. **Share `https://craftbid-6w5p.onrender.com`**, not the
 > workers.dev address: PLDT and Smart users cannot reach the latter (21.1).
-> Section 20 corrects section 18.1, whose diagnosis was wrong. What is still
-> open is in 22.7.
+> Section 20 corrects section 18.1, whose diagnosis was wrong, and **section 23
+> corrects 21.1: the Render address is on Cloudflare too, so it is not a
+> fallback for anyone who cannot reach Cloudflare.** What is still open is in
+> 22.7 and section 23.
 
 State at the time of writing: **everything below is committed, pushed and live.**
 Production database at migration 023. ImageKit "Restrict unnamed
@@ -47,6 +49,7 @@ in Render.
 20. Second audit of 2026-09-17 and its fixes (shipped 2026-09-18)
 21. Reaching PLDT users, comment cleanup, console error (shipped 2026-09-18)
 22. The lower-priority items from the audits (shipped 2026-09-18)
+23. Reachability investigation (opened 2026-09-21, root cause not yet confirmed)
 
 ---
 
@@ -1700,6 +1703,14 @@ typecheck clean.
   Community has earlier reports of PLDT losing routes to single Cloudflare
   addresses. Nothing in Craftbid's code causes it, and workers.dev IPs cannot be
   chosen.
+- **The premise of this workaround is wrong, found 2026-09-21 (section 23):**
+  `craftbid-6w5p.onrender.com` is a CNAME to
+  `gcp-us-west1-1.origin.onrender.com.cdn.cloudflare.net`, and its responses
+  carry `Server: cloudflare` and a `CF-RAY`. Render fronts its sites with
+  Cloudflare, so the Render address is **also** on Cloudflare's edge, just in a
+  different prefix (216.24.57.0/24, announced by Render's AS397273, instead of
+  104.21.0.0/20 and 172.67.176.0/20). It changes which prefix a visitor must
+  reach, not which company's network.
 - **Workaround in place:** a free **Render Static Site** named `craftbid`,
   `https://craftbid-6w5p.onrender.com`, built from `master` on every push
   (Render's IPs route fine from PLDT; `craftbid-api.onrender.com/health` loaded
@@ -1883,3 +1894,80 @@ mutation-checked (break it, watch the test fail, restore).
   the client.
 - Legal review (18.8) is deferred until just before the public announcement.
 - A penetration test before real growth.
+
+## 23. Reachability investigation (opened 2026-09-21, root cause not yet confirmed)
+
+New reports: at a PLDT household the developer's own phone could not open the
+Render address on either that house's wifi or his own mobile data, and the
+workers.dev address worked only sometimes. His partner's phone could not open
+either address anywhere, on her wifi or her own data. A different PLDT friend,
+who could not open workers.dev before, can now use the Render address and has
+registered. Far from both homes, on their own data, his phone opened
+workers.dev slowly and not the Render address; hers opened neither.
+
+### 23.1 What is measured and certain
+- **Every Craftbid hostname terminates on Cloudflare's edge.**
+  `craftbid-6w5p.onrender.com` CNAMEs to
+  `gcp-us-west1-1.origin.onrender.com.cdn.cloudflare.net`;
+  `craftbid-api.onrender.com` does the same; all three answer with
+  `Server: cloudflare` and a `CF-RAY`. **So the Render site is not an
+  independent network path, and "use the other link" was never a real fallback
+  for anyone whose problem is reaching Cloudflare.** 21.1 is corrected.
+- The prefixes differ: Render 216.24.57.0/24 (AS397273), workers.dev
+  104.21.0.0/20 and 172.67.176.0/20 (AS13335). A per-prefix routing fault would
+  hit one and not the other, which matches the friend's experience.
+- `craftbid.pgeagoni.workers.dev` publishes an HTTPS/SVCB record carrying
+  **ECH** (`ech=...`), `alpn=h3,h2` and IPv6 hints. `craftbid-6w5p.onrender.com`
+  publishes **no** HTTPS record, has **no AAAA**, and so is IPv4 only with no
+  ECH. `cloudflare.com` has an HTTPS record without ECH. ECH and IPv6 are
+  therefore possible causes for workers.dev only, and cannot explain a failure
+  on the Render address.
+- First load is small (about 156KB compressed: 108KB vendor, 38KB app, 10KB
+  CSS), so payload size does not explain "cannot connect".
+- From the developer's own ISP both addresses are healthy: Cloudflare MNL colo,
+  connect about 20ms, TTFB under 300ms.
+
+### 23.2 Ruled out as a method, not as a cause
+RIPEstat's BGP state shows no AS9299 (PLDT) paths for any of the three
+prefixes, **but the control shows none for 8.8.8.0/24 or 1.1.1.0/24 either**,
+so RIS simply has no PLDT vantage point. That query proves nothing either way;
+do not quote it as evidence.
+
+### 23.3 Candidate causes, and what each predicts
+| # | Cause | Predicts |
+|---|---|---|
+| 1 | Per-prefix routing fault between PLDT/Smart and a Cloudflare prefix | Cloudflare sites in other prefixes (cloudflare.com) load, ours does not; failure is a long hang, not an instant error |
+| 2 | ECH broken by a middlebox | Only workers.dev fails, only on browsers that fetched the HTTPS record; the Render address is unaffected |
+| 3 | Broken IPv6 path | Only workers.dev fails (it is the only one with AAAA); disabling IPv6 or using mobile data with IPv4 fixes it |
+| 4 | UDP 443 (HTTP/3) blocked or throttled | Intermittent slow starts on every Cloudflare host; `/cdn-cgi/trace` shows `http=h3` when it works |
+| 5 | DNS resolution failing on that device or network | Instant "cannot find server" error, not a hang; an IP-literal URL still loads |
+| 6 | App-limited prepaid promo or exhausted data | Only that device, everywhere, including on wifi if the wifi is also that carrier; Facebook and Messenger still work |
+| 7 | Device-level Private DNS, VPN or data saver | That device fails on every network, other devices on the same network are fine |
+
+Causes 1 to 4 are ours to fix by moving off a single vendor network. 5 to 7 are
+the visitor's setup, and the only fix we control there is telling them what to
+change.
+
+### 23.4 The field test that discriminates (run from a failing device)
+Open each address and note **whether it loads**, and whether a failure is
+instant or a long spin:
+1. `https://craftbid-6w5p.onrender.com/robots.txt` (our Render prefix, IPv4 only, no ECH)
+2. `https://craftbid-api.onrender.com/health` (same prefix, the API)
+3. `https://craftbid.pgeagoni.workers.dev/cdn-cgi/trace` (Cloudflare prefix, ECH, IPv6)
+4. `https://cloudflare.com/cdn-cgi/trace` (Cloudflare, no ECH)
+5. `https://www.google.com/generate_204` (control, not Cloudflare; a blank page means it worked)
+
+The `trace` pages print `ip`, `colo`, `http` and `warp`, which name the
+visitor's address, the Cloudflare site they reached, and whether HTTP/3 was
+used. Also record, on the failing phone: Private DNS setting, any VPN or data
+saver, and whether the load is an app-specific promo.
+
+### 23.5 The fix this is heading towards
+If the answer is 1 to 4, the structural fix is to stop depending on one
+vendor's network: serve the web app from a CDN that is not Cloudflare, with
+`/api/*` proxied server-side so session cookies stay first-party (the same
+trick the Worker and the Render rewrites already use). Netlify's free tier
+allows commercial use and supports a 200-status proxy rewrite to an external
+origin, which fits; Cloudflare Pages does not (same network) and Vercel Hobby
+and GitHub Pages forbid commercial sites. A custom domain does not help on its
+own: pointed at Cloudflare or Render it lands on the same edges.

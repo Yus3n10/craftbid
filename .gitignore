@@ -79,3 +79,6 @@ Thumbs.db
 
 # gstack skill output
 .gstack/
+
+# Brag video output
+brag-output*
