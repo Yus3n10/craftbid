@@ -4,6 +4,7 @@ import { uuidToBuf } from "../../db/ids.js";
 import { DbError, withTransaction } from "../../db/query.js";
 import { AppError, badRequest, conflict, unauthorized } from "../../lib/errors.js";
 import { emailVerificationEnabled, getMailer } from "../../lib/mail/index.js";
+import { sendMail } from "../../lib/mail/send.js";
 import { hashPassword, verifyPassword, wastePasswordTime } from "../../lib/password.js";
 import {
   generateRefreshToken,
@@ -80,9 +81,12 @@ export async function register(
     if (error instanceof DbError && error.isUniqueViolation) {
       if (error.constraintName === "UQ_USERS_EMAIL" && emailVerificationEnabled()) {
         // Answered exactly like a new sign-up, so the form cannot be used to
-        // find out who has an account. The owner hears about it by email.
-        await notifyExistingAccount(input.email);
-        return { status: "verification_sent", email: input.email };
+        // find out who has an account. The owner hears about it by email, and
+        // whether that send worked is reported the same way a new sign-up's
+        // is: while a sender is down both say false, so the difference cannot
+        // be used to tell a registered address from a free one.
+        const emailSent = await notifyExistingAccount(input.email);
+        return { status: "verification_sent", email: input.email, emailSent };
       }
       if (error.constraintName === "UQ_USERS_EMAIL") {
         throw conflict("That email is already registered.", {
@@ -99,15 +103,19 @@ export async function register(
   }
 
   if (emailVerificationEnabled()) {
+    let emailSent = true;
     try {
       await sendVerification(userId, input.email, input.displayName, input.remember === true);
     } catch (error) {
       // The account exists either way. A failed send is recoverable from the
       // page that follows, which offers another link, so it must not turn
-      // into an error that invites registering the same address again.
+      // into an error that invites registering the same address again. The
+      // person is told, because they just created this account themselves and
+      // would otherwise wait on an inbox nothing is coming to.
+      emailSent = false;
       console.error("Verification email failed to send", error);
     }
-    return { status: "verification_sent", email: input.email };
+    return { status: "verification_sent", email: input.email, emailSent };
   }
 
   return issueTokens(userId, input.role, input.remember === true);
@@ -118,16 +126,18 @@ export async function register(
  * owner gets another verification link (under the usual resend limits);
  * confirmed, a note pointing to sign in and password reset, once an hour.
  */
-async function notifyExistingAccount(email: string): Promise<void> {
+async function notifyExistingAccount(email: string): Promise<boolean> {
   try {
     const user = await users.findByEmail(email);
-    if (!user || user.status !== "active") return;
+    // Nothing to send to, and nothing that may be said about it.
+    if (!user || user.status !== "active") return true;
     if (!user.emailVerifiedAt) {
-      await resendVerification({ email });
-      return;
+      return await resendVerification({ email });
     }
-    if (!(await users.claimAccountExistsNotice(user.id))) return;
-    await getMailer().send(
+    // A limit meant no send was attempted, which is not a failure to report.
+    if (!(await users.claimAccountExistsNotice(user.id))) return true;
+    await sendMail(
+      "account_exists",
       accountExistsEmail({
         to: user.email,
         displayName: user.displayName,
@@ -135,8 +145,10 @@ async function notifyExistingAccount(email: string): Promise<void> {
         resetLink: `${config.mail.publicWebUrl}/forgot-password`,
       }),
     );
+    return true;
   } catch (error) {
     console.error("Existing account notice failed to send", error);
+    return false;
   }
 }
 
@@ -171,7 +183,8 @@ function storeVerification(
 }
 
 async function mailVerification(email: string, displayName: string, token: string): Promise<void> {
-  await getMailer().send(
+  await sendMail(
+    "verification",
     verificationEmail({
       to: email,
       displayName,
@@ -233,15 +246,20 @@ export async function verifyEmail(token: string): Promise<SessionTokens> {
  * already verified, or has asked too often, so this cannot be used to find out
  * who is registered. The limits (one a minute, five an hour per account) are
  * enforced silently for the same reason.
+ *
+ * Returns whether a link went out, which registration uses to tell someone
+ * their email could not be sent. A limit, a missing account or an already
+ * confirmed one all report true: nothing was attempted, so there is nothing
+ * to report, and saying otherwise would leak who is registered.
  */
 export async function resendVerification(
   target: { userId: string } | { email: string },
-): Promise<void> {
-  if (!emailVerificationEnabled()) return;
+): Promise<boolean> {
+  if (!emailVerificationEnabled()) return true;
 
   const user =
     "userId" in target ? await users.findById(target.userId) : await users.findByEmail(target.email);
-  if (!user || user.status !== "active" || user.emailVerifiedAt) return;
+  if (!user || user.status !== "active" || user.emailVerifiedAt) return true;
 
   const token = generateRefreshToken();
   const claimed = await withTransaction(async (tx) => {
@@ -254,12 +272,14 @@ export async function resendVerification(
     await storeVerification(user.id, token, false, tx);
     return true;
   });
-  if (!claimed) return;
+  if (!claimed) return true;
 
   try {
     await mailVerification(user.email, user.displayName, token);
+    return true;
   } catch (error) {
     console.error("Verification email failed to send", error);
+    return false;
   }
 }
 
@@ -409,7 +429,8 @@ export async function requestPasswordReset(email: string): Promise<void> {
     return true;
   });
   if (!claimed) return;
-  await getMailer().send(
+  await sendMail(
+    "password_reset",
     passwordResetEmail({
       to: user.email,
       displayName: user.displayName,

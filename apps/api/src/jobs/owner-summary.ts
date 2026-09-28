@@ -1,6 +1,7 @@
 import { config } from "../config.js";
 import { db } from "../db/query.js";
 import { getMailer, type Mailer } from "../lib/mail/index.js";
+import { sendMail } from "../lib/mail/send.js";
 import { claimRun, lastRunAt, releaseRun } from "./job-runs.repository.js";
 
 /**
@@ -172,7 +173,9 @@ export async function runOwnerSummary(
 
   const message = compose(date, data);
   try {
-    await (options.mailer ?? getMailer()).send({ to: recipient, ...message });
+    // A mailer passed in belongs to a test; the real path is recorded.
+    if (options.mailer) await options.mailer.send({ to: recipient, ...message });
+    else await sendMail("owner_summary", { to: recipient, ...message });
   } catch (error) {
     // Given back so the next tick, five minutes on, tries again today.
     await releaseRun(JOB, date);

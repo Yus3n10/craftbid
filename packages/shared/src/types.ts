@@ -105,6 +105,14 @@ export interface MeDto extends PublicProfileDto {
 export interface VerificationSentDto {
   status: "verification_sent";
   email: string;
+  /**
+   * Whether the link actually went out. Absent means it did: the field was
+   * added later, and Cloudflare and Render deploy minutes apart.
+   *
+   * Reported the same way for an address that already has an account, so a
+   * failing sender cannot be used to find out who is registered.
+   */
+  emailSent?: boolean;
 }
 
 export interface PostingDto {

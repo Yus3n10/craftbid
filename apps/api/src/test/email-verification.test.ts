@@ -84,7 +84,11 @@ describe("email verification, switched on", () => {
   it("creates the account without signing in, and emails a link", async () => {
     const response = await registerUnverified("artist", "newartist");
     expect(response.statusCode).toBe(202);
-    expect(response.json()).toEqual({ status: "verification_sent", email: "newartist@example.com" });
+    expect(response.json()).toEqual({
+      status: "verification_sent",
+      email: "newartist@example.com",
+      emailSent: true,
+    });
     expect(response.headers["set-cookie"]).toBeUndefined();
     expect(response.json().accessToken).toBeUndefined();
 

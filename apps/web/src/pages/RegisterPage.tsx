@@ -47,6 +47,8 @@ export function RegisterPage() {
   const [error, setError] = useState<unknown>(null);
   const [submitting, setSubmitting] = useState(false);
   const [verificationSentTo, setVerificationSentTo] = useState<string | null>(null);
+  // Absent means it went out: an API that predates the field cannot say.
+  const [emailSent, setEmailSent] = useState(true);
 
   // Half a sign-up form is worth asking about before a link throws it away.
   useUnsavedChanges(
@@ -65,7 +67,7 @@ export function RegisterPage() {
   if (verificationSentTo) {
     return (
       <Page width="narrow">
-        <CheckYourEmail email={verificationSentTo} />
+        <CheckYourEmail email={verificationSentTo} emailSent={emailSent} />
       </Page>
     );
   }
@@ -83,7 +85,10 @@ export function RegisterPage() {
     try {
       // The redirect above takes over as soon as the session lands.
       const result = await register({ ...form, role, remember });
-      if ("status" in result) setVerificationSentTo(result.email);
+      if ("status" in result) {
+        setEmailSent(result.emailSent !== false);
+        setVerificationSentTo(result.email);
+      }
     } catch (caught) {
       setError(caught);
     } finally {

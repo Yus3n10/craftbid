@@ -83,6 +83,7 @@ export async function closeTestApp(): Promise<void> {
 export async function resetData(): Promise<void> {
   const statements = [
     `DELETE FROM user_category_interest`,
+    `DELETE FROM mail_log`,
     `DELETE FROM job_runs`,
     `DELETE FROM commission_problems`,
     `DELETE FROM commission_payments`,

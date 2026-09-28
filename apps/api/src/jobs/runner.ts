@@ -1,5 +1,6 @@
 import { runChatFileCleanup } from "./chat-file-cleanup.js";
 import { runChatNudges } from "./chat-nudges.js";
+import { runMailLogPrune } from "./mail-log-prune.js";
 import { runOwnerSummary } from "./owner-summary.js";
 
 /**
@@ -24,6 +25,7 @@ const JOBS: [string, (now: Date) => Promise<unknown>][] = [
   ["owner summary", (now) => runOwnerSummary(now)],
   ["unread chat notices", runChatNudges],
   ["abandoned chat images", runChatFileCleanup],
+  ["old mail log rows", runMailLogPrune],
 ];
 
 export function startJobs(log: Logger): () => void {

@@ -256,6 +256,27 @@ test.describe("email verification", () => {
     await expect(page.getByText("new@example.com")).toBeVisible();
   });
 
+  test("a sign-up whose email could not be sent says so and offers the link again", async ({ page }) => {
+    await stubApi(page, () => null, (route, path) =>
+      path === "/auth/register"
+        ? route.fulfill(json({ status: "verification_sent", email: "nolink@example.com", emailSent: false }, 202))
+        : undefined,
+    );
+    await page.goto("/register");
+    await page.getByLabel("Display name").fill("No Link");
+    await page.getByLabel("Username").fill("nolink");
+    await page.getByLabel("Email").fill("nolink@example.com");
+    await page.getByRole("textbox", { name: "Password", exact: true }).fill("a sufficiently long password");
+    await page.getByRole("button", { name: "Create account" }).click();
+
+    await expect(page.getByRole("heading", { name: "Your account is ready" })).toBeVisible();
+    await expect(page.getByRole("status")).toContainText("could not send the confirmation link");
+    // The way out is on the same screen.
+    await expect(page.getByRole("button", { name: /send|resend/i })).toBeVisible();
+    // It must not also claim the link is on its way.
+    await expect(page.getByRole("heading", { name: "Check your email" })).toHaveCount(0);
+  });
+
   test("the link confirms, removes the token from the address bar, and lands signed in", async ({ page }) => {
     let signedIn = false;
     let urlWhenSent = "";

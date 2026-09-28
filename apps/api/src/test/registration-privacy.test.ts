@@ -53,7 +53,11 @@ describe("sign-up with an address that already has an account", () => {
 
     const taken = await signUp("owner@example.com", "someoneelse");
     expect(taken.statusCode).toBe(fresh.statusCode);
-    expect(taken.json()).toEqual({ status: "verification_sent", email: "owner@example.com" });
+    expect(taken.json()).toEqual({
+      status: "verification_sent",
+      email: "owner@example.com",
+      emailSent: true,
+    });
     expect(taken.headers["set-cookie"]).toBeUndefined();
 
     expect(sent).toHaveLength(1);

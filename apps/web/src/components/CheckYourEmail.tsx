@@ -86,8 +86,45 @@ export function ResendLink({ email: fixedEmail }: { email?: string }) {
   );
 }
 
-/** After sign-up: where the link went, and what to do if it does not arrive. */
-export function CheckYourEmail({ email }: { email: string }) {
+/**
+ * After sign-up: where the link went, and what to do if it does not arrive.
+ *
+ * `emailSent` false means the server tried and the sender refused. Saying so
+ * is better than leaving someone watching an inbox nothing is coming to, and
+ * it gives away nothing: they created this account themselves a moment ago.
+ */
+export function CheckYourEmail({ email, emailSent = true }: { email: string; emailSent?: boolean }) {
+  if (!emailSent) {
+    return (
+      <div>
+        <h1 className="font-display text-3xl">Your account is ready</h1>
+        <ThreadRule className="mt-4 w-16" />
+        <div className="mt-4 rounded-md bg-amber-wash px-3 py-2.5 text-sm" role="status">
+          <p className="font-medium text-amber">
+            We could not send the confirmation link just now
+          </p>
+          <p className="mt-1 text-ink">
+            Your account for <strong>{email}</strong> is saved, so nothing is
+            lost.
+          </p>
+        </div>
+        <p className="mt-4 text-ink-soft">
+          Ask for the link again below. If it still does not arrive, try in a few
+          minutes, or report a problem from the footer and we will look into it.
+        </p>
+        <div className="mt-6">
+          <ResendLink email={email} />
+        </div>
+        <p className="mt-8 text-sm text-ink-soft">
+          Typed the wrong address?{" "}
+          <Link to="/register" reloadDocument className="font-medium text-indigo hover:underline">
+            Start again
+          </Link>
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <h1 className="font-display text-3xl">Check your email</h1>

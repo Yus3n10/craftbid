@@ -16,7 +16,8 @@
     "test:watch": "vitest",
     "purge:accounts": "tsx src/db/purge-accounts.ts",
     "problems": "tsx src/modules/commission-payments/problems-cli.ts",
-    "staff": "tsx src/modules/admin/staff-cli.ts"
+    "staff": "tsx src/modules/admin/staff-cli.ts",
+    "mail": "tsx src/lib/mail/mail-cli.ts"
   },
   "dependencies": {
     "@craftbid/shared": "workspace:*",
