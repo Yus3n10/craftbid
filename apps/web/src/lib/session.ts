@@ -16,7 +16,10 @@
  * it would not be on the web: the webview loads only our own bundled assets,
  * so there is no third-party script to steal it.
  */
-export const BEARER_MODE = import.meta.env.VITE_AUTH_MODE === "bearer";
+declare const __BEARER_MODE__: boolean;
+
+/** Set by the build mode in vite.config.ts, not by an environment file. */
+export const BEARER_MODE = __BEARER_MODE__;
 
 const ACCESS_KEY = "craftbid.accessToken";
 const REFRESH_KEY = "craftbid.refreshToken";

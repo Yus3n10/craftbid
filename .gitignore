@@ -89,3 +89,11 @@ PROMPTS.md
 NOTES.md
 PRIVATE.md
 /private/
+
+# Internal working documents: the running bug ledger and the per-batch plans
+# and specs. Written for whoever maintains this, not for a public repository,
+# and the ledger carried production account credentials. Kept on disk.
+# docs/DEPLOY.md stays tracked: it is a real setup guide and holds only
+# placeholders, and the README links to it.
+docs/HANDOVER.md
+docs/superpowers/

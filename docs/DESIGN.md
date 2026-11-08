@@ -180,7 +180,9 @@ The backend is the security boundary; frontend route guards are cosmetic.
   server-generated filenames so a user cannot pick the storage key.
 - Rate limits on login, registration, and application submission.
 - External links forced to `https`, rendered `rel="noopener noreferrer nofollow"`.
-- Secrets only from env. `.env` is gitignored, `.env.example` is committed.
+- Secrets only from env, and no environment file is committed. The variables
+  and their defaults are documented in docs/DEPLOY.md; public build values such
+  as the API address live in `apps/web/vite.config.ts`.
 
 **Privacy:** exact addresses are never collected — region plus city only. Email is
 never exposed on a public profile.

@@ -21,10 +21,20 @@ sculpture, jewelry, woodcraft, paper craft, candles and soap.
 ```bash
 git clone <your-fork-url> craftbid && cd craftbid
 pnpm install
-cp .env.example .env
 ```
 
-Generate a JWT secret and put it in `.env`:
+Create `.env` in the repository root. These four are all a local run needs;
+everything else has a working default, and the full list with its production
+values is in [docs/DEPLOY.md](docs/DEPLOY.md).
+
+```
+ORACLE_USER=craftbid
+ORACLE_PASSWORD=devpw_local
+ORACLE_CONNECT_STRING=localhost:1521/FREEPDB1
+JWT_SECRET=
+```
+
+`.env` is gitignored and must stay that way. Generate the secret with:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"

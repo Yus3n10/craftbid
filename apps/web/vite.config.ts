@@ -10,7 +10,26 @@ export default defineConfig(({ mode }) => {
   // One .env at the repo root serves every package, so point Vite at it
   // instead of keeping a second copy here.
   const env = loadEnv(mode, repoRoot, "VITE_");
-  const upstreamApi = env.VITE_API_URL ?? "http://localhost:4000";
+
+  /**
+   * The deployed API. Not a secret: it is compiled into the bundle and visible
+   * in every request a visitor makes, which is why it lives here rather than
+   * in a committed .env file. A local .env may still override it, and so may
+   * VITE_API_URL in the build environment.
+   */
+  const DEPLOYED_API = "https://craftbid-api.onrender.com";
+
+  /**
+   * The desktop build ignores a local .env on purpose. It is the one build
+   * nobody can correct after the fact: an installed app that calls
+   * localhost:4000 finds nothing, and the developer machine that built it has
+   * a dev .env saying exactly that. Only VITE_API_URL set in the build
+   * environment overrides the deployed address.
+   */
+  const upstreamApi =
+    mode === "desktop"
+      ? (process.env.VITE_API_URL ?? DEPLOYED_API)
+      : (env.VITE_API_URL ?? (mode === "development" ? "http://localhost:4000" : DEPLOYED_API));
 
   /**
    * Where the browser sends API calls.
@@ -30,6 +49,14 @@ export default defineConfig(({ mode }) => {
    * same-site, so its cookies were never third-party.
    */
   const apiUrl = mode === "production" ? "/api" : upstreamApi;
+
+  /**
+   * The desktop build carries bearer tokens. It is served from
+   * tauri://localhost with no site Worker in front, so there is no first-party
+   * origin for a cookie to belong to. Decided by the build mode rather than by
+   * a file, so a release cannot be built without it by accident.
+   */
+  const authMode = mode === "desktop" ? "bearer" : (env.VITE_AUTH_MODE ?? "cookie");
 
   return {
     plugins: [
@@ -82,6 +109,7 @@ export default defineConfig(({ mode }) => {
     envDir: repoRoot,
     define: {
       __API_URL__: JSON.stringify(apiUrl),
+      __BEARER_MODE__: JSON.stringify(authMode === "bearer"),
     },
     server: { port: 5173 },
     // `vite preview` stands in for the Worker locally: it serves the

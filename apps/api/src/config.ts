@@ -164,7 +164,7 @@ if (!parsed.success) {
     .map((issue) => `  - ${issue.path.join(".") || "(root)"}: ${issue.message}`)
     .join("\n");
   throw new Error(
-    `Invalid environment configuration:\n${details}\n\nCopy .env.example to .env and fill it in.`,
+    `Invalid environment configuration:\n${details}\n\nCreate .env in the repository root; see the quick start in README.md.`,
   );
 }
 

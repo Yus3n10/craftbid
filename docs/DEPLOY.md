@@ -344,13 +344,11 @@ does the same job and also tells you when the API is down.
 
 ## 6. Desktop releases
 
-Before tagging, point `.env.desktop` at the deployed API. It is committed
-precisely so CI can build reproducibly, and it holds no secrets:
-
-```
-VITE_API_URL=https://your-api.onrender.com
-VITE_AUTH_MODE=bearer
-```
+The desktop build takes its API address and its bearer auth mode from the
+build mode in `apps/web/vite.config.ts`, so a release needs no environment
+file and cannot be built pointing at localhost by accident. Change the
+deployed address there if the API ever moves. To build against a different
+API without editing it, set `VITE_API_URL` in the build environment.
 
 Then tag:
 
